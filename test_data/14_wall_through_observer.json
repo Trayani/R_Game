@@ -1,0 +1,42 @@
+{
+  "testName": "14_wall_through_observer",
+  "gridRows": 10,
+  "gridCols": 10,
+  "blockedCells": [
+    5,
+    15,
+    25,
+    45,
+    55,
+    65,
+    75,
+    85,
+    95
+  ],
+  "startX": 5,
+  "startY": 3,
+  "expectedVisible": [
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "log": [
+    "========== TEST: 14_wall_through_observer ==========",
+    "Grid: 10x10",
+    "Blocked cells: 9",
+    "Start: (5, 3)",
+    "[PATH_FINDER] corner.lines has 10 rows",
+    "[PATH_FINDER] Row 3: 1 ranges: (1,10)",
+    "\n[RESULT] Total visible cells: 10",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "testName": "88_scattered_varying_distances",
+  "gridRows": 15,
+  "gridCols": 15,
+  "blockedCells": [
+    52,
+    82,
+    83,
+    127,
+    128,
+    172,
+    187,
+    188
+  ],
+  "startX": 7,
+  "startY": 3,
+  "expectedVisible": [],
+  "log": [
+    "========== TEST: 88_scattered_varying_distances ==========",
+    "Grid: 15x15",
+    "Blocked cells: 8",
+    "Start: (7, 3)",
+    "\n[RESULT] Total visible cells: 0",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

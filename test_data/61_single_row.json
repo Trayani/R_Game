@@ -1,0 +1,41 @@
+{
+  "testName": "61_single_row",
+  "gridRows": 1,
+  "gridCols": 20,
+  "blockedCells": [],
+  "startX": 10,
+  "startY": 0,
+  "expectedVisible": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "log": [
+    "========== TEST: 61_single_row ==========",
+    "Grid: 1x20",
+    "Blocked cells: 0",
+    "Start: (10, 0)",
+    "[PATH_FINDER] corner.lines has 1 rows",
+    "[PATH_FINDER] Row 0: 1 ranges: (1,20)",
+    "\n[RESULT] Total visible cells: 20",
+    "[RESULT] Expected cells: 20",
+    "[PASS] Test passed!"
+  ]
+}

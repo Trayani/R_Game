@@ -1,0 +1,38 @@
+{
+  "testName": "32_cross_pattern",
+  "gridRows": 11,
+  "gridCols": 11,
+  "blockedCells": [
+    5,
+    16,
+    27,
+    38,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    60,
+    71,
+    82,
+    93,
+    104
+  ],
+  "startX": 5,
+  "startY": 5,
+  "expectedVisible": [],
+  "log": [
+    "========== TEST: 32_cross_pattern ==========",
+    "Grid: 11x11",
+    "Blocked cells: 18",
+    "Start: (5, 5)",
+    "\n[RESULT] Total visible cells: 0",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

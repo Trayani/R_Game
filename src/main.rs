@@ -59,7 +59,7 @@ fn run_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, H
 
 /// Run all tests from the test_data directory
 fn run_all_tests() {
-    let test_dir = "/home/jan/hobby/RustGame2/test_data";
+    let test_dir = "./test_data";
     let mut passed = 0;
     let mut failed = 0;
     let mut failures = Vec::new();

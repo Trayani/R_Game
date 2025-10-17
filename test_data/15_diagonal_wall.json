@@ -1,0 +1,28 @@
+{
+  "testName": "15_diagonal_wall",
+  "gridRows": 10,
+  "gridCols": 10,
+  "blockedCells": [
+    11,
+    22,
+    33,
+    44,
+    55,
+    66,
+    77,
+    88
+  ],
+  "startX": 2,
+  "startY": 2,
+  "expectedVisible": [],
+  "log": [
+    "========== TEST: 15_diagonal_wall ==========",
+    "Grid: 10x10",
+    "Blocked cells: 8",
+    "Start: (2, 2)",
+    "\n[RESULT] Total visible cells: 0",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

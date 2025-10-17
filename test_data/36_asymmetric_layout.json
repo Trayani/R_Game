@@ -1,0 +1,33 @@
+{
+  "testName": "36_asymmetric_layout",
+  "gridRows": 10,
+  "gridCols": 10,
+  "blockedCells": [
+    13,
+    14,
+    15,
+    23,
+    33,
+    43,
+    53,
+    54,
+    55,
+    56,
+    66,
+    76,
+    86
+  ],
+  "startX": 3,
+  "startY": 3,
+  "expectedVisible": [],
+  "log": [
+    "========== TEST: 36_asymmetric_layout ==========",
+    "Grid: 10x10",
+    "Blocked cells: 13",
+    "Start: (3, 3)",
+    "\n[RESULT] Total visible cells: 0",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

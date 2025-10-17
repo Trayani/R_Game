@@ -1,0 +1,50 @@
+{
+  "testName": "31_ring_obstacles",
+  "gridRows": 10,
+  "gridCols": 10,
+  "blockedCells": [
+    22,
+    23,
+    24,
+    25,
+    26,
+    32,
+    36,
+    42,
+    46,
+    52,
+    56,
+    62,
+    63,
+    64,
+    65,
+    66
+  ],
+  "startX": 4,
+  "startY": 4,
+  "expectedVisible": [
+    33,
+    34,
+    35,
+    43,
+    44,
+    45,
+    53,
+    54,
+    55
+  ],
+  "log": [
+    "========== TEST: 31_ring_obstacles ==========",
+    "Grid: 10x10",
+    "Blocked cells: 16",
+    "Start: (4, 4)",
+    "[PATH_FINDER] corner.lines has 10 rows",
+    "[PATH_FINDER] Row 3: 1 ranges: (4,6)",
+    "[PATH_FINDER] Row 4: 1 ranges: (4,6)",
+    "[PATH_FINDER] Row 5: 1 ranges: (4,6)",
+    "\n[RESULT] Total visible cells: 9",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}

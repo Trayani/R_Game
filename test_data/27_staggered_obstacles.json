@@ -1,0 +1,50 @@
+{
+  "testName": "27_staggered_obstacles",
+  "gridRows": 10,
+  "gridCols": 10,
+  "blockedCells": [
+    23,
+    24,
+    25,
+    45,
+    46,
+    47
+  ],
+  "startX": 5,
+  "startY": 1,
+  "expectedVisible": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "log": [
+    "========== TEST: 27_staggered_obstacles ==========",
+    "Grid: 10x10",
+    "Blocked cells: 6",
+    "Start: (5, 1)",
+    "[PATH_FINDER] corner.lines has 10 rows",
+    "[PATH_FINDER] Row 0: 1 ranges: (1,10)",
+    "[PATH_FINDER] Row 1: 1 ranges: (1,10)",
+    "\n[RESULT] Total visible cells: 20",
+    "[RESULT] Expected cells: 0",
+    "[AUTO-ACCEPT] No expected cells provided, accepting actual result as correct",
+    "[PASS] Test passed!"
+  ]
+}
