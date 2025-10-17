@@ -200,7 +200,7 @@ fn process_cone(
         }
 
         // === C# line 71-72: check if cone collapsed ===
-        if border_x_r < border_x_l {
+        if border_x_r < border_x_l-1 {
             break;
         }
 
