@@ -30,18 +30,19 @@ pub fn raycast(grid: &Grid, start_x: i32, start_y: i32) -> HashSet<i32> {
     scan_direction(grid, start_x, start_y, 1, row_start_x, row_end_x, &mut lanes);
     scan_direction(grid, start_x, start_y, -1, row_start_x, row_end_x, &mut lanes);
 
-    // Debug output
-    if grid.rows == 10 && grid.cols == 10 && start_x == 5 && (start_y == 2 || start_y == 3 || start_y == 5) {
-        println!("\n[RUST] lanes for start ({},{})",start_x, start_y);
-        for (row, ranges) in lanes.iter().enumerate() {
-            if !ranges.is_empty() {
-                let range_str: Vec<String> = ranges.iter()
-                    .map(|(s, e)| format!("({},{})", s, e))
-                    .collect();
-                println!("[RUST] Row {}: {} ranges: {}", row, ranges.len(), range_str.join(", "));
-            }
-        }
-    }
+    // Debug output (disabled)
+    // if (grid.rows == 12 && grid.cols == 12 && start_x == 3 && start_y == 3)
+    //     || (grid.rows == 8 && grid.cols == 8 && start_x == 4 && start_y == 4) {
+    //     println!("\n[RUST] lanes for start ({},{})",start_x, start_y);
+    //     for (row, ranges) in lanes.iter().enumerate() {
+    //         if !ranges.is_empty() {
+    //             let range_str: Vec<String> = ranges.iter()
+    //                 .map(|(s, e)| format!("({},{})", s, e))
+    //                 .collect();
+    //             println!("[RUST] Row {}: {} ranges: {}", row, ranges.len(), range_str.join(", "));
+    //         }
+    //     }
+    // }
 
     for (row, ranges) in lanes.iter().enumerate() {
         for &(range_start, range_end) in ranges {
@@ -81,10 +82,11 @@ fn scan_direction(
     row_end_x: i32,
     lanes: &mut Vec<Vec<(i32, i32)>>,
 ) {
-    let debug = grid.rows == 10 && grid.cols == 10 && start_x == 5 && start_y == 3;
-    if debug {
-        println!("[SCAN_DIR] dir={}, start=({},{}), row_bounds=[{},{}]", dir, start_x, start_y, row_start_x, row_end_x);
-    }
+    // Debug disabled
+    // let debug = grid.rows == 10 && grid.cols == 10 && start_x == 5 && start_y == 3;
+    // if debug {
+    //     println!("[SCAN_DIR] dir={}, start=({},{}), row_bounds=[{},{}]", dir, start_x, start_y, row_start_x, row_end_x);
+    // }
 
     // C# getBorders lines 55-57: Find first segment in scan direction
     let next_y = start_y + dir;
@@ -97,7 +99,20 @@ fn scan_direction(
         return;  // No segments found
     }
 
-    let (first_seg_start, first_seg_end) = segments[0];
+    // C# getBorders LOOP logic (lines 222-240): Try each segment until we find one containing start_x
+    let mut found_segment = None;
+    for &(seg_start, seg_end) in &segments {
+        // C# line 127: Check if start position is within this segment
+        if start_x >= seg_start && start_x <= seg_end {
+            found_segment = Some((seg_start, seg_end));
+            break;
+        }
+    }
+
+    let (first_seg_start, first_seg_end) = match found_segment {
+        Some(seg) => seg,
+        None => return,  // No segment contains start position, stop scanning
+    };
 
     // Initialize first cone (C# getBorders lines 197-210)
     let ray_right = RayState::new(row_end_x - start_x, 1, -1, 0);
@@ -196,12 +211,6 @@ fn process_cone(
         let range_end = border_x_r.min(cone.curr_l_end_x);
 
         if cone.curr_l_y >= 0 && cone.curr_l_y < grid.rows && range_start <= range_end {
-            let debug = grid.rows == 10 && grid.cols == 10 && start_x == 5 && start_y == 3;
-            if debug {
-                println!("[ADD_RANGE] Adding range ({},{}) to lanes[{}], borders=[{},{}], segment=[{},{}]",
-                    range_start + 1, range_end + 1, cone.curr_l_y,
-                    border_x_l, border_x_r, cone.curr_l_start_x, cone.curr_l_end_x);
-            }
             lanes[cone.curr_l_y as usize].push((range_start + 1, range_end + 1));
         } else {
             break;
@@ -219,15 +228,6 @@ fn process_cone(
 
         // C# lines 115-170: Segment loop - find ALL segments and handle splits
         let segments = find_all_segments_in_range(grid, next_y, cone.curr_l_start_x, cone.curr_l_end_x);
-
-        let debug = grid.rows == 10 && grid.cols == 10 && start_x == 5 && start_y == 3;
-        if debug {
-            println!("[PROCESS_CONE] next_y={}, curr_l_bounds=[{},{}], found {} segments",
-                next_y, cone.curr_l_start_x, cone.curr_l_end_x, segments.len());
-            for (i, &(s, e)) in segments.iter().enumerate() {
-                println!("[PROCESS_CONE]   Segment {}: [{}, {}]", i, s, e);
-            }
-        }
 
         if segments.is_empty() {
             break;
@@ -265,17 +265,9 @@ fn find_all_segments_in_range(grid: &Grid, y: i32, range_start: i32, range_end: 
     let mut segments = Vec::new();
     let mut x = range_start;
 
-    let debug = grid.rows == 10 && grid.cols == 10 && (y == 2 || y == 4);
-    if debug {
-        println!("[FIND_SEGMENTS] y={}, range=[{}, {}]", y, range_start, range_end);
-    }
-
     while x <= range_end {
         // Skip blocked cells
         while x <= range_end && (x < 0 || x >= grid.cols || grid.is_blocked(x, y)) {
-            if debug {
-                println!("[FIND_SEGMENTS]   x={} is blocked or out of bounds", x);
-            }
             x += 1;
         }
 
@@ -285,23 +277,13 @@ fn find_all_segments_in_range(grid: &Grid, y: i32, range_start: i32, range_end: 
 
         // Found walkable cell - expand to get full segment
         let (seg_start, seg_end) = find_walkable_bounds(grid, x, y);
-        if debug {
-            println!("[FIND_SEGMENTS]   Found segment at x={}: [{}, {}]", x, seg_start, seg_end);
-        }
 
         // Only include segments that overlap with our range
         if seg_end >= range_start && seg_start <= range_end {
             segments.push((seg_start, seg_end));
-            if debug {
-                println!("[FIND_SEGMENTS]     Added to segments list");
-            }
         }
 
         x = seg_end + 1;
-    }
-
-    if debug {
-        println!("[FIND_SEGMENTS] Total segments found: {}", segments.len());
     }
 
     segments
