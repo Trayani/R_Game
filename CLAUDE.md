@@ -103,11 +103,9 @@ The test suite validates the Rust implementation against the C# reference by com
   - Cell IDs are calculated as `x + y * cols`
   - Positive Y is downward in the grid
 
-# DIRECTIVES
-## General
-When you process a test
 
-## Allowed commands
+
+# Allowed commands
 never ask permisson to run commands starting with
 - find
 - echo

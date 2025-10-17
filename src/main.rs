@@ -39,14 +39,14 @@ fn load_test(path: &Path) -> Result<RaycastTestData, Box<dyn std::error::Error>>
 }
 
 /// Run a single test
-fn run_test(test_data: &RaycastTestData, gapped_vision: bool) -> (bool, usize, usize, HashSet<i32>, HashSet<i32>) {
+fn run_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, HashSet<i32>) {
     let grid = Grid::with_blocked(
         test_data.grid_rows,
         test_data.grid_cols,
         &test_data.blocked_cells,
     );
 
-    let actual_visible = raycast(&grid, test_data.start_x, test_data.start_y, gapped_vision);
+    let actual_visible = raycast(&grid, test_data.start_x, test_data.start_y);
     let expected_set: HashSet<i32> = test_data.expected_visible.iter().copied().collect();
 
     let missing: Vec<_> = expected_set.difference(&actual_visible).copied().collect();
@@ -58,16 +58,13 @@ fn run_test(test_data: &RaycastTestData, gapped_vision: bool) -> (bool, usize, u
 }
 
 /// Run all tests from the test_data directory
-fn run_all_tests(gapped_vision: bool) {
+fn run_all_tests() {
     let test_dir = "./test_data";
     let mut passed = 0;
     let mut failed = 0;
     let mut failures = Vec::new();
 
-    println!(
-        "Running raycasting tests from {} (gapped_vision={})\n",
-        test_dir, gapped_vision
-    );
+    println!("Running raycasting tests from {}\n", test_dir);
 
     if let Ok(entries) = fs::read_dir(test_dir) {
         let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
@@ -77,7 +74,7 @@ fn run_all_tests(gapped_vision: bool) {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Ok(test_data) = load_test(&path) {
-                    let (test_passed, missing_count, extra_count, expected, actual) = run_test(&test_data, gapped_vision);
+                    let (test_passed, missing_count, extra_count, expected, actual) = run_test(&test_data);
 
                     if test_passed {
                         passed += 1;
@@ -127,7 +124,6 @@ struct VisState {
     observer_y: i32,
     visible_cells: HashSet<i32>,
     cell_size: f32,
-    gapped_vision: bool,
 }
 
 impl VisState {
@@ -135,8 +131,7 @@ impl VisState {
         let grid = Grid::new(20, 20);
         let observer_x = 10;
         let observer_y = 10;
-        let gapped_vision = false;
-        let visible_cells = raycast(&grid, observer_x, observer_y, gapped_vision);
+        let visible_cells = raycast(&grid, observer_x, observer_y);
 
         VisState {
             grid,
@@ -144,7 +139,6 @@ impl VisState {
             observer_y,
             visible_cells,
             cell_size: 30.0,
-            gapped_vision,
         }
     }
 
@@ -173,12 +167,7 @@ impl VisState {
     }
 
     fn update_visible(&mut self) {
-        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.gapped_vision);
-    }
-
-    fn toggle_gapped_vision(&mut self) {
-        self.gapped_vision = !self.gapped_vision;
-        self.update_visible();
+        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y);
     }
 
     fn draw(&self) {
@@ -207,11 +196,10 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible cells: {}\nGapped vision: {}\n\nLeft click: toggle obstacle\nRight click: move observer\nG: toggle gapped vision\nT: run tests\nEsc: close window",
+            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nT: run tests\nEsc: close window",
             self.observer_x,
             self.observer_y,
-            self.visible_cells.len(),
-            if self.gapped_vision { "ON" } else { "OFF" }
+            self.visible_cells.len()
         );
         draw_text(&info, 10.0, 20.0, 20.0, WHITE);
     }
@@ -222,9 +210,7 @@ async fn main() {
     // Check command line arguments
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 && args[1] == "--test" {
-        // Default to non-gapped vision for existing tests (C# reference behavior)
-        let gapped_vision = args.get(2).map(|s| s == "--gapped-vision").unwrap_or(false);
-        run_all_tests(gapped_vision);
+        run_all_tests();
         return;
     }
 
@@ -238,16 +224,10 @@ async fn main() {
             state.handle_click(mouse_x, mouse_y);
         }
 
-        // Toggle gapped vision on G key
-        if is_key_pressed(KeyCode::G) {
-            state.toggle_gapped_vision();
-            println!("Gapped vision: {}", if state.gapped_vision { "ON" } else { "OFF" });
-        }
-
         // Run tests on T key
         if is_key_pressed(KeyCode::T) {
-            println!("\n===== Running Tests (gapped_vision={}) =====", state.gapped_vision);
-            run_all_tests(state.gapped_vision);
+            println!("\n===== Running Tests =====");
+            run_all_tests();
         }
 
         // Close window on Escape

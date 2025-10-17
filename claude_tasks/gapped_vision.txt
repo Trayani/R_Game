@@ -3,26 +3,8 @@ s... start
 ■ ... blocked cell 
 □ ... free cell 
 o.... visible cell
-x.... vision is passing through but
 
-0|ooo■□□□□□□□□
-1|oso■□□□□□□□□
-2|ooo■□□□□□□□□
-3|ooo■□□□□□□□□
-4|ooox□□□□□□□□
-5|■■xx□□□□□□□□
-6|□□xx□□□□□□□□
-7|□□xox□□□□□□□
-9|□□□xx□□□□□□□
-0|□□□xx□□□□□□□
-1|□□□xo□□□□□□□
 
-------------------------
-another explanation
-
-'o'  are visible cells
-
-gapped_vision=true:
 0|ooo■□□□□□□□□
 1|oso■□□□□□□□□
 2|ooo■□□□□□□□□
@@ -34,18 +16,3 @@ gapped_vision=true:
 9|□□□□□□□□□□□□
 0|□□□□□□□□□□□□
 1|□□□□o□□□□□□□
-
-
-
-gapped_vision=false:
-0|ooo■□□□□□□□□
-1|oso■□□□□□□□□
-2|ooo■□□□□□□□□
-3|ooo■□□□□□□□□
-4|ooo□□□□□□□□□
-5|■■□□□□□□□□□□
-6|□□□□□□□□□□□□
-7|□□□□□□□□□□□□
-9|□□□□□□□□□□□□
-0|□□□□□□□□□□□□
-1|□□□□□□□□□□□□
