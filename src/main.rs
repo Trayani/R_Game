@@ -196,7 +196,7 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nT: run tests",
+            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nT: run tests\nEsc: close window",
             self.observer_x,
             self.observer_y,
             self.visible_cells.len()
@@ -228,6 +228,11 @@ async fn main() {
         if is_key_pressed(KeyCode::T) {
             println!("\n===== Running Tests =====");
             run_all_tests();
+        }
+
+        // Close window on Escape
+        if is_key_pressed(KeyCode::Escape) {
+            break;
         }
 
         // Draw
