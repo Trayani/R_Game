@@ -15,7 +15,11 @@ struct DeferredCone {
 }
 
 /// Main raycasting function
-pub fn raycast(grid: &Grid, start_x: i32, start_y: i32) -> HashSet<i32> {
+///
+/// If `gapped_vision` is true, cells between diverging rays are marked visible
+/// even if they fall in the gap between ray borders, since the expanding cone
+/// will eventually capture them.
+pub fn raycast(grid: &Grid, start_x: i32, start_y: i32, gapped_vision: bool) -> HashSet<i32> {
     let mut visible = HashSet::new();
 
     if grid.is_blocked(start_x, start_y) {
@@ -27,8 +31,8 @@ pub fn raycast(grid: &Grid, start_x: i32, start_y: i32) -> HashSet<i32> {
     let (row_start_x, row_end_x) = find_walkable_bounds(grid, start_x, start_y);
     lanes[start_y as usize].push((row_start_x + 1, row_end_x + 1));
 
-    scan_direction(grid, start_x, start_y, 1, row_start_x, row_end_x, &mut lanes);
-    scan_direction(grid, start_x, start_y, -1, row_start_x, row_end_x, &mut lanes);
+    scan_direction(grid, start_x, start_y, 1, row_start_x, row_end_x, gapped_vision, &mut lanes);
+    scan_direction(grid, start_x, start_y, -1, row_start_x, row_end_x, gapped_vision, &mut lanes);
 
     // Debug output (disabled)
     // if (grid.rows == 12 && grid.cols == 12 && start_x == 3 && start_y == 3)
@@ -80,6 +84,7 @@ fn scan_direction(
     dir: i32,
     row_start_x: i32,
     row_end_x: i32,
+    gapped_vision: bool,
     lanes: &mut Vec<Vec<(i32, i32)>>,
 ) {
     // Debug disabled
@@ -130,11 +135,11 @@ fn scan_direction(
 
     // C# getBorders line 218: pf.stepNxt(pfn, ...)
     let mut pfn = Vec::new(); // Deferred cones list
-    process_cone(grid, start_x, start_y, dir, initial_cone, lanes, &mut pfn);
+    process_cone(grid, start_x, start_y, dir, gapped_vision, initial_cone, lanes, &mut pfn);
 
     // C# getBorders lines 244-248: Process deferred cones
     while let Some(deferred) = pfn.pop() {
-        process_cone(grid, start_x, start_y, dir, deferred, lanes, &mut pfn);
+        process_cone(grid, start_x, start_y, dir, gapped_vision, deferred, lanes, &mut pfn);
     }
 }
 
@@ -144,6 +149,7 @@ fn process_cone(
     start_x: i32,
     start_y: i32,
     dir: i32,
+    gapped_vision: bool,
     mut cone: DeferredCone,
     lanes: &mut Vec<Vec<(i32, i32)>>,
     pfn: &mut Vec<DeferredCone>,
@@ -200,7 +206,12 @@ fn process_cone(
         }
 
         // === C# line 71-72: check if cone collapsed ===
-        if border_x_r < border_x_l {
+        // With gapped_vision, allow rays to diverge by 1 cell before stopping
+        // This lets the algorithm continue and potentially capture cells when rays converge again
+        let max_allowed_gap = if gapped_vision { 1 } else { 0 };
+
+
+        if border_x_r < border_x_l - max_allowed_gap {
             break;
         }
 
@@ -210,10 +221,16 @@ fn process_cone(
         let range_start = border_x_l.max(cone.curr_l_start_x);
         let range_end = border_x_r.min(cone.curr_l_end_x);
 
-        if cone.curr_l_y >= 0 && cone.curr_l_y < grid.rows && range_start <= range_end {
-            lanes[cone.curr_l_y as usize].push((range_start + 1, range_end + 1));
-        } else {
-            break;
+        if cone.curr_l_y >= 0 && cone.curr_l_y < grid.rows {
+            // Normal case: rays overlap, add the intersecting range
+            if range_start <= range_end {
+                lanes[cone.curr_l_y as usize].push((range_start + 1, range_end + 1));
+            }
+            // Gapped vision: rays diverged, but mark cells at the right ray position
+            // (the "inner" ray that's more likely to capture cells when rays converge)
+            else if gapped_vision && border_x_r >= cone.curr_l_start_x && border_x_r <= cone.curr_l_end_x {
+                lanes[cone.curr_l_y as usize].push((border_x_r + 1, border_x_r + 1));
+            }
         }
 
         // === C# lines 108-109: prevL = currL ===
@@ -296,14 +313,91 @@ mod tests {
     #[test]
     fn test_empty_grid() {
         let grid = Grid::new(10, 10);
-        let visible = raycast(&grid, 5, 5);
+        let visible = raycast(&grid, 5, 5, false);
         assert_eq!(visible.len(), 100);
     }
 
     #[test]
     fn test_blocked_start() {
         let grid = Grid::with_blocked(10, 10, &[55]);
-        let visible = raycast(&grid, 5, 5);
+        let visible = raycast(&grid, 5, 5, false);
         assert_eq!(visible.len(), 0);
+    }
+
+    #[test]
+    fn test_gapped_vision() {
+        // Test case from gapped_vision.txt
+        // Observer at (1,1), wall at column 3 (rows 0-3), obstacles at (0,5) and (1,5)
+        // This creates a scenario where rays diverge, creating gaps
+        //
+        // Grid layout (12 rows x 12 cols):
+        // Row 0: blocked at (3,0)
+        // Row 1: observer at (1,1), blocked at (3,1)
+        // Row 2-3: blocked at (3,2) and (3,3)
+        // Row 5: blocked at (0,5) and (1,5)
+        //
+        // With gapped_vision=false: rays stop when they diverge
+        // With gapped_vision=true: rays continue through 1-cell gap, eventually capturing:
+        //   - Row 7, col 3 (cell ID 87)
+        //   - Row 11, col 4 (cell ID 136)
+        let blocked = vec![
+            3,   // (3, 0)
+            15,  // (3, 1)
+            27,  // (3, 2)
+            39,  // (3, 3)
+            60,  // (0, 5)
+            61,  // (1, 5)
+        ];
+        let grid = Grid::with_blocked(12, 12, &blocked);
+
+        // Test without gapped_vision
+        let visible_no_gap = raycast(&grid, 1, 1, false);
+
+        // Test with gapped_vision
+        let visible_with_gap = raycast(&grid, 1, 1, true);
+
+        // Cell IDs for the specific cells that should become visible with gapped_vision
+        let cell_row7_col3 = grid.get_id(3, 7);  // Should be 87
+        let cell_row11_col4 = grid.get_id(4, 11); // Should be 136
+
+        // Without gapped_vision, these cells should NOT be visible
+        assert!(
+            !visible_no_gap.contains(&cell_row7_col3),
+            "Row 7 col 3 (cell {}) should NOT be visible without gapped_vision",
+            cell_row7_col3
+        );
+        assert!(
+            !visible_no_gap.contains(&cell_row11_col4),
+            "Row 11 col 4 (cell {}) should NOT be visible without gapped_vision",
+            cell_row11_col4
+        );
+
+        // With gapped_vision, these cells SHOULD be visible
+        assert!(
+            visible_with_gap.contains(&cell_row7_col3),
+            "Row 7 col 3 (cell {}) SHOULD be visible with gapped_vision",
+            cell_row7_col3
+        );
+        assert!(
+            visible_with_gap.contains(&cell_row11_col4),
+            "Row 11 col 4 (cell {}) SHOULD be visible with gapped_vision",
+            cell_row11_col4
+        );
+
+        // Verify that all non-gapped cells are included in gapped result
+        for cell_id in &visible_no_gap {
+            assert!(
+                visible_with_gap.contains(cell_id),
+                "Cell {} visible without gap should also be visible with gap",
+                cell_id
+            );
+        }
+
+        println!(
+            "Gapped vision test passed: {} cells without gap, {} with gap (+{})",
+            visible_no_gap.len(),
+            visible_with_gap.len(),
+            visible_with_gap.len() - visible_no_gap.len()
+        );
     }
 }
