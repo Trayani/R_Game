@@ -627,38 +627,50 @@ impl VisState {
             // Draw center line
             draw_line(observer_center_x, observer_center_y, mouse_center_x, mouse_center_y, 2.0, YELLOW);
 
-            // Calculate perpendicular offset for edge lines
+            // Calculate which corners to use for edge lines
             let dx = mouse_center_x - observer_center_x;
             let dy = mouse_center_y - observer_center_y;
-            let length = (dx * dx + dy * dy).sqrt();
 
-            if length > 0.0 {
-                // Perpendicular unit vector
-                let perp_x = -dy / length;
-                let perp_y = dx / length;
+            if dx != 0.0 || dy != 0.0 {
+                // Get all four corners of observer cell
+                let obs_left = self.observer_x as f32 * self.cell_size;
+                let obs_right = (self.observer_x + 1) as f32 * self.cell_size;
+                let obs_top = self.observer_y as f32 * self.cell_size;
+                let obs_bottom = (self.observer_y + 1) as f32 * self.cell_size;
 
-                // Offset by half cell size
-                let offset = self.cell_size / 2.0;
-                let offset_x = perp_x * offset;
-                let offset_y = perp_y * offset;
+                // Get all four corners of mouse cell
+                let mouse_left = mouse_grid_x as f32 * self.cell_size;
+                let mouse_right = (mouse_grid_x + 1) as f32 * self.cell_size;
+                let mouse_top = mouse_grid_y as f32 * self.cell_size;
+                let mouse_bottom = (mouse_grid_y + 1) as f32 * self.cell_size;
 
-                // Draw two edge lines
-                draw_line(
-                    observer_center_x + offset_x,
-                    observer_center_y + offset_y,
-                    mouse_center_x + offset_x,
-                    mouse_center_y + offset_y,
-                    1.0,
-                    YELLOW
-                );
-                draw_line(
-                    observer_center_x - offset_x,
-                    observer_center_y - offset_y,
-                    mouse_center_x - offset_x,
-                    mouse_center_y - offset_y,
-                    1.0,
-                    YELLOW
-                );
+                // Find which corners are on opposite sides of the center line
+                // Using cross product to determine which side each corner is on
+                let corners = [
+                    ((obs_left, obs_top), (mouse_left, mouse_top)),       // top-left
+                    ((obs_right, obs_top), (mouse_right, mouse_top)),     // top-right
+                    ((obs_left, obs_bottom), (mouse_left, mouse_bottom)), // bottom-left
+                    ((obs_right, obs_bottom), (mouse_right, mouse_bottom)), // bottom-right
+                ];
+
+                let mut side_values: Vec<(f32, usize)> = Vec::new();
+                for (i, ((ox, oy), _)) in corners.iter().enumerate() {
+                    // Cross product with direction vector to determine side
+                    let corner_dx = ox - observer_center_x;
+                    let corner_dy = oy - observer_center_y;
+                    let cross = dx * corner_dy - dy * corner_dx;
+                    side_values.push((cross, i));
+                }
+
+                // Sort by cross product value
+                side_values.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+                // Draw lines to the two extreme corners (most negative and most positive cross product)
+                let corner1 = corners[side_values[0].1];
+                let corner2 = corners[side_values[3].1];
+
+                draw_line(corner1.0.0, corner1.0.1, corner1.1.0, corner1.1.1, 1.0, YELLOW);
+                draw_line(corner2.0.0, corner2.0.1, corner2.1.0, corner2.1.1, 1.0, YELLOW);
             }
         }
 
