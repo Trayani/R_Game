@@ -623,7 +623,43 @@ impl VisState {
             let observer_center_y = self.observer_y as f32 * self.cell_size + self.cell_size / 2.0;
             let mouse_center_x = mouse_grid_x as f32 * self.cell_size + self.cell_size / 2.0;
             let mouse_center_y = mouse_grid_y as f32 * self.cell_size + self.cell_size / 2.0;
+
+            // Draw center line
             draw_line(observer_center_x, observer_center_y, mouse_center_x, mouse_center_y, 2.0, YELLOW);
+
+            // Calculate perpendicular offset for edge lines
+            let dx = mouse_center_x - observer_center_x;
+            let dy = mouse_center_y - observer_center_y;
+            let length = (dx * dx + dy * dy).sqrt();
+
+            if length > 0.0 {
+                // Perpendicular unit vector
+                let perp_x = -dy / length;
+                let perp_y = dx / length;
+
+                // Offset by half cell size
+                let offset = self.cell_size / 2.0;
+                let offset_x = perp_x * offset;
+                let offset_y = perp_y * offset;
+
+                // Draw two edge lines
+                draw_line(
+                    observer_center_x + offset_x,
+                    observer_center_y + offset_y,
+                    mouse_center_x + offset_x,
+                    mouse_center_y + offset_y,
+                    1.0,
+                    YELLOW
+                );
+                draw_line(
+                    observer_center_x - offset_x,
+                    observer_center_y - offset_y,
+                    mouse_center_x - offset_x,
+                    mouse_center_y - offset_y,
+                    1.0,
+                    YELLOW
+                );
+            }
         }
 
         // Draw info
