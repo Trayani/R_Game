@@ -112,8 +112,8 @@ impl VisState {
     }
 
     fn draw_corners(&self) {
-        let corner_size = 4.0; // Size of corner indicator squares
-        let corner_color = ORANGE;
+        let corner_size = 6.0; // Size of corner indicator squares
+        let corner_color = BLACK;
 
         for corner in &self.corners {
             let cell_x = corner.x as f32 * self.cell_width;
