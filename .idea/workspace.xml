@@ -11,9 +11,7 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/test_data/corners/corn" beforeDir="false" afterPath="$PROJECT_DIR$/test_data/corners/1_base.txt" afterDir="false" />
-    </list>
+    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -166,7 +164,7 @@
       <workItem from="1760732640419" duration="24812000" />
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
-      <workItem from="1760796207505" duration="9951000" />
+      <workItem from="1760796207505" duration="10454000" />
     </task>
     <servers />
   </component>

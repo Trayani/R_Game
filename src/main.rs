@@ -1,6 +1,7 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
 use rustgame3::{Grid, raycast};
+use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use std::collections::HashSet;
 
 /// Visualization state
@@ -9,6 +10,7 @@ struct VisState {
     observer_x: i32,
     observer_y: i32,
     visible_cells: HashSet<i32>,
+    corners: Vec<Corner>,
     cell_width: f32,
     cell_height: f32,
 }
@@ -20,17 +22,21 @@ impl VisState {
         let observer_y = 20;
         let visible_cells = raycast(&grid, observer_x, observer_y);
 
+        let all_corners = detect_all_corners(&grid);
+        let corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y);
+
         VisState {
             grid,
             observer_x,
             observer_y,
             visible_cells,
+            corners,
             cell_width: 20.0,
             cell_height: 15.0,
         }
     }
 
-    fn handle_click(&mut self, mouse_x: f32, mouse_y: f32) {
+    fn handle_mouse(&mut self, mouse_x: f32, mouse_y: f32) {
         let grid_x = (mouse_x / self.cell_width) as i32;
         let grid_y = (mouse_y / self.cell_height) as i32;
 
@@ -43,12 +49,14 @@ impl VisState {
                 self.grid.cells[cell_id as usize] = if current == 1 { 0 } else { 1 };
                 self.update_visible();
             }
-            // Right click: move observer
-            else if is_mouse_button_pressed(MouseButton::Right) {
+            // Right button DOWN (continuous): move observer
+            else if is_mouse_button_down(MouseButton::Right) {
                 if !self.grid.is_blocked(grid_x, grid_y) {
-                    self.observer_x = grid_x;
-                    self.observer_y = grid_y;
-                    self.update_visible();
+                    if self.observer_x != grid_x || self.observer_y != grid_y {
+                        self.observer_x = grid_x;
+                        self.observer_y = grid_y;
+                        self.update_visible();
+                    }
                 }
             }
         }
@@ -56,6 +64,10 @@ impl VisState {
 
     fn update_visible(&mut self) {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y);
+
+        // Update corners
+        let all_corners = detect_all_corners(&self.grid);
+        self.corners = filter_interesting_corners(&all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y);
     }
 
     fn grid_to_string(&self) -> String {
@@ -99,6 +111,34 @@ impl VisState {
         }
     }
 
+    fn draw_corners(&self) {
+        let corner_size = 4.0; // Size of corner indicator squares
+        let corner_color = ORANGE;
+
+        for corner in &self.corners {
+            let cell_x = corner.x as f32 * self.cell_width;
+            let cell_y = corner.y as f32 * self.cell_height;
+
+            // Draw a small square at each corner direction
+            for &dir in &corner.directions {
+                let (offset_x, offset_y) = match dir {
+                    CornerDirection::NW => (0.0, 0.0), // Top-left
+                    CornerDirection::NE => (self.cell_width - corner_size, 0.0), // Top-right
+                    CornerDirection::SW => (0.0, self.cell_height - corner_size), // Bottom-left
+                    CornerDirection::SE => (self.cell_width - corner_size, self.cell_height - corner_size), // Bottom-right
+                };
+
+                draw_rectangle(
+                    cell_x + offset_x,
+                    cell_y + offset_y,
+                    corner_size,
+                    corner_size,
+                    corner_color,
+                );
+            }
+        }
+    }
+
     fn draw(&self) {
         clear_background(Color::from_rgba(30, 30, 30, 255));
 
@@ -122,6 +162,9 @@ impl VisState {
                 draw_rectangle(px, py, self.cell_width - 1.0, self.cell_height - 1.0, color);
             }
         }
+
+        // Draw corner indicators
+        self.draw_corners();
 
         // Draw line from observer to mouse cell center
         let (mouse_x, mouse_y) = mouse_position();
@@ -187,10 +230,11 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nC: copy grid to clipboard\nEsc: close window",
+            "Observer: ({}, {})\nVisible: {} cells, {} corners\nLeft click: toggle obstacle\nRight hold: move observer\nC: copy grid\nEsc: close",
             self.observer_x,
             self.observer_y,
-            self.visible_cells.len()
+            self.visible_cells.len(),
+            self.corners.len()
         );
         draw_text(&info, 10.0, 20.0, 20.0, WHITE);
     }
@@ -201,12 +245,9 @@ async fn main() {
     let mut state = VisState::new();
 
     loop {
-        // Handle input
-        if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right)
-        {
-            let (mouse_x, mouse_y) = mouse_position();
-            state.handle_click(mouse_x, mouse_y);
-        }
+        // Handle input continuously
+        let (mouse_x, mouse_y) = mouse_position();
+        state.handle_mouse(mouse_x, mouse_y);
 
         // Copy grid to clipboard on C key
         if is_key_pressed(KeyCode::C) {
