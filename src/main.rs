@@ -612,6 +612,12 @@ impl VisState {
             }
         }
 
+        // Draw line from observer to mouse position
+        let (mouse_x, mouse_y) = mouse_position();
+        let observer_center_x = self.observer_x as f32 * self.cell_size + self.cell_size / 2.0;
+        let observer_center_y = self.observer_y as f32 * self.cell_size + self.cell_size / 2.0;
+        draw_line(observer_center_x, observer_center_y, mouse_x, mouse_y, 2.0, YELLOW);
+
         // Draw info
         let info = format!(
             "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nC: copy grid to clipboard\nEsc: close window",
