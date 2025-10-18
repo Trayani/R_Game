@@ -152,36 +152,18 @@ pub fn filter_interesting_corners(
 }
 
 /// Check if a corner direction leads to an area that's not visible (behind the corner)
-/// A corner is only interesting if it's "facing away" from the observer
 fn leads_to_hidden_area(
     grid: &Grid,
     corner_x: i32,
     corner_y: i32,
     dir: CornerDirection,
     visible_cells: &HashSet<i32>,
-    observer_x: i32,
-    observer_y: i32,
+    _observer_x: i32,
+    _observer_y: i32,
 ) -> bool {
-    // Calculate vector from observer to corner
-    let dx = corner_x - observer_x;
-    let dy = corner_y - observer_y;
+    // For each corner direction, check the cells "beyond" the corner
+    // that should be hidden if this corner blocks the view
 
-    // Check if this corner direction is "facing away" from the observer
-    // i.e., the corner direction vector should point generally in the same direction
-    // as the vector from observer to corner
-    let is_facing_away = match dir {
-        CornerDirection::NW => dx <= 0 && dy <= 0, // Corner is NW, observer should be SE of it
-        CornerDirection::NE => dx >= 0 && dy <= 0, // Corner is NE, observer should be SW of it
-        CornerDirection::SW => dx <= 0 && dy >= 0, // Corner is SW, observer should be NE of it
-        CornerDirection::SE => dx >= 0 && dy >= 0, // Corner is SE, observer should be NW of it
-    };
-
-    // Corner must be facing away from observer to be interesting
-    if !is_facing_away {
-        return false;
-    }
-
-    // Now check if there are non-visible cells in the direction "behind" the corner
     let check_positions = match dir {
         CornerDirection::NW => {
             // Check cells to the northwest beyond the corner
@@ -189,7 +171,6 @@ fn leads_to_hidden_area(
                 (corner_x - 1, corner_y - 1), // diagonal
                 (corner_x - 2, corner_y - 1), // further west
                 (corner_x - 1, corner_y - 2), // further north
-                (corner_x - 2, corner_y - 2), // further diagonal
             ]
         }
         CornerDirection::NE => {
@@ -197,7 +178,6 @@ fn leads_to_hidden_area(
                 (corner_x + 1, corner_y - 1),
                 (corner_x + 2, corner_y - 1),
                 (corner_x + 1, corner_y - 2),
-                (corner_x + 2, corner_y - 2),
             ]
         }
         CornerDirection::SW => {
@@ -205,7 +185,6 @@ fn leads_to_hidden_area(
                 (corner_x - 1, corner_y + 1),
                 (corner_x - 2, corner_y + 1),
                 (corner_x - 1, corner_y + 2),
-                (corner_x - 2, corner_y + 2),
             ]
         }
         CornerDirection::SE => {
@@ -213,7 +192,6 @@ fn leads_to_hidden_area(
                 (corner_x + 1, corner_y + 1),
                 (corner_x + 2, corner_y + 1),
                 (corner_x + 1, corner_y + 2),
-                (corner_x + 2, corner_y + 2),
             ]
         }
     };
