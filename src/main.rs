@@ -489,7 +489,7 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nC: copy grid to clipboard\nT: run tests\nEsc: close window",
+            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nC: copy grid to clipboard\nEsc: close window",
             self.observer_x,
             self.observer_y,
             self.visible_cells.len()
@@ -524,14 +524,6 @@ async fn main() {
             state.copy_to_clipboard();
         }
 
-        // Run tests on T key
-        if is_key_pressed(KeyCode::T) {
-            println!("\n===== Running Tests =====");
-            run_all_tests();
-            println!("\n");
-            run_standard_tests();
-        }
-
         // Close window on Escape
         if is_key_pressed(KeyCode::Escape) {
             break;
@@ -541,5 +533,91 @@ async fn main() {
         state.draw();
 
         next_frame().await
+    }
+}
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    #[test]
+    fn json_validation_tests() {
+        let test_dir = "./test_data";
+        let mut passed = 0;
+
+        if let Ok(entries) = fs::read_dir(test_dir) {
+            let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
+            entries.sort_by_key(|e| e.file_name());
+
+            for entry in entries {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Ok(test_data) = load_test(&path) {
+                        let (all_passed, failed_variant, missing_count, extra_count) = run_test(&test_data);
+
+                        if all_passed {
+                            passed += 1;
+                        } else {
+                            let variant = failed_variant.unwrap_or_else(|| "unknown".to_string());
+                            panic!(
+                                "Test '{}' failed [{}] (missing: {}, extra: {})",
+                                test_data.test_name, variant, missing_count, extra_count
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("All {} JSON validation tests passed", passed);
+    }
+
+    #[test]
+    fn standard_format_tests() {
+        let test_dir = "./test_data/standard";
+        let mut passed = 0;
+
+        if let Ok(entries) = fs::read_dir(test_dir) {
+            let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
+            entries.sort_by_key(|e| e.file_name());
+
+            for entry in entries {
+                let path = entry.path();
+
+                // Skip markdown files and directories
+                if path.extension().and_then(|s| s.to_str()) == Some("md") || path.is_dir() {
+                    continue;
+                }
+
+                let test_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown");
+
+                match parse_standard_test(&path) {
+                    Ok((grid, start_x, start_y, expected_visible)) => {
+                        let actual_visible = raycast(&grid, start_x, start_y);
+
+                        let missing: Vec<_> = expected_visible.difference(&actual_visible).copied().collect();
+                        let extra: Vec<_> = actual_visible.difference(&expected_visible).copied().collect();
+
+                        let test_passed = missing.is_empty() && extra.is_empty();
+
+                        if test_passed {
+                            passed += 1;
+                        } else {
+                            panic!(
+                                "Test '{}' failed (missing: {}, extra: {})",
+                                test_name, missing.len(), extra.len()
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        panic!("Test '{}' failed to parse: {}", test_name, e);
+                    }
+                }
+            }
+        }
+
+        println!("All {} standard format tests passed", passed);
     }
 }
