@@ -68,7 +68,7 @@
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "git-widget-placeholder": "corners",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/jan/hobby/RustGame3/test_data/standard",
+    "last_opened_file_path": "/home/jan/hobby/RustGame3/test_data/corners",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -82,6 +82,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/test_data/corners" />
       <recent name="$PROJECT_DIR$/test_data/standard" />
     </key>
   </component>
@@ -166,7 +167,7 @@
       <workItem from="1760732640419" duration="24812000" />
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
-      <workItem from="1760796207505" duration="8009000" />
+      <workItem from="1760796207505" duration="9394000" />
     </task>
     <servers />
   </component>
