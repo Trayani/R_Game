@@ -1,0 +1,4 @@
+s... start
+■ ... blocked cell
+□ ... free cell
+o.... visible free cell

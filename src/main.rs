@@ -3,6 +3,7 @@ mod grid;
 mod ray;
 mod raycast;
 
+use arboard::Clipboard;
 use grid::Grid;
 use macroquad::prelude::*;
 use raycast::raycast;
@@ -170,6 +171,42 @@ impl VisState {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y);
     }
 
+    fn grid_to_string(&self) -> String {
+        let mut result = String::new();
+
+        for y in 0..self.grid.rows {
+            for x in 0..self.grid.cols {
+                let symbol = if x == self.observer_x && y == self.observer_y {
+                    's' // Start position
+                } else if self.grid.is_blocked(x, y) {
+                    '■' // Blocked cell
+                } else {
+                    '□' // Free cell
+                };
+                result.push(symbol);
+            }
+            result.push('\n');
+        }
+
+        result
+    }
+
+    fn copy_to_clipboard(&self) {
+        let grid_string = self.grid_to_string();
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                if let Err(e) = clipboard.set_text(&grid_string) {
+                    println!("Failed to copy to clipboard: {}", e);
+                } else {
+                    println!("Grid layout copied to clipboard!");
+                }
+            }
+            Err(e) => {
+                println!("Failed to access clipboard: {}", e);
+            }
+        }
+    }
+
     fn draw(&self) {
         clear_background(Color::from_rgba(30, 30, 30, 255));
 
@@ -196,7 +233,7 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nT: run tests\nEsc: close window",
+            "Observer: ({}, {})\nVisible cells: {}\nLeft click: toggle obstacle\nRight click: move observer\nC: copy grid to clipboard\nT: run tests\nEsc: close window",
             self.observer_x,
             self.observer_y,
             self.visible_cells.len()
@@ -222,6 +259,11 @@ async fn main() {
         {
             let (mouse_x, mouse_y) = mouse_position();
             state.handle_click(mouse_x, mouse_y);
+        }
+
+        // Copy grid to clipboard on C key
+        if is_key_pressed(KeyCode::C) {
+            state.copy_to_clipboard();
         }
 
         // Run tests on T key
