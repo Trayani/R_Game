@@ -25,8 +25,8 @@ impl VisState {
             observer_x,
             observer_y,
             visible_cells,
-            cell_width: 10.0,
-            cell_height: 7.0,
+            cell_width: 20.0,
+            cell_height: 15.0,
         }
     }
 
