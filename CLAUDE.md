@@ -15,10 +15,7 @@ cargo build
 # Run the visual demo (interactive grid editor)
 cargo run
 
-# Run all tests (console output)
-cargo run -- --test
-
-# Run Rust unit tests
+# Run all tests
 cargo test
 ```
 
@@ -26,7 +23,7 @@ cargo test
 
 - **Left click**: Toggle obstacle at cell
 - **Right click**: Move observer to cell
-- **T key**: Run all validation tests
+- **C key**: Copy grid to clipboard
 - **Esc key**: Close window
 
 ## Architecture
@@ -63,10 +60,10 @@ The raycasting system is based on a cone-tracing algorithm ported from C#. The a
   - `process_cone()`: Handles cone expansion and splitting
   - `find_all_segments_in_range()`: Identifies walkable segments in a row
 
-- **`main.rs`**: Visual demo and test runner
+- **`main.rs`**: Visual demo and test utilities
   - `VisState`: Interactive visualization state
-  - `run_all_tests()`: Validates against JSON test data
-  - Test data structure matches C# export format
+  - Test helper functions for loading and flipping test data
+  - Integration tests validate against JSON and standard format test data
 
 ### Test Data Format
 

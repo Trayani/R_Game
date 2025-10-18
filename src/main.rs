@@ -176,56 +176,6 @@ fn run_test(test_data: &RaycastTestData) -> (bool, Option<String>, usize, usize)
     (true, None, 0, 0)
 }
 
-/// Run all tests from the test_data directory
-fn run_all_tests() {
-    let test_dir = "./test_data";
-    let mut passed = 0;
-    let mut failed = 0;
-    let mut failures = Vec::new();
-
-    println!("Running raycasting tests from {} (4 variants per test)\n", test_dir);
-
-    if let Ok(entries) = fs::read_dir(test_dir) {
-        let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
-        entries.sort_by_key(|e| e.file_name());
-
-        for entry in entries {
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(test_data) = load_test(&path) {
-                    let (all_passed, failed_variant, missing_count, extra_count) = run_test(&test_data);
-
-                    if all_passed {
-                        passed += 1;
-                        println!("✓ {} (all 4 variants pass)", test_data.test_name);
-                    } else {
-                        failed += 1;
-                        let variant = failed_variant.unwrap_or_else(|| "unknown".to_string());
-                        println!(
-                            "✗ {} [{}] (missing: {}, extra: {})",
-                            test_data.test_name, variant, missing_count, extra_count
-                        );
-
-                        failures.push(format!("{} [{}]", test_data.test_name, variant));
-                    }
-                }
-            }
-        }
-    }
-
-    println!("\n========================================");
-    println!("Test Results: {} passed, {} failed", passed, failed);
-    println!("Total variants tested: {}", passed * 4);
-    println!("========================================");
-
-    if !failures.is_empty() {
-        println!("\nFailed tests:");
-        for name in failures {
-            println!("  - {}", name);
-        }
-    }
-}
-
 /// Parse a standard format test file
 /// Format:
 /// - s: start position (observer)
@@ -394,106 +344,6 @@ fn flip_standard_both(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSe
     (new_grid, new_start_x, new_start_y, new_expected)
 }
 
-/// Run standard format tests from test_data/standard directory
-fn run_standard_tests() {
-    let test_dir = "./test_data/standard";
-    let mut passed = 0;
-    let mut failed = 0;
-    let mut failures = Vec::new();
-
-    println!("Running standard format tests from {}\n", test_dir);
-
-    if let Ok(entries) = fs::read_dir(test_dir) {
-        let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
-        entries.sort_by_key(|e| e.file_name());
-
-        for entry in entries {
-            let path = entry.path();
-
-            // Skip the STANDARD_TESTS.md file
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                continue;
-            }
-
-            // Skip directories
-            if path.is_dir() {
-                continue;
-            }
-
-            let test_name = path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown");
-
-            match parse_standard_test(&path) {
-                Ok((grid, start_x, start_y, expected_visible)) => {
-                    // Test all 4 variants
-                    let variants = vec![
-                        ("original", (grid.clone(), start_x, start_y, expected_visible.clone())),
-                        ("h_flip", flip_standard_horizontal(&grid, start_x, start_y, &expected_visible)),
-                        ("v_flip", flip_standard_vertical(&grid, start_x, start_y, &expected_visible)),
-                        ("hv_flip", flip_standard_both(&grid, start_x, start_y, &expected_visible)),
-                    ];
-
-                    let mut all_passed = true;
-                    let mut failed_variant = String::new();
-                    let mut variant_missing = 0;
-                    let mut variant_extra = 0;
-
-                    for (variant_name, (variant_grid, variant_x, variant_y, variant_expected)) in variants {
-                        let actual_visible = raycast(&variant_grid, variant_x, variant_y);
-                        let missing: Vec<_> = variant_expected.difference(&actual_visible).copied().collect();
-                        let extra: Vec<_> = actual_visible.difference(&variant_expected).copied().collect();
-
-                        if !missing.is_empty() || !extra.is_empty() {
-                            all_passed = false;
-                            failed_variant = variant_name.to_string();
-                            variant_missing = missing.len();
-                            variant_extra = extra.len();
-
-                            // Debug first failed test
-                            if failures.is_empty() {
-                                println!("\n[DEBUG] First failed test: {} [{}]", test_name, variant_name);
-                                println!("Expected {} cells, got {}", variant_expected.len(), actual_visible.len());
-                                println!("Missing cells: {:?}", missing);
-                                println!("Extra cells: {:?}", extra);
-                            }
-                            break;
-                        }
-                    }
-
-                    if all_passed {
-                        passed += 1;
-                        println!("✓ {} (all 4 variants pass)", test_name);
-                    } else {
-                        failed += 1;
-                        println!(
-                            "✗ {} [{}] (missing: {}, extra: {})",
-                            test_name, failed_variant, variant_missing, variant_extra
-                        );
-                        failures.push(format!("{} [{}]", test_name, failed_variant));
-                    }
-                }
-                Err(e) => {
-                    failed += 1;
-                    println!("✗ {} (parse error: {})", test_name, e);
-                    failures.push(test_name.to_string());
-                }
-            }
-        }
-    }
-
-    println!("\n========================================");
-    println!("Standard Test Results: {} passed, {} failed", passed, failed);
-    println!("========================================");
-
-    if !failures.is_empty() {
-        println!("\nFailed tests:");
-        for name in failures {
-            println!("  - {}", name);
-        }
-    }
-}
-
 /// Visualization state
 struct VisState {
     grid: Grid,
@@ -516,8 +366,8 @@ impl VisState {
             observer_x,
             observer_y,
             visible_cells,
-            cell_width: 20.0,
-            cell_height: 12.0,
+            cell_width: 10.0,
+            cell_height: 7.0,
         }
     }
 
@@ -689,15 +539,6 @@ impl VisState {
 
 #[macroquad::main("RustGame3 - Raycasting")]
 async fn main() {
-    // Check command line arguments
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && args[1] == "--test" {
-        run_all_tests();
-        println!("\n");
-        run_standard_tests();
-        return;
-    }
-
     let mut state = VisState::new();
 
     loop {
