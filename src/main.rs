@@ -316,6 +316,84 @@ fn parse_standard_test(path: &Path) -> Result<(Grid, i32, i32, HashSet<i32>), Bo
     Ok((grid, start_x, start_y, expected_visible))
 }
 
+/// Flip standard test data horizontally
+fn flip_standard_horizontal(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    let mut blocked_cells = Vec::new();
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_x = grid.cols - 1 - x;
+                blocked_cells.push(coords_to_cell_id(new_x, y, grid.cols));
+            }
+        }
+    }
+
+    let new_grid = Grid::with_blocked(grid.rows, grid.cols, &blocked_cells);
+    let new_start_x = grid.cols - 1 - start_x;
+    let new_expected: HashSet<i32> = expected.iter()
+        .map(|&cell_id| {
+            let (x, y) = cell_id_to_coords(cell_id, grid.cols);
+            let new_x = grid.cols - 1 - x;
+            coords_to_cell_id(new_x, y, grid.cols)
+        })
+        .collect();
+
+    (new_grid, new_start_x, start_y, new_expected)
+}
+
+/// Flip standard test data vertically
+fn flip_standard_vertical(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    let mut blocked_cells = Vec::new();
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_y = grid.rows - 1 - y;
+                blocked_cells.push(coords_to_cell_id(x, new_y, grid.cols));
+            }
+        }
+    }
+
+    let new_grid = Grid::with_blocked(grid.rows, grid.cols, &blocked_cells);
+    let new_start_y = grid.rows - 1 - start_y;
+    let new_expected: HashSet<i32> = expected.iter()
+        .map(|&cell_id| {
+            let (x, y) = cell_id_to_coords(cell_id, grid.cols);
+            let new_y = grid.rows - 1 - y;
+            coords_to_cell_id(x, new_y, grid.cols)
+        })
+        .collect();
+
+    (new_grid, start_x, new_start_y, new_expected)
+}
+
+/// Flip standard test data both horizontally and vertically
+fn flip_standard_both(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    let mut blocked_cells = Vec::new();
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_x = grid.cols - 1 - x;
+                let new_y = grid.rows - 1 - y;
+                blocked_cells.push(coords_to_cell_id(new_x, new_y, grid.cols));
+            }
+        }
+    }
+
+    let new_grid = Grid::with_blocked(grid.rows, grid.cols, &blocked_cells);
+    let new_start_x = grid.cols - 1 - start_x;
+    let new_start_y = grid.rows - 1 - start_y;
+    let new_expected: HashSet<i32> = expected.iter()
+        .map(|&cell_id| {
+            let (x, y) = cell_id_to_coords(cell_id, grid.cols);
+            let new_x = grid.cols - 1 - x;
+            let new_y = grid.rows - 1 - y;
+            coords_to_cell_id(new_x, new_y, grid.cols)
+        })
+        .collect();
+
+    (new_grid, new_start_x, new_start_y, new_expected)
+}
+
 /// Run standard format tests from test_data/standard directory
 fn run_standard_tests() {
     let test_dir = "./test_data/standard";
@@ -348,32 +426,51 @@ fn run_standard_tests() {
 
             match parse_standard_test(&path) {
                 Ok((grid, start_x, start_y, expected_visible)) => {
-                    let actual_visible = raycast(&grid, start_x, start_y);
+                    // Test all 4 variants
+                    let variants = vec![
+                        ("original", (grid.clone(), start_x, start_y, expected_visible.clone())),
+                        ("h_flip", flip_standard_horizontal(&grid, start_x, start_y, &expected_visible)),
+                        ("v_flip", flip_standard_vertical(&grid, start_x, start_y, &expected_visible)),
+                        ("hv_flip", flip_standard_both(&grid, start_x, start_y, &expected_visible)),
+                    ];
 
-                    let missing: Vec<_> = expected_visible.difference(&actual_visible).copied().collect();
-                    let extra: Vec<_> = actual_visible.difference(&expected_visible).copied().collect();
+                    let mut all_passed = true;
+                    let mut failed_variant = String::new();
+                    let mut variant_missing = 0;
+                    let mut variant_extra = 0;
 
-                    let test_passed = missing.is_empty() && extra.is_empty();
+                    for (variant_name, (variant_grid, variant_x, variant_y, variant_expected)) in variants {
+                        let actual_visible = raycast(&variant_grid, variant_x, variant_y);
+                        let missing: Vec<_> = variant_expected.difference(&actual_visible).copied().collect();
+                        let extra: Vec<_> = actual_visible.difference(&variant_expected).copied().collect();
 
-                    if test_passed {
+                        if !missing.is_empty() || !extra.is_empty() {
+                            all_passed = false;
+                            failed_variant = variant_name.to_string();
+                            variant_missing = missing.len();
+                            variant_extra = extra.len();
+
+                            // Debug first failed test
+                            if failures.is_empty() {
+                                println!("\n[DEBUG] First failed test: {} [{}]", test_name, variant_name);
+                                println!("Expected {} cells, got {}", variant_expected.len(), actual_visible.len());
+                                println!("Missing cells: {:?}", missing);
+                                println!("Extra cells: {:?}", extra);
+                            }
+                            break;
+                        }
+                    }
+
+                    if all_passed {
                         passed += 1;
-                        println!("✓ {}", test_name);
+                        println!("✓ {} (all 4 variants pass)", test_name);
                     } else {
                         failed += 1;
                         println!(
-                            "✗ {} (missing: {}, extra: {})",
-                            test_name, missing.len(), extra.len()
+                            "✗ {} [{}] (missing: {}, extra: {})",
+                            test_name, failed_variant, variant_missing, variant_extra
                         );
-
-                        // Debug first failed test
-                        if failures.is_empty() {
-                            println!("\n[DEBUG] First failed test: {}", test_name);
-                            println!("Expected {} cells, got {}", expected_visible.len(), actual_visible.len());
-                            println!("Missing cells: {:?}", missing);
-                            println!("Extra cells: {:?}", extra);
-                        }
-
-                        failures.push(test_name.to_string());
+                        failures.push(format!("{} [{}]", test_name, failed_variant));
                     }
                 }
                 Err(e) => {
@@ -623,21 +720,28 @@ mod integration_tests {
 
                 match parse_standard_test(&path) {
                     Ok((grid, start_x, start_y, expected_visible)) => {
-                        let actual_visible = raycast(&grid, start_x, start_y);
+                        // Test all 4 variants
+                        let variants = vec![
+                            ("original", (grid.clone(), start_x, start_y, expected_visible.clone())),
+                            ("h_flip", flip_standard_horizontal(&grid, start_x, start_y, &expected_visible)),
+                            ("v_flip", flip_standard_vertical(&grid, start_x, start_y, &expected_visible)),
+                            ("hv_flip", flip_standard_both(&grid, start_x, start_y, &expected_visible)),
+                        ];
 
-                        let missing: Vec<_> = expected_visible.difference(&actual_visible).copied().collect();
-                        let extra: Vec<_> = actual_visible.difference(&expected_visible).copied().collect();
+                        for (variant_name, (variant_grid, variant_x, variant_y, variant_expected)) in variants {
+                            let actual_visible = raycast(&variant_grid, variant_x, variant_y);
+                            let missing: Vec<_> = variant_expected.difference(&actual_visible).copied().collect();
+                            let extra: Vec<_> = actual_visible.difference(&variant_expected).copied().collect();
 
-                        let test_passed = missing.is_empty() && extra.is_empty();
-
-                        if test_passed {
-                            passed += 1;
-                        } else {
-                            panic!(
-                                "Test '{}' failed (missing: {}, extra: {})",
-                                test_name, missing.len(), extra.len()
-                            );
+                            if !missing.is_empty() || !extra.is_empty() {
+                                panic!(
+                                    "Test '{}' [{}] failed (missing: {}, extra: {})",
+                                    test_name, variant_name, missing.len(), extra.len()
+                                );
+                            }
                         }
+
+                        passed += 1;
                     }
                     Err(e) => {
                         panic!("Test '{}' failed to parse: {}", test_name, e);
