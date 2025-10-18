@@ -161,42 +161,40 @@ fn leads_to_hidden_area(
     _observer_x: i32,
     _observer_y: i32,
 ) -> bool {
-    // For each corner direction, check the cells "beyond" the corner
-    // that should be hidden if this corner blocks the view
-
+    // Check cells "beyond" the corner - further in the corner's direction
+    // Use a wider search pattern to catch hidden areas
     let check_positions = match dir {
-        CornerDirection::NW => {
-            // Check cells to the northwest beyond the corner
-            vec![
-                (corner_x - 1, corner_y - 1), // diagonal
-                (corner_x - 2, corner_y - 1), // further west
-                (corner_x - 1, corner_y - 2), // further north
-            ]
-        }
-        CornerDirection::NE => {
-            vec![
-                (corner_x + 1, corner_y - 1),
-                (corner_x + 2, corner_y - 1),
-                (corner_x + 1, corner_y - 2),
-            ]
-        }
-        CornerDirection::SW => {
-            vec![
-                (corner_x - 1, corner_y + 1),
-                (corner_x - 2, corner_y + 1),
-                (corner_x - 1, corner_y + 2),
-            ]
-        }
-        CornerDirection::SE => {
-            vec![
-                (corner_x + 1, corner_y + 1),
-                (corner_x + 2, corner_y + 1),
-                (corner_x + 1, corner_y + 2),
-            ]
-        }
+        CornerDirection::NW => vec![
+            (corner_x - 2, corner_y - 1),
+            (corner_x - 1, corner_y - 2),
+            (corner_x - 2, corner_y - 2),
+            (corner_x - 3, corner_y - 1),
+            (corner_x - 1, corner_y - 3),
+        ],
+        CornerDirection::NE => vec![
+            (corner_x + 2, corner_y - 1),
+            (corner_x + 1, corner_y - 2),
+            (corner_x + 2, corner_y - 2),
+            (corner_x + 3, corner_y - 1),
+            (corner_x + 1, corner_y - 3),
+        ],
+        CornerDirection::SW => vec![
+            (corner_x - 2, corner_y + 1),
+            (corner_x - 1, corner_y + 2),
+            (corner_x - 2, corner_y + 2),
+            (corner_x - 3, corner_y + 1),
+            (corner_x - 1, corner_y + 3),
+        ],
+        CornerDirection::SE => vec![
+            (corner_x + 2, corner_y + 1),
+            (corner_x + 1, corner_y + 2),
+            (corner_x + 2, corner_y + 2),
+            (corner_x + 3, corner_y + 1),
+            (corner_x + 1, corner_y + 3),
+        ],
     };
 
-    // If any of the "beyond" cells are free but NOT visible, this corner leads to hidden area
+    // If any of these cells are walkable but not visible, corner leads to hidden area
     for (x, y) in check_positions {
         if x >= 0 && x < grid.cols && y >= 0 && y < grid.rows {
             let cell_id = grid.get_id(x, y);

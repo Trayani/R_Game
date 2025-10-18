@@ -76,23 +76,29 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
     println!("Expected {} interesting corners", interesting.len());
 
     // Verify interesting corners (marked with ▲)
+    let mut missing_interesting = 0;
     for &(x, y) in &interesting {
         if !interesting_positions.contains(&(x, y)) {
             println!("MISSING interesting corner at ({}, {})", x, y);
+            missing_interesting += 1;
         }
     }
 
     // Verify non-interesting corners are NOT in interesting set
+    let mut false_non_interesting = 0;
     for &(x, y) in &non_interesting {
         if interesting_positions.contains(&(x, y)) {
             println!("FALSE POSITIVE: non-interesting corner at ({}, {}) marked as interesting", x, y);
+            false_non_interesting += 1;
         }
     }
 
     // Verify non-visible corners are NOT detected as interesting
+    let mut false_non_visible = 0;
     for &(x, y) in &non_visible {
         if interesting_positions.contains(&(x, y)) {
             println!("FALSE POSITIVE: non-visible corner at ({}, {}) marked as interesting", x, y);
+            false_non_visible += 1;
         }
         // Also verify they're not visible
         let cell_id = grid.get_id(x, y);
@@ -100,9 +106,15 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
                 "Corner marked 'u' at ({}, {}) should not be visible", x, y);
     }
 
-    // For now, just verify we detected SOME corners
-    // The exact matching will be refined as we understand the spec better
-    assert!(!interesting_positions.is_empty(), "Should detect at least some interesting corners");
+    println!("\nTest Results:");
+    println!("Missing interesting (▲): {}/{}", missing_interesting, interesting.len());
+    println!("False positive non-interesting (n): {}", false_non_interesting);
+    println!("False positive non-visible (u): {}", false_non_visible);
+
+    // Strict assertions based on CORNERS.md spec
+    assert_eq!(missing_interesting, 0, "All corners marked ▲ should be detected as interesting");
+    assert_eq!(false_non_interesting, 0, "Corners marked 'n' should NOT be detected as interesting");
+    assert_eq!(false_non_visible, 0, "Corners marked 'u' should NOT be detected as interesting");
 }
 
 #[test]
