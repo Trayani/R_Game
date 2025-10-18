@@ -199,6 +199,8 @@ impl VisState {
                     println!("Failed to copy to clipboard: {}", e);
                 } else {
                     println!("Grid layout copied to clipboard!");
+                    // Keep clipboard alive for a moment to ensure clipboard managers can capture it
+                    std::thread::sleep(std::time::Duration::from_millis(100));
                 }
             }
             Err(e) => {
