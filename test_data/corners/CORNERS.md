@@ -7,15 +7,14 @@ In grid  with width:4, height: 3 and blocked at blocked cell at (2,2) and (3,2),
 corners are (0,0), (4,0), (0,3) , (4,3)
 
 So, whether a cell is corner or not is independent of observer's position.
-But the observer is interested only in corners that  ARE visible AND
-lead to directions that are not further visible
+But the observer is interested only in corners that  ARE within the observer's vision AND
+lead to directions that are not further visible (**behind the corner**)
 
 s... overver
 ■ .. blocked
 ▲ ... interesting corner
 n ... non-interesting corner
 u ... non-visible corner (cannot be seen)
-
 
 
 □□□□□□□□□□□□□□□□□□□□□▲□□□□□□□
@@ -31,23 +30,5 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
 □▲□n□□□□□□□□□□□□□□□■□□□□□□□□□
 □□■□□□□□□□□□□□□□□□▲□u□□□□□□□□
 □u□▲□□□□□□▲□▲□□□□□□□□□□□□□□□□
-□□□□□□□□□□□■□□□□□□□□□□□□□□□□□
-□□□□□□□□□□u□u□□□□□□□□□□□□□□□□
-
-
-
-□□□□□□□□□□□□□□□□□□□□□c□□□□□□□
-n□□□□c□□□□u□u□□□□□□□□□■□□□□□□
-□■■■■□□□□□□■□□□□□□□□□□■□□□□□□
-c□□□□n□□□□c□c□□□□□□□□□■□□□□□□
-□□□□□□□□□□□□□□□□□□□□□□□c□□□□□
-u□c□□□□□□□□□□□□□□□□□□□□□□c□u□
-□■□□□□□□□□□s□□□□□□□□□□□□□□■□□
-u□c□□□□□□□□□□□□□□□□□□□□□□c□u□
-□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
-□□□□□□□□□□□□□□□□□□n□c□□□□□□□□
-□c□n□□□□□□□□□□□□□□□■□□□□□□□□□
-□□■□□□□□□□□□□□□□□□c□u□□□□□□□□
-□u□c□□□□□□c□c□□□□□□□□□□□□□□□□
 □□□□□□□□□□□■□□□□□□□□□□□□□□□□□
 □□□□□□□□□□u□u□□□□□□□□□□□□□□□□
