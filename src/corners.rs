@@ -152,6 +152,10 @@ pub fn filter_interesting_corners(
 }
 
 /// Check if a corner direction leads to an area that's not visible (behind the corner)
+///
+/// A corner is interesting if at least one of its two cardinal directions is NOT visible.
+/// If both cardinal directions are visible, you can already see both ways around the corner,
+/// so it doesn't lead to unexplored areas.
 fn leads_to_hidden_area(
     grid: &Grid,
     corner_x: i32,
@@ -161,50 +165,36 @@ fn leads_to_hidden_area(
     _observer_x: i32,
     _observer_y: i32,
 ) -> bool {
-    // Check cells "beyond" the corner - further in the corner's direction
-    // Use a wider search pattern to catch hidden areas
-    let check_positions = match dir {
-        CornerDirection::NW => vec![
-            (corner_x - 2, corner_y - 1),
-            (corner_x - 1, corner_y - 2),
-            (corner_x - 2, corner_y - 2),
-            (corner_x - 3, corner_y - 1),
-            (corner_x - 1, corner_y - 3),
-        ],
-        CornerDirection::NE => vec![
-            (corner_x + 2, corner_y - 1),
-            (corner_x + 1, corner_y - 2),
-            (corner_x + 2, corner_y - 2),
-            (corner_x + 3, corner_y - 1),
-            (corner_x + 1, corner_y - 3),
-        ],
-        CornerDirection::SW => vec![
-            (corner_x - 2, corner_y + 1),
-            (corner_x - 1, corner_y + 2),
-            (corner_x - 2, corner_y + 2),
-            (corner_x - 3, corner_y + 1),
-            (corner_x - 1, corner_y + 3),
-        ],
-        CornerDirection::SE => vec![
-            (corner_x + 2, corner_y + 1),
-            (corner_x + 1, corner_y + 2),
-            (corner_x + 2, corner_y + 2),
-            (corner_x + 3, corner_y + 1),
-            (corner_x + 1, corner_y + 3),
-        ],
+    // Get the two cardinal direction cells for this corner
+    let (cardinal1_x, cardinal1_y, cardinal2_x, cardinal2_y) = match dir {
+        CornerDirection::NW => (corner_x, corner_y - 1, corner_x - 1, corner_y), // North, West
+        CornerDirection::NE => (corner_x, corner_y - 1, corner_x + 1, corner_y), // North, East
+        CornerDirection::SW => (corner_x, corner_y + 1, corner_x - 1, corner_y), // South, West
+        CornerDirection::SE => (corner_x, corner_y + 1, corner_x + 1, corner_y), // South, East
     };
 
-    // If any of these cells are walkable but not visible, corner leads to hidden area
-    for (x, y) in check_positions {
-        if x >= 0 && x < grid.cols && y >= 0 && y < grid.rows {
-            let cell_id = grid.get_id(x, y);
-            if !grid.is_blocked(x, y) && !visible_cells.contains(&cell_id) {
-                return true;
-            }
+    // Check if each cardinal direction is visible (and walkable)
+    let cardinal1_visible = {
+        if cardinal1_x >= 0 && cardinal1_x < grid.cols && cardinal1_y >= 0 && cardinal1_y < grid.rows {
+            !grid.is_blocked(cardinal1_x, cardinal1_y) &&
+            visible_cells.contains(&grid.get_id(cardinal1_x, cardinal1_y))
+        } else {
+            false // Out of bounds counts as not visible
         }
-    }
+    };
 
-    false
+    let cardinal2_visible = {
+        if cardinal2_x >= 0 && cardinal2_x < grid.cols && cardinal2_y >= 0 && cardinal2_y < grid.rows {
+            !grid.is_blocked(cardinal2_x, cardinal2_y) &&
+            visible_cells.contains(&grid.get_id(cardinal2_x, cardinal2_y))
+        } else {
+            false // Out of bounds counts as not visible
+        }
+    };
+
+    // Corner is interesting if at least one cardinal direction is NOT visible
+    // (meaning it leads to unexplored areas)
+    !cardinal1_visible || !cardinal2_visible
 }
 
 #[cfg(test)]
