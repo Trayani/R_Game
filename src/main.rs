@@ -236,25 +236,53 @@ fn parse_standard_test(path: &Path) -> Result<(Grid, i32, i32, HashSet<i32>), Bo
     let contents = fs::read_to_string(path)?;
     let lines: Vec<&str> = contents.lines().collect();
 
-    // Find non-empty lines
-    let non_empty_lines: Vec<&str> = lines.iter()
+    // Find non-empty lines that are valid grid rows
+    let all_non_empty: Vec<&str> = lines.iter()
         .copied()
         .filter(|line| !line.trim().is_empty())
         .collect();
 
-    if non_empty_lines.is_empty() {
+    if all_non_empty.is_empty() {
         return Err("No non-empty lines found in test file".into());
     }
 
-    let grid_rows = non_empty_lines.len() as i32;
-    let grid_cols = non_empty_lines[0].chars().count() as i32;
+    // Determine grid width from first line
+    let grid_cols = all_non_empty[0].chars().count() as i32;
+
+    // Valid grid characters
+    let valid_chars = ['s', '■', '□', 'o', ' '];
+
+    // Collect only valid grid rows (same width and valid characters)
+    let mut grid_lines = Vec::new();
+    for line in all_non_empty {
+        let line_width = line.chars().count() as i32;
+
+        // Stop if line width doesn't match expected grid width
+        if line_width != grid_cols {
+            break;
+        }
+
+        // Stop if line contains invalid characters
+        let has_invalid = line.chars().any(|c| !valid_chars.contains(&c));
+        if has_invalid {
+            break;
+        }
+
+        grid_lines.push(line);
+    }
+
+    if grid_lines.is_empty() {
+        return Err("No valid grid lines found in test file".into());
+    }
+
+    let grid_rows = grid_lines.len() as i32;
 
     let mut blocked_cells = Vec::new();
     let mut start_x = -1;
     let mut start_y = -1;
     let mut expected_visible = HashSet::new();
 
-    for (y, line) in non_empty_lines.iter().enumerate() {
+    for (y, line) in grid_lines.iter().enumerate() {
         for (x, ch) in line.chars().enumerate() {
             let cell_id = x as i32 + (y as i32) * grid_cols;
 

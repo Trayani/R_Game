@@ -210,11 +210,15 @@ fn process_cone(
         let range_start = border_x_l.max(cone.curr_l_start_x);
         let range_end = border_x_r.min(cone.curr_l_end_x);
 
+        // Only add visible cells if there are any in this row
+        // Continue processing even if range_start > range_end (narrow cone may reopen on subsequent rows)
         if cone.curr_l_y >= 0 && cone.curr_l_y < grid.rows && range_start <= range_end {
             lanes[cone.curr_l_y as usize].push((range_start + 1, range_end + 1));
-        } else {
+        } else if cone.curr_l_y < 0 || cone.curr_l_y >= grid.rows {
+            // Out of bounds - stop processing
             break;
         }
+        // If range_start > range_end but still in bounds, continue (cone may reopen)
 
         // === C# lines 108-109: prevL = currL ===
         cone.prev_l_start_x = cone.curr_l_start_x;
