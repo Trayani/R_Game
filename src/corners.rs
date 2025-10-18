@@ -68,15 +68,15 @@ pub fn detect_all_corners(grid: &Grid) -> Vec<Corner> {
 /// Check if cell (x,y) is a NW corner
 /// NW corner: can turn from North→West or West→North around this cell
 /// This happens when:
-/// - North OR West is walkable (at least one direction to turn from/to)
+/// - North AND West are BOTH walkable (need both directions to turn between them)
 /// - NW diagonal is blocked/boundary (obstacle around which to turn)
 fn check_nw_corner(grid: &Grid, x: i32, y: i32, corner: &mut Corner) {
     let north_free = !grid.is_blocked(x, y - 1);
     let west_free = !grid.is_blocked(x - 1, y);
     let nw_blocked = grid.is_blocked(x - 1, y - 1);
 
-    // Can turn if at least one cardinal direction is free AND diagonal is blocked
-    if (north_free || west_free) && nw_blocked {
+    // Can turn if BOTH cardinal directions are free AND diagonal is blocked
+    if north_free && west_free && nw_blocked {
         corner.add_direction(CornerDirection::NW);
     }
 }
@@ -87,7 +87,7 @@ fn check_ne_corner(grid: &Grid, x: i32, y: i32, corner: &mut Corner) {
     let east_free = !grid.is_blocked(x + 1, y);
     let ne_blocked = grid.is_blocked(x + 1, y - 1);
 
-    if (north_free || east_free) && ne_blocked {
+    if north_free && east_free && ne_blocked {
         corner.add_direction(CornerDirection::NE);
     }
 }
@@ -98,7 +98,7 @@ fn check_sw_corner(grid: &Grid, x: i32, y: i32, corner: &mut Corner) {
     let west_free = !grid.is_blocked(x - 1, y);
     let sw_blocked = grid.is_blocked(x - 1, y + 1);
 
-    if (south_free || west_free) && sw_blocked {
+    if south_free && west_free && sw_blocked {
         corner.add_direction(CornerDirection::SW);
     }
 }
@@ -109,7 +109,7 @@ fn check_se_corner(grid: &Grid, x: i32, y: i32, corner: &mut Corner) {
     let east_free = !grid.is_blocked(x + 1, y);
     let se_blocked = grid.is_blocked(x + 1, y + 1);
 
-    if (south_free || east_free) && se_blocked {
+    if south_free && east_free && se_blocked {
         corner.add_direction(CornerDirection::SE);
     }
 }
@@ -266,12 +266,13 @@ mod tests {
             println!("  Corner at ({}, {}) with directions: {:?}", c.x, c.y, c.directions);
         }
 
-        // Should detect corners at (0,0), (3,0), (0,2), (3,2)
+        // The actual corners where you can turn around obstacles:
+        // (1,0) with SE - can turn around the block at (2,1)
+        // (1,2) with NE - can turn around the block at (2,1)
         let positions: HashSet<(i32, i32)> = corners.iter().map(|c| (c.x, c.y)).collect();
-        assert!(positions.contains(&(0, 0)), "Should have corner at (0,0)");
-        assert!(positions.contains(&(3, 0)), "Should have corner at (3,0)");
-        assert!(positions.contains(&(0, 2)), "Should have corner at (0,2)");
-        assert!(positions.contains(&(3, 2)), "Should have corner at (3,2)");
+        assert!(positions.contains(&(1, 0)), "Should have corner at (1,0)");
+        assert!(positions.contains(&(1, 2)), "Should have corner at (1,2)");
+        assert_eq!(corners.len(), 2, "Should have exactly 2 corners");
     }
 
     #[test]
