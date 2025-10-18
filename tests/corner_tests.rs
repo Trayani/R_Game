@@ -179,7 +179,7 @@ fn test_2_next_corners() {
 
             match ch {
                 '■' => grid.set_cell(x, y, 1), // Blocked
-                '▲' => expected_corners.push((x, y)), // Expected corner
+                '▲' | '!' => expected_corners.push((x, y)), // Expected corner
                 _ => {} // Free cell
             }
         }
@@ -194,6 +194,9 @@ fn test_2_next_corners() {
         all_corners.iter().map(|c| (c.x, c.y)).collect();
 
     println!("Detected {} corners", detected_positions.len());
+    for corner in &all_corners {
+        println!("  Corner at ({}, {}) with directions: {:?}", corner.x, corner.y, corner.directions);
+    }
 
     // Check each expected corner
     let mut missing = 0;

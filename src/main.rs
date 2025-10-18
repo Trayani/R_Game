@@ -10,7 +10,8 @@ struct VisState {
     observer_x: i32,
     observer_y: i32,
     visible_cells: HashSet<i32>,
-    corners: Vec<Corner>,
+    all_corners: Vec<Corner>,
+    interesting_corners: Vec<Corner>,
     cell_width: f32,
     cell_height: f32,
 }
@@ -23,14 +24,15 @@ impl VisState {
         let visible_cells = raycast(&grid, observer_x, observer_y);
 
         let all_corners = detect_all_corners(&grid);
-        let corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y);
+        let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y);
 
         VisState {
             grid,
             observer_x,
             observer_y,
             visible_cells,
-            corners,
+            all_corners,
+            interesting_corners,
             cell_width: 20.0,
             cell_height: 15.0,
         }
@@ -66,8 +68,8 @@ impl VisState {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y);
 
         // Update corners
-        let all_corners = detect_all_corners(&self.grid);
-        self.corners = filter_interesting_corners(&all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y);
+        self.all_corners = detect_all_corners(&self.grid);
+        self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y);
     }
 
     fn grid_to_string(&self) -> String {
@@ -113,11 +115,22 @@ impl VisState {
 
     fn draw_corners(&self) {
         let corner_size = 6.0; // Size of corner indicator squares
-        let corner_color = BLACK;
 
-        for corner in &self.corners {
+        // Create a set of interesting corner positions for quick lookup
+        let interesting_positions: HashSet<(i32, i32)> =
+            self.interesting_corners.iter().map(|c| (c.x, c.y)).collect();
+
+        // Draw all corners
+        for corner in &self.all_corners {
             let cell_x = corner.x as f32 * self.cell_width;
             let cell_y = corner.y as f32 * self.cell_height;
+
+            // Determine color: white for interesting, yellow for non-interesting
+            let corner_color = if interesting_positions.contains(&(corner.x, corner.y)) {
+                WHITE
+            } else {
+                YELLOW
+            };
 
             // Draw a small square at each corner direction
             for &dir in &corner.directions {
@@ -230,11 +243,12 @@ impl VisState {
 
         // Draw info
         let info = format!(
-            "Observer: ({}, {})\nVisible: {} cells, {} corners\nLeft click: toggle obstacle\nRight hold: move observer\nC: copy grid\nEsc: close",
+            "Observer: ({}, {})\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle\nRight hold: move observer\nC: copy grid | Esc: close",
             self.observer_x,
             self.observer_y,
             self.visible_cells.len(),
-            self.corners.len()
+            self.all_corners.len(),
+            self.interesting_corners.len()
         );
         draw_text(&info, 10.0, 20.0, 20.0, WHITE);
     }
