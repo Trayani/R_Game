@@ -176,12 +176,15 @@ impl VisState {
 
         for y in 0..self.grid.rows {
             for x in 0..self.grid.cols {
+                let cell_id = self.grid.get_id(x, y);
                 let symbol = if x == self.observer_x && y == self.observer_y {
                     's' // Start position
                 } else if self.grid.is_blocked(x, y) {
                     '■' // Blocked cell
+                } else if self.visible_cells.contains(&cell_id) {
+                    'o' // Visible free cell
                 } else {
-                    '□' // Free cell
+                    '□' // Non-visible free cell
                 };
                 result.push(symbol);
             }
