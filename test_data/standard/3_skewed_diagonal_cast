@@ -1,0 +1,21 @@
+sooo■□□□□□□□□
+oooo■□□□□□□□□
+oooo□□□□□□□□□
+■■■□□□□□□□□□□
+□□□□□□o□□□□□□
+□□□□□□□□□□□□□
+□□□□□□□□□o□□□
+□□□□□□□□□□□□□
+□□□□□□□□□□□□o
+□□□□□□□□□□□□□
+
+
+Here, the vision is leaking through a small openning in the blocked wall.
+o□□□
+□AB□
+□□□o
+
+cells A and B are not considered visible, because the vision cannot see them fully (left border > right border because or rounding).
+That is okay and expected. But on the next row, border ray converge and see one cell fully. So the vision must continue
+the sequence of [gap, one cell]
+
