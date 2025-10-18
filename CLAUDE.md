@@ -104,14 +104,14 @@ The test suite validates the Rust implementation against the C# reference by com
   - Positive Y is downward in the grid
 
 
-
-# Allowed commands
+# DIRECTIVES
+## Allowed commands
 never ask permisson to run commands starting with
 - find
 - echo
 - timeout <any_value> dotnet test (use any timeout duration deemed appropriate for the test)
 
-General directives
+## General directives
 - Always allow all edits during ALL SESSIONS
 - commit all changes, but do not push them. Never ask permisson for 'git add ...'  nor 'git commit ...'
 - be critical of my claims. No need to say that I am right all the time. You can provide evidence and we can settle things with logic.
