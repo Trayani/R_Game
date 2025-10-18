@@ -612,11 +612,19 @@ impl VisState {
             }
         }
 
-        // Draw line from observer to mouse position
+        // Draw line from observer to mouse cell center
         let (mouse_x, mouse_y) = mouse_position();
-        let observer_center_x = self.observer_x as f32 * self.cell_size + self.cell_size / 2.0;
-        let observer_center_y = self.observer_y as f32 * self.cell_size + self.cell_size / 2.0;
-        draw_line(observer_center_x, observer_center_y, mouse_x, mouse_y, 2.0, YELLOW);
+        let mouse_grid_x = (mouse_x / self.cell_size) as i32;
+        let mouse_grid_y = (mouse_y / self.cell_size) as i32;
+
+        // Only draw line if mouse is within grid bounds
+        if mouse_grid_x >= 0 && mouse_grid_x < self.grid.cols && mouse_grid_y >= 0 && mouse_grid_y < self.grid.rows {
+            let observer_center_x = self.observer_x as f32 * self.cell_size + self.cell_size / 2.0;
+            let observer_center_y = self.observer_y as f32 * self.cell_size + self.cell_size / 2.0;
+            let mouse_center_x = mouse_grid_x as f32 * self.cell_size + self.cell_size / 2.0;
+            let mouse_center_y = mouse_grid_y as f32 * self.cell_size + self.cell_size / 2.0;
+            draw_line(observer_center_x, observer_center_y, mouse_center_x, mouse_center_y, 2.0, YELLOW);
+        }
 
         // Draw info
         let info = format!(
