@@ -155,3 +155,82 @@ fn test_1_base_corners() {
     // For now, allow some tolerance as we refine the algorithm
     assert!(interesting_positions.len() > 0, "Should detect at least some corners");
 }
+
+#[test]
+fn test_2_next_corners() {
+    let test_data = std::fs::read_to_string("test_data/corners/2_next.txt")
+        .expect("Failed to read 2_next.txt");
+
+    // Parse grid - no observer needed, just test corner detection
+    let lines: Vec<&str> = test_data.trim().lines()
+        .filter(|line| !line.is_empty() && !line.contains("no observer"))
+        .collect();
+
+    let rows = lines.len() as i32;
+    let cols = if rows > 0 { lines[0].chars().count() as i32 } else { 0 };
+
+    let mut grid = Grid::new(rows, cols);
+    let mut expected_corners = Vec::new();
+
+    for (y, line) in lines.iter().enumerate() {
+        for (x, ch) in line.chars().enumerate() {
+            let x = x as i32;
+            let y = y as i32;
+
+            match ch {
+                '■' => grid.set_cell(x, y, 1), // Blocked
+                '▲' => expected_corners.push((x, y)), // Expected corner
+                _ => {} // Free cell
+            }
+        }
+    }
+
+    println!("Grid size: {}x{}", cols, rows);
+    println!("Expected {} corners", expected_corners.len());
+
+    // Detect all corners (no observer needed)
+    let all_corners = detect_all_corners(&grid);
+    let detected_positions: HashSet<(i32, i32)> =
+        all_corners.iter().map(|c| (c.x, c.y)).collect();
+
+    println!("Detected {} corners", detected_positions.len());
+
+    // Check each expected corner
+    let mut missing = 0;
+    for &(x, y) in &expected_corners {
+        if !detected_positions.contains(&(x, y)) {
+            println!("MISSING corner at ({}, {})", x, y);
+
+            // Debug: check what's around this position
+            println!("  North: blocked={}", grid.is_blocked(x, y - 1));
+            println!("  South: blocked={}", grid.is_blocked(x, y + 1));
+            println!("  East:  blocked={}", grid.is_blocked(x + 1, y));
+            println!("  West:  blocked={}", grid.is_blocked(x - 1, y));
+            println!("  NW:    blocked={}", grid.is_blocked(x - 1, y - 1));
+            println!("  NE:    blocked={}", grid.is_blocked(x + 1, y - 1));
+            println!("  SW:    blocked={}", grid.is_blocked(x - 1, y + 1));
+            println!("  SE:    blocked={}", grid.is_blocked(x + 1, y + 1));
+
+            missing += 1;
+        }
+    }
+
+    // Check for false positives
+    let mut false_positives = 0;
+    for corner in &all_corners {
+        if !expected_corners.contains(&(corner.x, corner.y)) {
+            println!("FALSE POSITIVE: corner at ({}, {}) with directions {:?}",
+                     corner.x, corner.y, corner.directions);
+            false_positives += 1;
+        }
+    }
+
+    println!("\nSummary:");
+    println!("Expected: {}", expected_corners.len());
+    println!("Detected: {}", detected_positions.len());
+    println!("Missing: {}", missing);
+    println!("False positives: {}", false_positives);
+
+    assert_eq!(missing, 0, "Should detect all expected corners");
+    assert_eq!(false_positives, 0, "Should not have false positive corners");
+}
