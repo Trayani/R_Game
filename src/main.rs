@@ -500,7 +500,8 @@ struct VisState {
     observer_x: i32,
     observer_y: i32,
     visible_cells: HashSet<i32>,
-    cell_size: f32,
+    cell_width: f32,
+    cell_height: f32,
 }
 
 impl VisState {
@@ -515,13 +516,14 @@ impl VisState {
             observer_x,
             observer_y,
             visible_cells,
-            cell_size: 30.0,
+            cell_width: 30.0,
+            cell_height: 20.0,
         }
     }
 
     fn handle_click(&mut self, mouse_x: f32, mouse_y: f32) {
-        let grid_x = (mouse_x / self.cell_size) as i32;
-        let grid_y = (mouse_y / self.cell_size) as i32;
+        let grid_x = (mouse_x / self.cell_width) as i32;
+        let grid_y = (mouse_y / self.cell_height) as i32;
 
         if grid_x >= 0 && grid_x < self.grid.cols && grid_y >= 0 && grid_y < self.grid.rows {
             let cell_id = self.grid.get_id(grid_x, grid_y);
@@ -595,8 +597,8 @@ impl VisState {
         for y in 0..self.grid.rows {
             for x in 0..self.grid.cols {
                 let cell_id = self.grid.get_id(x, y);
-                let px = x as f32 * self.cell_size;
-                let py = y as f32 * self.cell_size;
+                let px = x as f32 * self.cell_width;
+                let py = y as f32 * self.cell_height;
 
                 let color = if x == self.observer_x && y == self.observer_y {
                     BLUE // Observer
@@ -608,21 +610,21 @@ impl VisState {
                     Color::from_rgba(60, 60, 60, 255) // Not visible
                 };
 
-                draw_rectangle(px, py, self.cell_size - 1.0, self.cell_size - 1.0, color);
+                draw_rectangle(px, py, self.cell_width - 1.0, self.cell_height - 1.0, color);
             }
         }
 
         // Draw line from observer to mouse cell center
         let (mouse_x, mouse_y) = mouse_position();
-        let mouse_grid_x = (mouse_x / self.cell_size) as i32;
-        let mouse_grid_y = (mouse_y / self.cell_size) as i32;
+        let mouse_grid_x = (mouse_x / self.cell_width) as i32;
+        let mouse_grid_y = (mouse_y / self.cell_height) as i32;
 
         // Only draw line if mouse is within grid bounds
         if mouse_grid_x >= 0 && mouse_grid_x < self.grid.cols && mouse_grid_y >= 0 && mouse_grid_y < self.grid.rows {
-            let observer_center_x = self.observer_x as f32 * self.cell_size + self.cell_size / 2.0;
-            let observer_center_y = self.observer_y as f32 * self.cell_size + self.cell_size / 2.0;
-            let mouse_center_x = mouse_grid_x as f32 * self.cell_size + self.cell_size / 2.0;
-            let mouse_center_y = mouse_grid_y as f32 * self.cell_size + self.cell_size / 2.0;
+            let observer_center_x = self.observer_x as f32 * self.cell_width + self.cell_width / 2.0;
+            let observer_center_y = self.observer_y as f32 * self.cell_height + self.cell_height / 2.0;
+            let mouse_center_x = mouse_grid_x as f32 * self.cell_width + self.cell_width / 2.0;
+            let mouse_center_y = mouse_grid_y as f32 * self.cell_height + self.cell_height / 2.0;
 
             // Draw center line
             draw_line(observer_center_x, observer_center_y, mouse_center_x, mouse_center_y, 2.0, YELLOW);
@@ -633,16 +635,16 @@ impl VisState {
 
             if dx != 0.0 || dy != 0.0 {
                 // Get all four corners of observer cell
-                let obs_left = self.observer_x as f32 * self.cell_size;
-                let obs_right = (self.observer_x + 1) as f32 * self.cell_size;
-                let obs_top = self.observer_y as f32 * self.cell_size;
-                let obs_bottom = (self.observer_y + 1) as f32 * self.cell_size;
+                let obs_left = self.observer_x as f32 * self.cell_width;
+                let obs_right = (self.observer_x + 1) as f32 * self.cell_width;
+                let obs_top = self.observer_y as f32 * self.cell_height;
+                let obs_bottom = (self.observer_y + 1) as f32 * self.cell_height;
 
                 // Get all four corners of mouse cell
-                let mouse_left = mouse_grid_x as f32 * self.cell_size;
-                let mouse_right = (mouse_grid_x + 1) as f32 * self.cell_size;
-                let mouse_top = mouse_grid_y as f32 * self.cell_size;
-                let mouse_bottom = (mouse_grid_y + 1) as f32 * self.cell_size;
+                let mouse_left = mouse_grid_x as f32 * self.cell_width;
+                let mouse_right = (mouse_grid_x + 1) as f32 * self.cell_width;
+                let mouse_top = mouse_grid_y as f32 * self.cell_height;
+                let mouse_bottom = (mouse_grid_y + 1) as f32 * self.cell_height;
 
                 // Find which corners are on opposite sides of the center line
                 // Using cross product to determine which side each corner is on
