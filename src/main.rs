@@ -13,7 +13,7 @@ use std::fs;
 use std::path::Path;
 
 /// Test data structure matching C# JSON export format
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct RaycastTestData {
     #[serde(rename = "testName")]
     test_name: String,
@@ -39,8 +39,105 @@ fn load_test(path: &Path) -> Result<RaycastTestData, Box<dyn std::error::Error>>
     Ok(test_data)
 }
 
-/// Run a single test
-fn run_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, HashSet<i32>) {
+/// Helper functions for coordinate transformation
+fn cell_id_to_coords(cell_id: i32, cols: i32) -> (i32, i32) {
+    let x = cell_id % cols;
+    let y = cell_id / cols;
+    (x, y)
+}
+
+fn coords_to_cell_id(x: i32, y: i32, cols: i32) -> i32 {
+    x + y * cols
+}
+
+/// Flip test horizontally (mirror left-right)
+fn flip_test_horizontal(test: &RaycastTestData) -> RaycastTestData {
+    let mut flipped = RaycastTestData {
+        test_name: format!("{}_h_flip", test.test_name),
+        grid_rows: test.grid_rows,
+        grid_cols: test.grid_cols,
+        blocked_cells: Vec::new(),
+        start_x: test.grid_cols - 1 - test.start_x,
+        start_y: test.start_y,
+        expected_visible: Vec::new(),
+        log: Vec::new(),
+    };
+
+    for &cell_id in &test.blocked_cells {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_x = test.grid_cols - 1 - x;
+        flipped.blocked_cells.push(coords_to_cell_id(new_x, y, test.grid_cols));
+    }
+
+    for &cell_id in &test.expected_visible {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_x = test.grid_cols - 1 - x;
+        flipped.expected_visible.push(coords_to_cell_id(new_x, y, test.grid_cols));
+    }
+
+    flipped
+}
+
+/// Flip test vertically (mirror top-bottom)
+fn flip_test_vertical(test: &RaycastTestData) -> RaycastTestData {
+    let mut flipped = RaycastTestData {
+        test_name: format!("{}_v_flip", test.test_name),
+        grid_rows: test.grid_rows,
+        grid_cols: test.grid_cols,
+        blocked_cells: Vec::new(),
+        start_x: test.start_x,
+        start_y: test.grid_rows - 1 - test.start_y,
+        expected_visible: Vec::new(),
+        log: Vec::new(),
+    };
+
+    for &cell_id in &test.blocked_cells {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_y = test.grid_rows - 1 - y;
+        flipped.blocked_cells.push(coords_to_cell_id(x, new_y, test.grid_cols));
+    }
+
+    for &cell_id in &test.expected_visible {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_y = test.grid_rows - 1 - y;
+        flipped.expected_visible.push(coords_to_cell_id(x, new_y, test.grid_cols));
+    }
+
+    flipped
+}
+
+/// Flip test both horizontally and vertically
+fn flip_test_both(test: &RaycastTestData) -> RaycastTestData {
+    let mut flipped = RaycastTestData {
+        test_name: format!("{}_hv_flip", test.test_name),
+        grid_rows: test.grid_rows,
+        grid_cols: test.grid_cols,
+        blocked_cells: Vec::new(),
+        start_x: test.grid_cols - 1 - test.start_x,
+        start_y: test.grid_rows - 1 - test.start_y,
+        expected_visible: Vec::new(),
+        log: Vec::new(),
+    };
+
+    for &cell_id in &test.blocked_cells {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_x = test.grid_cols - 1 - x;
+        let new_y = test.grid_rows - 1 - y;
+        flipped.blocked_cells.push(coords_to_cell_id(new_x, new_y, test.grid_cols));
+    }
+
+    for &cell_id in &test.expected_visible {
+        let (x, y) = cell_id_to_coords(cell_id, test.grid_cols);
+        let new_x = test.grid_cols - 1 - x;
+        let new_y = test.grid_rows - 1 - y;
+        flipped.expected_visible.push(coords_to_cell_id(new_x, new_y, test.grid_cols));
+    }
+
+    flipped
+}
+
+/// Run a single test variant
+fn run_single_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, HashSet<i32>) {
     let grid = Grid::with_blocked(
         test_data.grid_rows,
         test_data.grid_cols,
@@ -58,6 +155,27 @@ fn run_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, H
     (passed, missing.len(), extra.len(), expected_set.clone(), actual_visible.clone())
 }
 
+/// Run a test with all 4 variants (original, h_flip, v_flip, hv_flip)
+/// Returns (all_passed, failed_variant_name_if_any, missing_count, extra_count)
+fn run_test(test_data: &RaycastTestData) -> (bool, Option<String>, usize, usize) {
+    // Test all 4 variants
+    let variants = vec![
+        ("original", test_data.clone()),
+        ("h_flip", flip_test_horizontal(test_data)),
+        ("v_flip", flip_test_vertical(test_data)),
+        ("hv_flip", flip_test_both(test_data)),
+    ];
+
+    for (variant_name, variant_test) in variants {
+        let (passed, missing_count, extra_count, _, _) = run_single_test(&variant_test);
+        if !passed {
+            return (false, Some(variant_name.to_string()), missing_count, extra_count);
+        }
+    }
+
+    (true, None, 0, 0)
+}
+
 /// Run all tests from the test_data directory
 fn run_all_tests() {
     let test_dir = "./test_data";
@@ -65,7 +183,7 @@ fn run_all_tests() {
     let mut failed = 0;
     let mut failures = Vec::new();
 
-    println!("Running raycasting tests from {}\n", test_dir);
+    println!("Running raycasting tests from {} (4 variants per test)\n", test_dir);
 
     if let Ok(entries) = fs::read_dir(test_dir) {
         let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
@@ -75,31 +193,20 @@ fn run_all_tests() {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Ok(test_data) = load_test(&path) {
-                    let (test_passed, missing_count, extra_count, expected, actual) = run_test(&test_data);
+                    let (all_passed, failed_variant, missing_count, extra_count) = run_test(&test_data);
 
-                    if test_passed {
+                    if all_passed {
                         passed += 1;
-                        println!("✓ {}", test_data.test_name);
+                        println!("✓ {} (all 4 variants pass)", test_data.test_name);
                     } else {
                         failed += 1;
+                        let variant = failed_variant.unwrap_or_else(|| "unknown".to_string());
                         println!(
-                            "✗ {} (missing: {}, extra: {})",
-                            test_data.test_name, missing_count, extra_count
+                            "✗ {} [{}] (missing: {}, extra: {})",
+                            test_data.test_name, variant, missing_count, extra_count
                         );
 
-                        // Debug first failed test
-                        if failures.is_empty() {
-                            println!("\n[DEBUG] First failed test: {}", test_data.test_name);
-                            println!("Expected {} cells, got {}", expected.len(), actual.len());
-                            println!("C# log lines:");
-                            for line in &test_data.log {
-                                if line.contains("PATH_FINDER") {
-                                    println!("  {}", line);
-                                }
-                            }
-                        }
-
-                        failures.push(test_data.test_name.clone());
+                        failures.push(format!("{} [{}]", test_data.test_name, variant));
                     }
                 }
             }
@@ -108,6 +215,7 @@ fn run_all_tests() {
 
     println!("\n========================================");
     println!("Test Results: {} passed, {} failed", passed, failed);
+    println!("Total variants tested: {}", passed * 4);
     println!("========================================");
 
     if !failures.is_empty() {
