@@ -1,22 +1,19 @@
 
 
-s... start
-■ ... blocked cell
-□ ... free cell
-o.... visible free cell
 
 
-ooooooooo□□□□□□□□□□□
+
+oooooooooooooooooooo
+osoooooooooooooooooo
+oooooo■□□□□□□□□□□□□□
 oooooo□□□□□□□□□□□□□□
-oosooo■□□□□□□□□□□□□□
-oooooo□□□□□□□□□□□□□□
-oooo■□□□o□□□□□□□□□□□
+oooo■□□o□□□□□□□□□□□□
+oooo□□□□□o□□□□□□□□□□
 oooo□□□□□□□o□□□□□□□□
-oooo□□□□□□□□□□o□□□□□
-oooo□□□□□□□□□□□□□o□□
-ooooo□□□□□□□□□□□□□□□
-ooooo□□□□□□□□□□□□□□□
-ooooo□□□□□□□□□□□□□□□
+ooooo□□□□□□□□o□□□□□□
+ooooo□□□□□□□□□□o□□□□
+oooooo□□□□□□□□□□□o□□
+oooooo□□□□□□□□□□□□□o
 
 
 

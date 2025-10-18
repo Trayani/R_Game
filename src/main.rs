@@ -118,6 +118,149 @@ fn run_all_tests() {
     }
 }
 
+/// Parse a standard format test file
+/// Format:
+/// - s: start position (observer)
+/// - ■: blocked cell
+/// - □: free cell
+/// - o: visible free cell
+fn parse_standard_test(path: &Path) -> Result<(Grid, i32, i32, HashSet<i32>), Box<dyn std::error::Error>> {
+    let contents = fs::read_to_string(path)?;
+    let lines: Vec<&str> = contents.lines().collect();
+
+    // Find non-empty lines
+    let non_empty_lines: Vec<&str> = lines.iter()
+        .copied()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+
+    if non_empty_lines.is_empty() {
+        return Err("No non-empty lines found in test file".into());
+    }
+
+    let grid_rows = non_empty_lines.len() as i32;
+    let grid_cols = non_empty_lines[0].chars().count() as i32;
+
+    let mut blocked_cells = Vec::new();
+    let mut start_x = -1;
+    let mut start_y = -1;
+    let mut expected_visible = HashSet::new();
+
+    for (y, line) in non_empty_lines.iter().enumerate() {
+        for (x, ch) in line.chars().enumerate() {
+            let cell_id = x as i32 + (y as i32) * grid_cols;
+
+            match ch {
+                's' => {
+                    start_x = x as i32;
+                    start_y = y as i32;
+                    expected_visible.insert(cell_id);
+                }
+                '■' => {
+                    blocked_cells.push(cell_id);
+                }
+                'o' => {
+                    expected_visible.insert(cell_id);
+                }
+                '□' | ' ' => {
+                    // Free cell, do nothing
+                }
+                _ => {
+                    // Unknown character, skip
+                }
+            }
+        }
+    }
+
+    if start_x == -1 || start_y == -1 {
+        return Err("No start position 's' found in test file".into());
+    }
+
+    let grid = Grid::with_blocked(grid_rows, grid_cols, &blocked_cells);
+    Ok((grid, start_x, start_y, expected_visible))
+}
+
+/// Run standard format tests from test_data/standard directory
+fn run_standard_tests() {
+    let test_dir = "./test_data/standard";
+    let mut passed = 0;
+    let mut failed = 0;
+    let mut failures = Vec::new();
+
+    println!("Running standard format tests from {}\n", test_dir);
+
+    if let Ok(entries) = fs::read_dir(test_dir) {
+        let mut entries: Vec<_> = entries.filter_map(Result::ok).collect();
+        entries.sort_by_key(|e| e.file_name());
+
+        for entry in entries {
+            let path = entry.path();
+
+            // Skip the STANDARD_TESTS.md file
+            if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                continue;
+            }
+
+            // Skip directories
+            if path.is_dir() {
+                continue;
+            }
+
+            let test_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown");
+
+            match parse_standard_test(&path) {
+                Ok((grid, start_x, start_y, expected_visible)) => {
+                    let actual_visible = raycast(&grid, start_x, start_y);
+
+                    let missing: Vec<_> = expected_visible.difference(&actual_visible).copied().collect();
+                    let extra: Vec<_> = actual_visible.difference(&expected_visible).copied().collect();
+
+                    let test_passed = missing.is_empty() && extra.is_empty();
+
+                    if test_passed {
+                        passed += 1;
+                        println!("✓ {}", test_name);
+                    } else {
+                        failed += 1;
+                        println!(
+                            "✗ {} (missing: {}, extra: {})",
+                            test_name, missing.len(), extra.len()
+                        );
+
+                        // Debug first failed test
+                        if failures.is_empty() {
+                            println!("\n[DEBUG] First failed test: {}", test_name);
+                            println!("Expected {} cells, got {}", expected_visible.len(), actual_visible.len());
+                            println!("Missing cells: {:?}", missing);
+                            println!("Extra cells: {:?}", extra);
+                        }
+
+                        failures.push(test_name.to_string());
+                    }
+                }
+                Err(e) => {
+                    failed += 1;
+                    println!("✗ {} (parse error: {})", test_name, e);
+                    failures.push(test_name.to_string());
+                }
+            }
+        }
+    }
+
+    println!("\n========================================");
+    println!("Standard Test Results: {} passed, {} failed", passed, failed);
+    println!("========================================");
+
+    if !failures.is_empty() {
+        println!("\nFailed tests:");
+        for name in failures {
+            println!("  - {}", name);
+        }
+    }
+}
+
 /// Visualization state
 struct VisState {
     grid: Grid,
@@ -253,6 +396,8 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 && args[1] == "--test" {
         run_all_tests();
+        println!("\n");
+        run_standard_tests();
         return;
     }
 
@@ -275,6 +420,8 @@ async fn main() {
         if is_key_pressed(KeyCode::T) {
             println!("\n===== Running Tests =====");
             run_all_tests();
+            println!("\n");
+            run_standard_tests();
         }
 
         // Close window on Escape
