@@ -506,9 +506,9 @@ struct VisState {
 
 impl VisState {
     fn new() -> Self {
-        let grid = Grid::new(20, 20);
-        let observer_x = 10;
-        let observer_y = 10;
+        let grid = Grid::new(40, 40);
+        let observer_x = 20;
+        let observer_y = 20;
         let visible_cells = raycast(&grid, observer_x, observer_y);
 
         VisState {
@@ -516,8 +516,8 @@ impl VisState {
             observer_x,
             observer_y,
             visible_cells,
-            cell_width: 30.0,
-            cell_height: 20.0,
+            cell_width: 20.0,
+            cell_height: 12.0,
         }
     }
 
