@@ -4,12 +4,15 @@ o .... visible cell
 c .... interesting corner (also a visible cell)
 
 
+
+
+
 xxoxxxxooooooooooooooox
 xxxxxxxoooooooooooooxxx
 xxxxxxxcoooooooooooxxxx
 xxxxxxbooooooooooxxxxxx
-oxxxxcoooooooooxxxxxxxx
-ooxxboooooooocxxxxxxxxx
+xxxxxcoooooooooxxxxxxxx
+oxxxboooooooocxxxxxxxxx
 ooocoooooooooobxxxxxxxo
 ooooooooooooooocooooooo
 oooooooosoooooooooooooo
@@ -18,9 +21,9 @@ oooooocoooooooooooooooo
 ooooooxbooooooooooooooo
 oooooxxxcoooocooooooooo
 ooooxxxxooobbxxoooooooo
-oooxxxxxcocxxxxxooooooo
+oooxxxxxoocxxxxxooooooo
 ooxxxxxxobxxxxxxxoooooo
-oxxxxxxxoxxxxxxxxxooooo
+oxxxxxxxcxxxxxxxxxooooo
 xxxxxxxxoxxoxxxxxxxxooo
 xxxxxxxxoxxxxxxxxxxxxoo
 xxxxxxxxoxxxxxxxxxxxxxo
