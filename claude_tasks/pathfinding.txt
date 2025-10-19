@@ -13,3 +13,9 @@ When a corner shows up again from the queue, check if it was already processed O
 the potential new distance from a different path. If a better distance is found for already processed corner, it needs to be enqueued again
 
 In the GUI, always display the path between observer and mouse
+
+
+The general principles are :
+- cache to avoid repeated computations
+- maximal peformance
+- absolute precision and consistency. If there are multiple paths with the same distance, sort them , so the result is always deterministic
