@@ -142,8 +142,8 @@ fn flip_messy_y_both(grid: &Grid, obs_x: i32, obs_y: i32,
                      observer_corners: &Vec<(i32, i32)>)
     -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
     let mut new_grid = Grid::new(grid.rows, grid.cols);
-    let new_obs_x = grid.cols - 1 - obs_x;  // Standard horizontal flip
-    let new_obs_y = grid.rows - 1 - obs_y;
+    let new_obs_x = grid.cols - 1 - obs_x;  // Standard h-flip
+    let new_obs_y = grid.rows - obs_y - 2;  // Messy Y v-flip offset
 
     // Flip blocked cells
     for y in 0..grid.rows {

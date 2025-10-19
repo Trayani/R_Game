@@ -1,4 +1,4 @@
-s ... observer on two cells vertically (messy Y position)
+s ... observer on two cells (messy Y position)
 x .... non-visible cell
 o .... visible cell
 c .... interesting corner (also a visible cell)
