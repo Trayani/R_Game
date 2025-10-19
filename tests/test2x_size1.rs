@@ -10,8 +10,8 @@ fn load_test_grid() -> Grid {
         .expect("Failed to load grid2_blocked.json");
     let blocked: Vec<i32> = serde_json::from_str(&json)
         .expect("Failed to parse grid2_blocked.json");
-    // Grid dimensions: 104 cols × 83 rows
-    Grid::with_blocked(83, 104, &blocked)
+    // C# uses Grid.init(rows, cols) = Grid.init(104, 83) = 104 rows × 83 cols
+    Grid::with_blocked(104, 83, &blocked)
 }
 
 // Helper to run pathfinding and validate
@@ -59,7 +59,6 @@ fn assert_path(
 
 // Lines 215-229: test4() calls with messyX=false, messyY=false
 #[test]
-#[ignore]  // Remove after fixing pathfinding
 fn test2x_001_4396_to_1211() {
     // test4(pf, 4396, 1211, 1, true, false, false, 4056, 4310);
     let grid = load_test_grid();
