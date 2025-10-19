@@ -89,23 +89,18 @@ impl CornerCache {
             return corners.clone();
         }
 
-        // Compute corners for this position
-        // For pathfinding, we need ALL visible corners (not just "interesting" ones)
-        // C# computes all corners visible from a position for navigation
+        // Compute interesting corners for this position
+        // These are corners that are partially hidden and lead to unexplored areas
         let visible_cells = raycast(grid, pos.x, pos.y, messy_x, messy_y);
         let all_corners = detect_all_corners(grid);
 
-        // Filter to get ALL corners that are visible (not just interesting/partially hidden)
-        let visible_corners: Vec<Corner> = all_corners.iter()
-            .filter(|corner| {
-                let corner_id = grid.get_id(corner.x, corner.y);
-                visible_cells.contains(&corner_id)
-            })
-            .cloned()
-            .collect();
+        // Filter for interesting corners (partially hidden corners at visibility boundaries)
+        let interesting_corners = filter_interesting_corners(
+            &all_corners, &visible_cells, grid, pos.x, pos.y, messy_x
+        );
 
-        self.cache.insert(pos, (visible_corners.clone(), false));
-        visible_corners
+        self.cache.insert(pos, (interesting_corners.clone(), false));
+        interesting_corners
     }
 
     /// Mark a corner as processed
@@ -147,7 +142,7 @@ pub fn find_path_by_id(
         total_dist += path_positions[i - 1].distance(&path_positions[i]);
     }
 
-    // Return path as-is (waypoints are already in correct forward order)
+    // Return path as-is (Rust builds path forward, C# builds backward then reverses = same result)
     Some((path_ids, total_dist))
 }
 
@@ -192,33 +187,26 @@ pub fn find_path(
         return Some(vec![start, dest]);
     }
 
-    // Step 3: Get ALL visible corners from start (not just "interesting" ones)
-    // C# computes all corners visible from a position for navigation
+    // Step 3: Get interesting corners from start (partially hidden corners that lead to unexplored areas)
     let all_corners = detect_all_corners(grid);
-    let start_visible_corners: Vec<Corner> = all_corners.iter()
-        .filter(|corner| {
-            let corner_id = grid.get_id(corner.x, corner.y);
-            visible_cells.contains(&corner_id)
-        })
-        .cloned()
-        .collect();
+    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
 
     if TRACE_PATHFINDING {
-        println!("[find_path] Start ALL visible corners: {} corners", start_visible_corners.len());
+        println!("[find_path] Start interesting corners: {} corners", interesting_corners.len());
         println!("[find_path] Expected corners in path: 4056=(72,48), 4310=(77,51)");
 
-        let has_4056 = start_visible_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4056);
-        let has_4310 = start_visible_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4310);
+        let has_4056 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4056);
+        let has_4310 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4310);
         println!("[find_path] Has 4056? {}, Has 4310? {}", has_4056, has_4310);
 
-        for (i, corner) in start_visible_corners.iter().enumerate() {
+        for (i, corner) in interesting_corners.iter().enumerate() {
             let id = grid.get_id(corner.x, corner.y);
             if id == 4056 || id == 4310 || i < 5 {
                 println!("  [{}] Corner at ({},{}) = ID {}", i, corner.x, corner.y, id);
             }
         }
-        if start_visible_corners.len() > 5 {
-            println!("  ... and {} more", start_visible_corners.len() - 5);
+        if interesting_corners.len() > 5 {
+            println!("  ... and {} more", interesting_corners.len() - 5);
         }
     }
 
@@ -304,10 +292,10 @@ pub fn find_path(
         // Mark as processed
         cache.mark_processed(pos);
 
-        // Get this corner's visible corners
-        // Special case: if we're at start position, use pre-computed start_visible_corners
+        // Get this corner's interesting corners
+        // Special case: if we're at start position, use pre-computed interesting_corners
         let next_corners = if pos == start {
-            start_visible_corners.clone()
+            interesting_corners.clone()
         } else {
             cache.get_or_compute(pos, grid, messy_x, messy_y)
         };
