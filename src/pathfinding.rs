@@ -186,7 +186,59 @@ pub fn find_path(
         println!("[find_path] Visible cells from start: {} cells", visible_cells.len());
     }
 
-    // Step 2: Early exit - if destination is visible, return direct path
+    // Step 2: Check for same-line special case (start and dest on same row)
+    // This requires special handling when messy flags are set
+    if start_y == dest_y {
+        if TRACE_PATHFINDING {
+            println!("[find_path] Start and dest on same line (Y={})", start_y);
+        }
+
+        // If no messy flags, check if destination is visible for direct path
+        if !messy_x && !messy_y {
+            if visible_positions.contains(&dest) {
+                if TRACE_PATHFINDING {
+                    println!("[find_path] Same line, clean position, dest visible - direct path");
+                }
+                return Some(vec![start, dest]);
+            }
+        }
+
+        // With messy_y, need to check if alignment waypoint is required
+        // This matches C# logic in PathFinder.cs:356-368
+        if messy_y {
+            if TRACE_PATHFINDING {
+                println!("[find_path] Same line with messyY=true - checking if alignment needed");
+            }
+
+            // C# gets line from row BELOW: getLineFromRow(start + grid.cols, size)
+            // We need to find what line segment exists at the row below start
+            // For simplicity, we'll check if the destination can be reached from the messy position
+            // If not, we need an alignment waypoint
+
+            // TODO: Implement proper line segment checking from row below
+            // For now, use simplified logic: only add alignment if dest is NOT visible from messy position
+            if !visible_positions.contains(&dest) {
+                if TRACE_PATHFINDING {
+                    println!("[find_path] Same line messyY: dest not visible from messy, adding alignment waypoint");
+                }
+                let mut path = vec![start, start, dest];  // start, alignment at start, dest
+                return Some(path);
+            } else {
+                if TRACE_PATHFINDING {
+                    println!("[find_path] Same line messyY: dest IS visible from messy, direct path");
+                }
+                return Some(vec![start, dest]);
+            }
+        }
+
+        // With messy_x, similar logic for horizontal alignment
+        if messy_x {
+            // TODO: Implement messyX alignment logic
+            // For now, treat as normal case
+        }
+    }
+
+    // Step 2b: Early exit - if destination is visible, return direct path
     if visible_positions.contains(&dest) {
         if TRACE_PATHFINDING {
             println!("[find_path] Destination is directly visible - returning direct path");
