@@ -22,9 +22,17 @@ cargo test
 ## Visual Demo Controls
 
 - **Left click**: Toggle obstacle at cell
-- **Right click**: Move observer to cell
+- **Right hold**: Move observer continuously (hold right mouse button and move)
 - **C key**: Copy grid to clipboard
 - **Esc key**: Close window
+
+The GUI displays:
+- Blue cells: Observer position
+- Red cells: Blocked/walls
+- Green cells: Visible to observer
+- Dark gray cells: Not visible to observer
+- White squares at cell edges: Interesting corners
+- Yellow squares at cell edges: Non-interesting corners
 
 ## Architecture
 
@@ -60,8 +68,14 @@ The raycasting system is based on a cone-tracing algorithm ported from C#. The a
   - `process_cone()`: Handles cone expansion and splitting
   - `find_all_segments_in_range()`: Identifies walkable segments in a row
 
+- **`corners.rs`**: Corner detection system
+  - `detect_all_corners()`: Finds all corners in the grid (observer-independent)
+  - `filter_interesting_corners()`: Filters for tactically interesting corners
+  - See "Corner Detection" section below for detailed behavior
+
 - **`main.rs`**: Visual demo and test utilities
   - `VisState`: Interactive visualization state
+  - Displays corners with color coding: white=interesting, yellow=non-interesting
   - Test helper functions for loading and flipping test data
   - Integration tests validate against JSON and standard format test data
 
@@ -99,6 +113,78 @@ The test suite validates the Rust implementation against the C# reference by com
   - Grid uses standard (x, y) coordinates
   - Cell IDs are calculated as `x + y * cols`
   - Positive Y is downward in the grid
+
+## Corner Detection
+
+### What is a Corner?
+
+A cell is a **corner** when it is free AND it is possible to travel around it from a vertical to horizontal direction (or vice versa). This is independent of the observer's position.
+
+**Detection logic**: For a free cell to be a corner in a specific direction (NW, NE, SW, SE):
+- **BOTH cardinal directions must be free** (the two sides you'd turn between)
+- **The diagonal must be blocked** (the obstacle you turn around)
+
+Example for NW corner at position (x, y):
+- North cell (x, y-1): must be FREE
+- West cell (x-1, y): must be FREE
+- NW diagonal (x-1, y-1): must be BLOCKED
+- This allows travel from vertical (north) ↔ horizontal (west)
+
+**Important**: A single cell can be a corner in multiple directions simultaneously (e.g., both NW and SE).
+
+### Interesting vs Non-Interesting Corners
+
+**Definition**: A corner is **interesting** if it is visible to the observer AND at least one of its two cardinal directions is NOT visible.
+
+**The Rule**:
+```
+For a corner direction (e.g., NW corner):
+  IF (North is NOT visible) OR (West is NOT visible)
+  THEN corner is interesting
+  ELSE corner is non-interesting
+```
+
+**Why this works**:
+- If **both cardinal directions are visible**: Observer can already see both ways around the corner → no new areas to explore → **NOT interesting**
+- If **at least one direction is hidden**: The corner leads to unexplored areas → **INTERESTING**
+
+**Example from test data**:
+```
+Position (5,3) with NW corner:
+  North (5,2): visible ✓
+  West (4,3): visible ✓
+  → Both visible → NOT interesting
+
+Position (5,1) with SW corner:
+  South (5,2): visible ✓
+  West (4,1): NOT visible ✗
+  → One hidden → IS interesting
+```
+
+### Visual Representation in GUI
+
+The GUI displays corners with color coding:
+- **WHITE squares (6x6 pixels)**: Interesting corners
+- **YELLOW squares (6x6 pixels)**: Non-interesting corners
+
+Corner indicators are drawn at cell edges based on direction:
+- NW corner: top-left of cell
+- NE corner: top-right of cell
+- SW corner: bottom-left of cell
+- SE corner: bottom-right of cell
+
+### Test Data Format (test_data/corners/)
+
+Corner test files use these markers:
+- `s`: observer position
+- `■`: blocked cell
+- `▲`: interesting corner (expected)
+- `n`: non-interesting corner (expected)
+- `u`: non-visible corner (not visible to observer)
+- `o`: visible free cell
+- `□`: non-visible free cell
+
+The test suite validates that the corner detection algorithm matches these expectations with 100% accuracy.
 
 
 # DIRECTIVES
