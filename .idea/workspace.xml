@@ -13,20 +13,13 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/raycast.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/raycast.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/common/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/common/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/corner_tests.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/corner_tests.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/standard_tests.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/standard_tests.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_messy_x.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_messy_x.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_messy_x_analysis.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_messy_x_analysis.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:test" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:dev" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -65,9 +58,9 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Cargo.Run rustgame3.executor": "Debug",
+    "Cargo.Run rustgame3.executor": "Run",
     "Cargo.Test ray.executor": "Debug",
-    "Cargo.test.executor": "Run",
+    "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -97,7 +90,7 @@
       <command value="cargo test" />
     </option>
   </component>
-  <component name="RunManager" selected="Cargo.test">
+  <component name="RunManager" selected="Cargo.Run rustgame3">
     <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="buildProfileId" value="dev" />
       <option name="command" value="run --package rustgame3 --bin rustgame3" />
@@ -134,7 +127,7 @@
       </method>
     </configuration>
     <configuration name="test" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
-      <option name="buildProfileId" value="test" />
+      <option name="buildProfileId" value="dev" />
       <option name="command" value="test" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <envs />
@@ -153,8 +146,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Cargo.test" />
         <item itemvalue="Cargo.Run rustgame3" />
+        <item itemvalue="Cargo.test" />
         <item itemvalue="Cargo.Test ray" />
       </list>
     </recent_temporary>
@@ -173,7 +166,7 @@
       <workItem from="1760732640419" duration="24812000" />
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
-      <workItem from="1760796207505" duration="27954000" />
+      <workItem from="1760796207505" duration="35020000" />
     </task>
     <servers />
   </component>
