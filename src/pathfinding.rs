@@ -131,7 +131,7 @@ pub fn find_path_by_id(
     let path_positions = find_path(grid, start_x, start_y, dest_x, dest_y, messy_x, messy_y)?;
 
     // Convert Position path to cell IDs
-    let path_ids: Vec<i32> = path_positions
+    let mut path_ids: Vec<i32> = path_positions
         .iter()
         .map(|p| grid.get_id(p.x, p.y))
         .collect();
@@ -142,11 +142,18 @@ pub fn find_path_by_id(
         total_dist += path_positions[i - 1].distance(&path_positions[i]);
     }
 
-    // Return path as-is (Rust builds path forward, C# builds backward then reverses = same result)
+    // C# returns waypoints in reversed order: [start, waypointN, ..., waypoint1, dest]
+    // Reverse the middle waypoints (but keep start and dest in place)
+    if path_ids.len() > 2 {
+        let len = path_ids.len();
+        path_ids[1..len - 1].reverse();
+    }
+
     Some((path_ids, total_dist))
 }
 
 /// Find path from start to destination using corner-based pathfinding
+/// Uses bidirectional-style search: marks dest corners as "finished" with known distances
 pub fn find_path(
     grid: &Grid,
     start_x: i32,
@@ -210,25 +217,28 @@ pub fn find_path(
         }
     }
 
-    let targets = determine_targets(&dest, grid);
-    if targets.is_empty() {
+    // Step 4: Bidirectional setup - compute "finished corners" with distances to dest
+    // This matches C# behavior where dest corners are marked as "finished" before search
+    let finished_corners = compute_finished_corners(&dest, grid);
+    if finished_corners.is_empty() {
         if TRACE_PATHFINDING {
-            println!("[find_path] No target corners found - no path possible");
+            println!("[find_path] No finished corners found - no path possible");
         }
-        return None; // No valid targets
+        return None;
     }
 
     if TRACE_PATHFINDING {
-        println!("[find_path] Target corners: {} corners", targets.len());
-        for (i, target) in targets.iter().enumerate().take(5) {
-            println!("  [{}] Target at ({},{}) = ID {}", i, target.x, target.y, grid.get_id(target.x, target.y));
+        println!("[find_path] Finished corners: {} corners", finished_corners.len());
+        for (i, (pos, dist)) in finished_corners.iter().enumerate().take(5) {
+            println!("  [{}] Finished at ({},{}) = ID {}, dist_to_dest={:.2}",
+                     i, pos.x, pos.y, grid.get_id(pos.x, pos.y), dist);
         }
-        if targets.len() > 5 {
-            println!("  ... and {} more", targets.len() - 5);
+        if finished_corners.len() > 5 {
+            println!("  ... and {} more", finished_corners.len() - 5);
         }
     }
 
-    // Step 4: Initialize search
+    // Step 5: Initialize A* search
     let mut cache = CornerCache::new();
     let mut queue: BinaryHeap<PathNode> = BinaryHeap::new();
     let mut best_distances: HashMap<Position, f64> = HashMap::new();
@@ -245,10 +255,10 @@ pub fn find_path(
     });
 
     if TRACE_PATHFINDING {
-        println!("[find_path] Starting A* from start position");
+        println!("[find_path] Starting A* from start position with bidirectional search");
     }
 
-    // Step 5: Process queue
+    // Step 6: Process queue with bidirectional-style search
     let mut iterations = 0;
     while let Some(node) = queue.pop() {
         iterations += 1;
@@ -259,6 +269,15 @@ pub fn find_path(
                      iterations, pos.x, pos.y, grid.get_id(pos.x, pos.y), node.total_distance);
         }
 
+        // Early termination: if priority >= best found distance, we're done
+        if node.total_distance >= min_distance {
+            if TRACE_PATHFINDING {
+                println!("[A*] Early termination: priority {:.2} >= best {:.2}",
+                         node.total_distance, min_distance);
+            }
+            break;
+        }
+
         // Skip if already processed with better distance
         if let Some(&best_dist) = best_distances.get(&pos) {
             if node.total_distance > best_dist {
@@ -266,21 +285,26 @@ pub fn find_path(
             }
         }
 
-        // Check if this is a target
-        if targets.contains(&pos) {
+        // Check if this is a finished corner (can see destination)
+        if let Some(&finished_dist) = finished_corners.get(&pos) {
+            let total_dist = node.total_distance + finished_dist;
             if TRACE_PATHFINDING {
-                println!("[A*] Found target at ({},{}) = ID {}, dist={:.2}",
-                         pos.x, pos.y, grid.get_id(pos.x, pos.y), node.total_distance);
+                println!("[A*] Found finished corner at ({},{}) = ID {}, finDist={:.2}, total={:.2}",
+                         pos.x, pos.y, grid.get_id(pos.x, pos.y), finished_dist, total_dist);
             }
-            if node.total_distance < min_distance {
-                min_distance = node.total_distance;
+            if total_dist < min_distance {
+                if TRACE_PATHFINDING {
+                    println!("[A*] NEW SHORTEST PATH: old={:.2}, new={:.2}", min_distance, total_dist);
+                }
+                min_distance = total_dist;
                 let mut path = node.path.clone();
-                // Only add dest if target is not already the destination
+                // Add dest to path only if it's not already there (pos != dest)
                 if pos != dest {
                     path.push(dest);
                 }
                 optimal_path = Some(path);
             }
+            // Don't continue - this is like C#'s behavior when finding finished corner
             continue;
         }
 
@@ -294,10 +318,12 @@ pub fn find_path(
 
         // Get this corner's interesting corners
         // Special case: if we're at start position, use pre-computed interesting_corners
+        // IMPORTANT: Messy flags ONLY apply to the start position!
+        // Once we reach any corner, it's grid-aligned, so we use false, false
         let next_corners = if pos == start {
             interesting_corners.clone()
         } else {
-            cache.get_or_compute(pos, grid, messy_x, messy_y)
+            cache.get_or_compute(pos, grid, false, false)
         };
 
         if TRACE_PATHFINDING && iterations <= 10 {
@@ -340,7 +366,48 @@ pub fn find_path(
     optimal_path
 }
 
-/// Determine target corners for pathfinding
+/// Compute "finished corners" - corners that can see the destination with their distances
+/// This implements C#'s bidirectional-style search behavior
+fn compute_finished_corners(dest: &Position, grid: &Grid) -> HashMap<Position, f64> {
+    let mut finished = HashMap::new();
+
+    // Raycast FROM the destination to find which corners can see it
+    let dest_visible = raycast(grid, dest.x, dest.y, false, false);
+
+    // Detect all corners in the grid
+    let all_corners = detect_all_corners(grid);
+
+    // Filter for interesting corners visible from destination
+    let dest_corners = filter_interesting_corners(
+        &all_corners,
+        &dest_visible,
+        grid,
+        dest.x,
+        dest.y,
+        false,
+    );
+
+    // Compute distance from each corner to destination
+    for corner in dest_corners {
+        let corner_pos = Position::new(corner.x, corner.y);
+        let distance = corner_pos.distance(dest);
+        finished.insert(corner_pos, distance);
+    }
+
+    // Check if destination itself is a corner
+    // If so, it's the only finished corner with distance 0
+    for corner in &all_corners {
+        if corner.x == dest.x && corner.y == dest.y {
+            finished.clear();
+            finished.insert(*dest, 0.0);
+            break;
+        }
+    }
+
+    finished
+}
+
+/// Determine target corners for pathfinding (DEPRECATED - use compute_finished_corners)
 /// These are corners from which the destination is visible
 fn determine_targets(dest: &Position, grid: &Grid) -> HashSet<Position> {
     let mut targets = HashSet::new();

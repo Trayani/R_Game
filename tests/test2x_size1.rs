@@ -233,8 +233,11 @@ fn test2x_018_4829_to_4750() {
 fn test2x_019_4829_to_4750_with_blocks() {
     // test(4829, 4750, 1, 4917, 5083, 5247, 5245);
     let mut grid = load_test_grid();
-    grid.set_cell(4998 % 104, 4998 / 104, 1);  // setBlocked
-    grid.set_cell(4999 % 104, 4999 / 104, 1);
+    // CORRECT: Use get_coords to get the right x,y coordinates
+    let (x1, y1) = grid.get_coords(4998);
+    let (x2, y2) = grid.get_coords(4999);
+    grid.set_cell(x1, y1, 1);  // setBlocked
+    grid.set_cell(x2, y2, 1);
     assert_path(&grid, 4829, 4750, Some(&[4917, 5083, 5247, 5245]), "019");
 }
 
