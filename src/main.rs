@@ -120,30 +120,45 @@ impl VisState {
     }
 
     /// Get the conservative observer cell for border line drawing.
-    /// Conservative = the observer cell closest to the target, which gives the narrower view cone.
+    /// Conservative = the observer cell in the corner that faces the target direction.
+    /// This gives the narrowest view cone from the messy observer to the target.
     fn get_conservative_observer_cell(&self, target_x: i32, target_y: i32) -> (i32, i32) {
-        // Collect all observer cells
-        let mut observer_cells = vec![(self.observer_x, self.observer_y)];
+        // Calculate direction from observer center to target
+        let center_x = if self.messy_x {
+            self.observer_x as f32 + 0.5  // Center between two cells
+        } else {
+            self.observer_x as f32 + 0.5  // Center of single cell
+        };
 
-        if self.messy_x {
-            observer_cells.push((self.observer_x + 1, self.observer_y));
-        }
-        if self.messy_y {
-            observer_cells.push((self.observer_x, self.observer_y + 1));
-        }
-        if self.messy_x && self.messy_y {
-            observer_cells.push((self.observer_x + 1, self.observer_y + 1));
-        }
+        let center_y = if self.messy_y {
+            self.observer_y as f32 + 0.5  // Center between two cells
+        } else {
+            self.observer_y as f32 + 0.5  // Center of single cell
+        };
 
-        // Find the observer cell with minimum distance to target
-        observer_cells.iter()
-            .min_by_key(|(ox, oy)| {
-                let dx = target_x - ox;
-                let dy = target_y - oy;
-                dx * dx + dy * dy  // Squared distance (no need for sqrt)
-            })
-            .copied()
-            .unwrap()
+        let target_center_x = target_x as f32 + 0.5;
+        let target_center_y = target_y as f32 + 0.5;
+
+        let dx = target_center_x - center_x;
+        let dy = target_center_y - center_y;
+
+        // Determine which observer cell to use based on target direction
+        let use_right = dx >= 0.0;
+        let use_bottom = dy >= 0.0;
+
+        let obs_x = if self.messy_x && use_right {
+            self.observer_x + 1  // Use right cell
+        } else {
+            self.observer_x  // Use left cell
+        };
+
+        let obs_y = if self.messy_y && use_bottom {
+            self.observer_y + 1  // Use bottom cell
+        } else {
+            self.observer_y  // Use top cell
+        };
+
+        (obs_x, obs_y)
     }
 
     fn grid_to_string(&self) -> String {
