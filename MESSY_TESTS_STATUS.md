@@ -4,9 +4,15 @@
 
 Ported 32 messy position pathfinding tests from C# Test2X to Rust.
 
-**Results**: 14 passing (43.75%), 18 failing (56.25%)
+**Results** (After Critical Fix):
+- **28 passing (87.5%)** ✅
+- **4 failing (12.5%)**
 
-These failures are EXPECTED - messy positions have known issues that need investigation.
+**Previous Results** (Before Fix):
+- 14 passing (43.75%)
+- 18 failing (56.25%)
+
+**Improvement**: Fixed 14 additional tests with ONE line change!
 
 ## Test Categories
 
@@ -106,3 +112,40 @@ These tests find a different path than expected:
 ## File Location
 
 `/home/jan/hobby/RustGame3/tests/test2x_size1_messy.rs`
+
+## Critical Fix Applied (2025-10-19)
+
+**Bug**: Intermediate corners were being computed with messy flags from start position.
+
+**Root Cause** (pathfinding.rs:324):
+```rust
+// WRONG - was passing messy flags to ALL intermediate corners:
+cache.get_or_compute(pos, grid, messy_x, messy_y)
+
+// CORRECT - intermediate corners are grid-aligned:
+cache.get_or_compute(pos, grid, false, false)
+```
+
+**Key Insight**: Messy positions ONLY affect the starting/observer position. Once the path reaches any corner, it's grid-aligned!
+
+**Impact**: Fixed 14 tests (43.75% → 87.5% passing rate)
+
+## Remaining Failures (4 tests) - Path Selection Differences
+
+### test2x_messy_024_2679_to_2684
+- Expected: [2679, 2679, 2684] (start appears as waypoint!)
+- Got: [2679, 2684] (direct path)
+
+### test2x_messy_010_6637_to_6552
+- Expected: [6637, 6636, 6637, 6552]
+- Got: [6637, 6636, 6639, 6552]
+
+### test2x_messy_012_5476_to_5556
+- Expected: [5476, 5474, 5476, 5556] (3 waypoints)
+- Got: [5476, 5553, 5968, 5970, 5889, 5891, 5556] (6 waypoints)
+
+### test2x_messy_025_2679_to_2270
+- Expected: [2679, 2269, 2599, 2679, 2270] (4 waypoints)
+- Got: [2679, 2187, ..., 2270] (54 waypoints!)
+
+These are path selection differences, not "no path found" bugs.
