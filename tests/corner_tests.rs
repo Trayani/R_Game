@@ -295,6 +295,159 @@ fn parse_visibility_corner_test(text: &str) -> (Grid, i32, i32, HashSet<(i32, i3
     (grid, observer_x, observer_y, visible_positions, interesting_corners)
 }
 
+/// Flip corner test data horizontally
+fn flip_corner_test_horizontal(grid: &Grid, obs_x: i32, obs_y: i32,
+                                visible: &HashSet<(i32, i32)>,
+                                corners: &Vec<(i32, i32)>)
+    -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>) {
+    let mut new_grid = Grid::new(grid.rows, grid.cols);
+
+    // Flip blocked cells
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_x = grid.cols - 1 - x;
+                new_grid.set_cell(new_x, y, 1);
+            }
+        }
+    }
+
+    // Flip observer
+    let new_obs_x = grid.cols - 1 - obs_x;
+
+    // Flip visible positions
+    let new_visible: HashSet<(i32, i32)> = visible.iter()
+        .map(|&(x, y)| (grid.cols - 1 - x, y))
+        .collect();
+
+    // Flip corner positions
+    let new_corners: Vec<(i32, i32)> = corners.iter()
+        .map(|&(x, y)| (grid.cols - 1 - x, y))
+        .collect();
+
+    (new_grid, new_obs_x, obs_y, new_visible, new_corners)
+}
+
+/// Flip corner test data vertically
+fn flip_corner_test_vertical(grid: &Grid, obs_x: i32, obs_y: i32,
+                              visible: &HashSet<(i32, i32)>,
+                              corners: &Vec<(i32, i32)>)
+    -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>) {
+    let mut new_grid = Grid::new(grid.rows, grid.cols);
+
+    // Flip blocked cells
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_y = grid.rows - 1 - y;
+                new_grid.set_cell(x, new_y, 1);
+            }
+        }
+    }
+
+    // Flip observer
+    let new_obs_y = grid.rows - 1 - obs_y;
+
+    // Flip visible positions
+    let new_visible: HashSet<(i32, i32)> = visible.iter()
+        .map(|&(x, y)| (x, grid.rows - 1 - y))
+        .collect();
+
+    // Flip corner positions
+    let new_corners: Vec<(i32, i32)> = corners.iter()
+        .map(|&(x, y)| (x, grid.rows - 1 - y))
+        .collect();
+
+    (new_grid, obs_x, new_obs_y, new_visible, new_corners)
+}
+
+/// Flip corner test data both horizontally and vertically
+fn flip_corner_test_both(grid: &Grid, obs_x: i32, obs_y: i32,
+                         visible: &HashSet<(i32, i32)>,
+                         corners: &Vec<(i32, i32)>)
+    -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>) {
+    let mut new_grid = Grid::new(grid.rows, grid.cols);
+
+    // Flip blocked cells
+    for y in 0..grid.rows {
+        for x in 0..grid.cols {
+            if grid.is_blocked(x, y) {
+                let new_x = grid.cols - 1 - x;
+                let new_y = grid.rows - 1 - y;
+                new_grid.set_cell(new_x, new_y, 1);
+            }
+        }
+    }
+
+    // Flip observer
+    let new_obs_x = grid.cols - 1 - obs_x;
+    let new_obs_y = grid.rows - 1 - obs_y;
+
+    // Flip visible positions
+    let new_visible: HashSet<(i32, i32)> = visible.iter()
+        .map(|&(x, y)| (grid.cols - 1 - x, grid.rows - 1 - y))
+        .collect();
+
+    // Flip corner positions
+    let new_corners: Vec<(i32, i32)> = corners.iter()
+        .map(|&(x, y)| (grid.cols - 1 - x, grid.rows - 1 - y))
+        .collect();
+
+    (new_grid, new_obs_x, new_obs_y, new_visible, new_corners)
+}
+
+/// Run corner test with a specific variant
+fn run_corner_test_variant(grid: &Grid, obs_x: i32, obs_y: i32,
+                           expected_visible: &HashSet<(i32, i32)>,
+                           expected_interesting: &Vec<(i32, i32)>)
+    -> (usize, usize, usize, usize) {
+    // Run raycasting
+    let visible_cells = raycast(&grid, obs_x, obs_y);
+    let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
+        .map(|&id| grid.get_coords(id))
+        .collect();
+
+    // Check visibility matches
+    let mut missing_visible = 0;
+    let mut false_visible = 0;
+
+    for &(x, y) in expected_visible {
+        if !visible_positions.contains(&(x, y)) {
+            missing_visible += 1;
+        }
+    }
+
+    for &(x, y) in &visible_positions {
+        if !expected_visible.contains(&(x, y)) {
+            false_visible += 1;
+        }
+    }
+
+    // Detect corners
+    let all_corners = detect_all_corners(&grid);
+    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, obs_x, obs_y);
+    let interesting_positions: HashSet<(i32, i32)> =
+        interesting_corners.iter().map(|c| (c.x, c.y)).collect();
+
+    // Check interesting corners
+    let mut missing_interesting = 0;
+    let mut false_interesting = 0;
+
+    for &(x, y) in expected_interesting {
+        if !interesting_positions.contains(&(x, y)) {
+            missing_interesting += 1;
+        }
+    }
+
+    for corner in &interesting_corners {
+        if !expected_interesting.contains(&(corner.x, corner.y)) {
+            false_interesting += 1;
+        }
+    }
+
+    (missing_visible, false_visible, missing_interesting, false_interesting)
+}
+
 #[test]
 fn test_3_case_corners() {
     let test_data = std::fs::read_to_string("test_data/corners/3_case.txt")
@@ -307,77 +460,36 @@ fn test_3_case_corners() {
     println!("Expected {} visible cells", expected_visible.len());
     println!("Expected {} interesting corners", expected_interesting.len());
 
-    // Run raycasting
-    let visible_cells = raycast(&grid, obs_x, obs_y);
-    println!("Detected {} visible cells", visible_cells.len());
+    // Test all 4 variants
+    let variants = vec![
+        ("original", grid.clone(), obs_x, obs_y, expected_visible.clone(), expected_interesting.clone()),
+        {
+            let (g, x, y, v, c) = flip_corner_test_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("h_flip", g, x, y, v, c)
+        },
+        {
+            let (g, x, y, v, c) = flip_corner_test_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("v_flip", g, x, y, v, c)
+        },
+        {
+            let (g, x, y, v, c) = flip_corner_test_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("hv_flip", g, x, y, v, c)
+        },
+    ];
 
-    // Convert visible cell IDs to positions
-    let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
-        .map(|&id| grid.get_coords(id))
-        .collect();
+    for (variant_name, variant_grid, variant_obs_x, variant_obs_y, variant_visible, variant_corners) in variants {
+        let (missing_visible, false_visible, missing_interesting, false_interesting) =
+            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners);
 
-    // Check visibility matches
-    let mut missing_visible = 0;
-    let mut false_visible = 0;
-
-    for &(x, y) in &expected_visible {
-        if !visible_positions.contains(&(x, y)) {
-            println!("MISSING visible cell at ({}, {})", x, y);
-            missing_visible += 1;
+        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 {
+            panic!(
+                "Test 3_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}",
+                variant_name, missing_visible, false_visible, missing_interesting, false_interesting
+            );
         }
     }
 
-    for &(x, y) in &visible_positions {
-        if !expected_visible.contains(&(x, y)) {
-            println!("FALSE POSITIVE visible cell at ({}, {})", x, y);
-            false_visible += 1;
-        }
-    }
-
-    println!("\nVisibility Results:");
-    println!("Missing visible cells: {}", missing_visible);
-    println!("False positive visible cells: {}", false_visible);
-
-    // Detect corners
-    let all_corners = detect_all_corners(&grid);
-    println!("\nTotal corners detected: {}", all_corners.len());
-
-    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, obs_x, obs_y);
-    println!("Interesting corners detected: {}", interesting_corners.len());
-
-    // Convert to positions
-    let interesting_positions: HashSet<(i32, i32)> =
-        interesting_corners.iter().map(|c| (c.x, c.y)).collect();
-
-    // Check interesting corners
-    let mut missing_interesting = 0;
-    let mut false_interesting = 0;
-
-    for &(x, y) in &expected_interesting {
-        if !interesting_positions.contains(&(x, y)) {
-            println!("MISSING interesting corner at ({}, {})", x, y);
-            missing_interesting += 1;
-        }
-    }
-
-    for corner in &interesting_corners {
-        if !expected_interesting.contains(&(corner.x, corner.y)) {
-            println!("FALSE POSITIVE interesting corner at ({}, {})", corner.x, corner.y);
-            false_interesting += 1;
-        }
-    }
-
-    println!("\nInteresting Corner Results:");
-    println!("Missing interesting corners: {}", missing_interesting);
-    println!("False positive interesting corners: {}", false_interesting);
-
-    // Assert visibility is correct
-    assert_eq!(missing_visible, 0, "All expected visible cells should be detected");
-    assert_eq!(false_visible, 0, "No false positive visible cells");
-
-    // Assert interesting corners are correct
-    assert_eq!(missing_interesting, 0, "All expected interesting corners should be detected");
-    assert_eq!(false_interesting, 0, "No false positive interesting corners");
+    println!("All 4 variants passed!");
 }
 
 #[test]
@@ -392,75 +504,34 @@ fn test_4_case_corners() {
     println!("Expected {} visible cells", expected_visible.len());
     println!("Expected {} interesting corners", expected_interesting.len());
 
-    // Run raycasting
-    let visible_cells = raycast(&grid, obs_x, obs_y);
-    println!("Detected {} visible cells", visible_cells.len());
+    // Test all 4 variants
+    let variants = vec![
+        ("original", grid.clone(), obs_x, obs_y, expected_visible.clone(), expected_interesting.clone()),
+        {
+            let (g, x, y, v, c) = flip_corner_test_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("h_flip", g, x, y, v, c)
+        },
+        {
+            let (g, x, y, v, c) = flip_corner_test_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("v_flip", g, x, y, v, c)
+        },
+        {
+            let (g, x, y, v, c) = flip_corner_test_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting);
+            ("hv_flip", g, x, y, v, c)
+        },
+    ];
 
-    // Convert visible cell IDs to positions
-    let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
-        .map(|&id| grid.get_coords(id))
-        .collect();
+    for (variant_name, variant_grid, variant_obs_x, variant_obs_y, variant_visible, variant_corners) in variants {
+        let (missing_visible, false_visible, missing_interesting, false_interesting) =
+            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners);
 
-    // Check visibility matches
-    let mut missing_visible = 0;
-    let mut false_visible = 0;
-
-    for &(x, y) in &expected_visible {
-        if !visible_positions.contains(&(x, y)) {
-            println!("MISSING visible cell at ({}, {})", x, y);
-            missing_visible += 1;
+        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 {
+            panic!(
+                "Test 4_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}",
+                variant_name, missing_visible, false_visible, missing_interesting, false_interesting
+            );
         }
     }
 
-    for &(x, y) in &visible_positions {
-        if !expected_visible.contains(&(x, y)) {
-            println!("FALSE POSITIVE visible cell at ({}, {})", x, y);
-            false_visible += 1;
-        }
-    }
-
-    println!("\nVisibility Results:");
-    println!("Missing visible cells: {}", missing_visible);
-    println!("False positive visible cells: {}", false_visible);
-
-    // Detect corners
-    let all_corners = detect_all_corners(&grid);
-    println!("\nTotal corners detected: {}", all_corners.len());
-
-    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, obs_x, obs_y);
-    println!("Interesting corners detected: {}", interesting_corners.len());
-
-    // Convert to positions
-    let interesting_positions: HashSet<(i32, i32)> =
-        interesting_corners.iter().map(|c| (c.x, c.y)).collect();
-
-    // Check interesting corners
-    let mut missing_interesting = 0;
-    let mut false_interesting = 0;
-
-    for &(x, y) in &expected_interesting {
-        if !interesting_positions.contains(&(x, y)) {
-            println!("MISSING interesting corner at ({}, {})", x, y);
-            missing_interesting += 1;
-        }
-    }
-
-    for corner in &interesting_corners {
-        if !expected_interesting.contains(&(corner.x, corner.y)) {
-            println!("FALSE POSITIVE interesting corner at ({}, {})", corner.x, corner.y);
-            false_interesting += 1;
-        }
-    }
-
-    println!("\nInteresting Corner Results:");
-    println!("Missing interesting corners: {}", missing_interesting);
-    println!("False positive interesting corners: {}", false_interesting);
-
-    // Assert visibility is correct
-    assert_eq!(missing_visible, 0, "All expected visible cells should be detected");
-    assert_eq!(false_visible, 0, "No false positive visible cells");
-
-    // Assert interesting corners are correct
-    assert_eq!(missing_interesting, 0, "All expected interesting corners should be detected");
-    assert_eq!(false_interesting, 0, "No false positive interesting corners");
+    println!("All 4 variants passed!");
 }
