@@ -37,3 +37,7 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
 # MESSY X
 is a state, where the observer is placed on two cells in the same row. His position is no "cleanly" at one cell only.
 That affects vision calculation: ray casting needs to use the cell that is more conservative for given direction and left/right border. 
+Primary learning files: 
+[5_messy_x.txt](5_messy_x.txt)
+[6_messy_x.txt](6_messy_x.txt)
+[7_messy_x2.txt](7_messy_x2.txt)
