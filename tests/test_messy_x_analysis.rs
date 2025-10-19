@@ -76,7 +76,7 @@ fn analyze_messy_x_reci() {
     println!("Observer at ({},{}) + ({},{}) [messy X]", obs_x, obs_y, obs_x+1, obs_y);
 
     // Run messy X raycasting
-    let visible_cells = raycast(&grid, obs_x, obs_y, true);
+    let visible_cells = raycast(&grid, obs_x, obs_y, true, false);
     let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
         .map(|&id| grid.get_coords(id))
         .collect();
@@ -102,7 +102,7 @@ fn analyze_messy_x_reci() {
 
     for corner in &interesting_corners {
         // Run raycast from corner (NOT messy X, just regular single-cell)
-        let corner_visible = raycast(&grid, corner.x, corner.y, false);
+        let corner_visible = raycast(&grid, corner.x, corner.y, false, false);
         let corner_sees: HashSet<(i32, i32)> = corner_visible.iter()
             .map(|&id| grid.get_coords(id))
             .collect();

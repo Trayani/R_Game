@@ -21,7 +21,7 @@ impl VisState {
         let grid = Grid::new(40, 40);
         let observer_x = 20;
         let observer_y = 20;
-        let visible_cells = raycast(&grid, observer_x, observer_y, false);
+        let visible_cells = raycast(&grid, observer_x, observer_y, false, false);
 
         let all_corners = detect_all_corners(&grid);
         let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y, false);
@@ -65,7 +65,7 @@ impl VisState {
     }
 
     fn update_visible(&mut self) {
-        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, false);
+        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, false, false);
 
         // Update corners
         self.all_corners = detect_all_corners(&self.grid);

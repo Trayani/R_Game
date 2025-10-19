@@ -36,7 +36,7 @@ fn standard_format_tests() {
                     ];
 
                     for (variant_name, (variant_grid, variant_x, variant_y, variant_expected)) in variants {
-                        let actual_visible = raycast(&variant_grid, variant_x, variant_y, false);
+                        let actual_visible = raycast(&variant_grid, variant_x, variant_y, false, false);
                         let missing: Vec<_> = variant_expected.difference(&actual_visible).copied().collect();
                         let extra: Vec<_> = actual_visible.difference(&variant_expected).copied().collect();
 

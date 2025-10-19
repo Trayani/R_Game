@@ -59,7 +59,7 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
     let (grid, obs_x, obs_y, interesting, non_interesting, non_visible) = parse_corner_test_grid(test_data);
 
     // Run raycasting to get visible cells
-    let visible_cells = raycast(&grid, obs_x, obs_y, false);
+    let visible_cells = raycast(&grid, obs_x, obs_y, false, false);
 
     // Detect all corners
     let all_corners = detect_all_corners(&grid);
@@ -129,7 +129,7 @@ fn test_1_base_corners() {
     println!("Expected {} interesting corners", interesting.len());
 
     // Run raycasting
-    let visible_cells = raycast(&grid, obs_x, obs_y, false);
+    let visible_cells = raycast(&grid, obs_x, obs_y, false, false);
     println!("Visible cells: {}", visible_cells.len());
 
     // Detect corners
@@ -404,7 +404,7 @@ fn run_corner_test_variant(grid: &Grid, obs_x: i32, obs_y: i32,
                            check_reciprocal: bool)
     -> (usize, usize, usize, usize, usize) {
     // Run raycasting
-    let visible_cells = raycast(&grid, obs_x, obs_y, false);
+    let visible_cells = raycast(&grid, obs_x, obs_y, false, false);
     let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
         .map(|&id| grid.get_coords(id))
         .collect();
@@ -451,7 +451,7 @@ fn run_corner_test_variant(grid: &Grid, obs_x: i32, obs_y: i32,
     let mut reciprocal_failures = 0;
     if check_reciprocal {
         for corner in &interesting_corners {
-            let corner_visible_cells = raycast(&grid, corner.x, corner.y, false);
+            let corner_visible_cells = raycast(&grid, corner.x, corner.y, false, false);
             let corner_visible_positions: HashSet<(i32, i32)> = corner_visible_cells.iter()
                 .map(|&id| grid.get_coords(id))
                 .collect();

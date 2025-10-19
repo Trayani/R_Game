@@ -2,11 +2,11 @@ use rustgame3::{Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners_with_observer_corners};
 use std::collections::HashSet;
 
-/// Parse messy X test format
+/// Parse messy Y test format
 /// Observer is marked with two adjacent 's' cells (observer occupies both)
 /// Returns (grid, observer_x, observer_y, visible_positions, interesting_corners, observer_corners)
 /// observer_x is the leftmost of the two observer cells
-fn parse_messy_x_test(text: &str) -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
+fn parse_messy_y_test(text: &str) -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
     let lines: Vec<&str> = text.trim().lines()
         .filter(|line| !line.is_empty() && !line.starts_with("s ...") && !line.starts_with("b ...")
                 && !line.starts_with("x ...") && !line.starts_with("o ...") && !line.starts_with("c ...") && !line.starts_with("z ..."))
@@ -58,15 +58,15 @@ fn parse_messy_x_test(text: &str) -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(
     (grid, observer_x, observer_y, visible_positions, interesting_corners, observer_corners)
 }
 
-/// Flip messy X test horizontally
-/// For messy X: new_obs_x = cols - obs_x - 2 (to maintain left/right cell ordering)
-fn flip_messy_x_horizontal(grid: &Grid, obs_x: i32, obs_y: i32,
+/// Flip messy Y test horizontally
+/// For messy Y: new_obs_x = cols - obs_x - 2 (to maintain left/right cell ordering)
+fn flip_messy_y_horizontal(grid: &Grid, obs_x: i32, obs_y: i32,
                            visible: &HashSet<(i32, i32)>,
                            corners: &Vec<(i32, i32)>,
                            observer_corners: &Vec<(i32, i32)>)
     -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
     let mut new_grid = Grid::new(grid.rows, grid.cols);
-    let new_obs_x = grid.cols - obs_x - 2;  // Messy X offset formula
+    let new_obs_x = grid.cols - 1 - obs_x;  // Standard horizontal flip
     let new_obs_y = obs_y;
 
     // Flip blocked cells
@@ -97,15 +97,15 @@ fn flip_messy_x_horizontal(grid: &Grid, obs_x: i32, obs_y: i32,
     (new_grid, new_obs_x, new_obs_y, new_visible, new_corners, new_observer_corners)
 }
 
-/// Flip messy X test vertically
-fn flip_messy_x_vertical(grid: &Grid, obs_x: i32, obs_y: i32,
+/// Flip messy Y test vertically
+fn flip_messy_y_vertical(grid: &Grid, obs_x: i32, obs_y: i32,
                          visible: &HashSet<(i32, i32)>,
                          corners: &Vec<(i32, i32)>,
                          observer_corners: &Vec<(i32, i32)>)
     -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
     let mut new_grid = Grid::new(grid.rows, grid.cols);
-    let new_obs_x = obs_x;  // X stays same for vertical flip
-    let new_obs_y = grid.rows - 1 - obs_y;
+    let new_obs_x = obs_x;  // X stays same
+    let new_obs_y = grid.rows - obs_y - 2;  // Messy Y offset formula
 
     // Flip blocked cells
     for y in 0..grid.rows {
@@ -135,14 +135,14 @@ fn flip_messy_x_vertical(grid: &Grid, obs_x: i32, obs_y: i32,
     (new_grid, new_obs_x, new_obs_y, new_visible, new_corners, new_observer_corners)
 }
 
-/// Flip messy X test both horizontally and vertically
-fn flip_messy_x_both(grid: &Grid, obs_x: i32, obs_y: i32,
+/// Flip messy Y test both horizontally and vertically
+fn flip_messy_y_both(grid: &Grid, obs_x: i32, obs_y: i32,
                      visible: &HashSet<(i32, i32)>,
                      corners: &Vec<(i32, i32)>,
                      observer_corners: &Vec<(i32, i32)>)
     -> (Grid, i32, i32, HashSet<(i32, i32)>, Vec<(i32, i32)>, Vec<(i32, i32)>) {
     let mut new_grid = Grid::new(grid.rows, grid.cols);
-    let new_obs_x = grid.cols - obs_x - 2;  // Messy X offset formula
+    let new_obs_x = grid.cols - 1 - obs_x;  // Standard horizontal flip
     let new_obs_y = grid.rows - 1 - obs_y;
 
     // Flip blocked cells
@@ -175,138 +175,9 @@ fn flip_messy_x_both(grid: &Grid, obs_x: i32, obs_y: i32,
 }
 
 #[test]
-fn test_5_messy_x() {
-    let test_data = std::fs::read_to_string("test_data/corners/5_messy_x.txt")
-        .expect("Failed to read 5_messy_x.txt");
-
-    // Extract the messy X test cases (lines after "with messy X")
-    let messy_x_section: Vec<&str> = test_data.lines()
-        .skip_while(|line| !line.contains("with messy X"))
-        .skip(2) // Skip header and empty line
-        .take(4) // Take the 4 test case lines
-        .collect();
-
-    // Each line contains multiple test cases separated by '|'
-    let test_cases: Vec<Vec<&str>> = messy_x_section.iter()
-        .map(|line| line.split('|').map(|s| s.trim()).collect())
-        .collect();
-
-    // Transpose to get individual test cases
-    let num_tests = test_cases[0].len();
-
-    for test_idx in 0..num_tests {
-        // Build test grid from this column
-        let mut test_lines = Vec::new();
-        for row in &test_cases {
-            if test_idx < row.len() && !row[test_idx].is_empty() {
-                test_lines.push(row[test_idx]);
-            }
-        }
-
-        if test_lines.is_empty() {
-            continue;
-        }
-
-        let test_text = test_lines.join("\n");
-
-        let (grid, obs_x, obs_y, expected_visible, expected_interesting, observer_corners) =
-            parse_messy_x_test(&test_text);
-
-        if obs_x == -1 {
-            continue; // No observer found, skip
-        }
-
-        println!("\n=== Messy X Test Case {} ===", test_idx + 1);
-        println!("Grid: {}x{}", grid.cols, grid.rows);
-        println!("Observer at ({}, {}) + ({}, {}) [messy X]", obs_x, obs_y, obs_x + 1, obs_y);
-        println!("Expected {} visible cells", expected_visible.len());
-        println!("Expected {} interesting corners", expected_interesting.len());
-        println!("Expected {} observer corners", observer_corners.len());
-
-        // Test all 4 variants with 3FLIP
-        let variants = vec![
-            ("original", (grid.clone(), obs_x, obs_y, expected_visible.clone(), expected_interesting.clone(), observer_corners.clone())),
-            ("h_flip", flip_messy_x_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-            ("v_flip", flip_messy_x_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-            ("hv_flip", flip_messy_x_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-        ];
-
-        for (variant_name, (variant_grid, variant_obs_x, variant_obs_y, variant_expected_visible, variant_expected_interesting, variant_observer_corners)) in variants {
-            println!("\n  Testing variant: {}", variant_name);
-            println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x + 1, variant_obs_y);
-
-            // Run raycasting with messy_x=true
-            let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, true, false);
-            let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
-                .map(|&id| variant_grid.get_coords(id))
-                .collect();
-
-            // Check visibility
-            let mut missing_visible = 0;
-            let mut false_visible = 0;
-
-            for &(x, y) in &variant_expected_visible {
-                if !visible_positions.contains(&(x, y)) {
-                    println!("    MISSING visible at ({}, {})", x, y);
-                    missing_visible += 1;
-                }
-            }
-
-            for &(x, y) in &visible_positions {
-                if !variant_expected_visible.contains(&(x, y)) {
-                    println!("    FALSE POSITIVE visible at ({}, {})", x, y);
-                    false_visible += 1;
-                }
-            }
-
-            // Detect corners
-            let all_corners = detect_all_corners(&variant_grid);
-            let interesting_corners = filter_interesting_corners_with_observer_corners(
-                &all_corners, &visible_cells, &variant_grid, variant_obs_x, variant_obs_y, true, &variant_observer_corners);
-
-            let interesting_positions: HashSet<(i32, i32)> =
-                interesting_corners.iter().map(|c| (c.x, c.y)).collect();
-
-            // Check corners (including observer corners)
-            let mut all_expected_interesting = variant_expected_interesting.clone();
-            all_expected_interesting.extend(variant_observer_corners.clone());
-
-            let mut missing_corners = 0;
-            let mut false_corners = 0;
-
-            for &(x, y) in &all_expected_interesting {
-                if !interesting_positions.contains(&(x, y)) {
-                    println!("    MISSING corner at ({}, {})", x, y);
-                    missing_corners += 1;
-                }
-            }
-
-            for corner in &interesting_corners {
-                if !all_expected_interesting.contains(&(corner.x, corner.y)) {
-                    println!("    FALSE POSITIVE corner at ({}, {})", corner.x, corner.y);
-                    false_corners += 1;
-                }
-            }
-
-            // Assert test passes
-            assert_eq!(missing_visible, 0, "Test case {} {}: Missing visible cells", test_idx + 1, variant_name);
-            assert_eq!(false_visible, 0, "Test case {} {}: False positive visible cells", test_idx + 1, variant_name);
-            assert_eq!(missing_corners, 0, "Test case {} {}: Missing interesting corners", test_idx + 1, variant_name);
-            assert_eq!(false_corners, 0, "Test case {} {}: False positive interesting corners", test_idx + 1, variant_name);
-
-            println!("  ✓ Variant {} PASSED", variant_name);
-        }
-
-        println!("Test case {} (all 4 variants) PASSED", test_idx + 1);
-    }
-
-    println!("\nAll messy X test cases passed!");
-}
-
-#[test]
-fn test_6_messy_x() {
-    let test_data = std::fs::read_to_string("test_data/corners/6_messy_x.txt")
-        .expect("Failed to read 6_messy_x.txt");
+fn test_6_messy_y() {
+    let test_data = std::fs::read_to_string("test_data/corners/messy_y/6_messy_y.txt")
+        .expect("Failed to read 6_messy_y.txt");
 
     // Skip comment lines and parse the grid
     let grid_lines: Vec<&str> = test_data.lines()
@@ -318,11 +189,11 @@ fn test_6_messy_x() {
     let test_text = grid_lines.join("\n");
 
     let (grid, obs_x, obs_y, expected_visible, expected_interesting, observer_corners) =
-        parse_messy_x_test(&test_text);
+        parse_messy_y_test(&test_text);
 
-    println!("\n=== Test 6_messy_x.txt ===");
+    println!("\n=== Test 6_messy_y.txt ===");
     println!("Grid: {}x{}", grid.cols, grid.rows);
-    println!("Observer at ({}, {}) + ({}, {}) [messy X]", obs_x, obs_y, obs_x + 1, obs_y);
+    println!("Observer at ({}, {}) + ({}, {}) [messy Y]", obs_x, obs_y, obs_x, obs_y + 1);
     println!("Expected {} visible cells", expected_visible.len());
     println!("Expected {} interesting corners", expected_interesting.len());
     println!("Expected {} observer corners", observer_corners.len());
@@ -330,17 +201,17 @@ fn test_6_messy_x() {
     // Test all 4 variants with 3FLIP
     let variants = vec![
         ("original", (grid.clone(), obs_x, obs_y, expected_visible.clone(), expected_interesting.clone(), observer_corners.clone())),
-        ("h_flip", flip_messy_x_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-        ("v_flip", flip_messy_x_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-        ("hv_flip", flip_messy_x_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("h_flip", flip_messy_y_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("v_flip", flip_messy_y_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("hv_flip", flip_messy_y_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
     ];
 
     for (variant_name, (variant_grid, variant_obs_x, variant_obs_y, variant_expected_visible, variant_expected_interesting, variant_observer_corners)) in variants {
         println!("\n  Testing variant: {}", variant_name);
-        println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x + 1, variant_obs_y);
+        println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x, variant_obs_y + 1);
 
-        // Run raycasting with messy_x=true
-        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, true, false);
+        // Run raycasting with messy_y=true
+        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true);
         let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
             .map(|&id| variant_grid.get_coords(id))
             .collect();
@@ -401,13 +272,13 @@ fn test_6_messy_x() {
         println!("  ✓ Variant {} PASSED", variant_name);
     }
 
-    println!("\nTest 6_messy_x.txt (all 4 variants) PASSED");
+    println!("\nTest 6_messy_y.txt (all 4 variants) PASSED");
 }
 
 #[test]
-fn test_7_messy_x2() {
-    let test_data = std::fs::read_to_string("test_data/corners/7_messy_x2.txt")
-        .expect("Failed to read 7_messy_x2.txt");
+fn test_7_messy_y2() {
+    let test_data = std::fs::read_to_string("test_data/corners/messy_y/7_messy_y2.txt")
+        .expect("Failed to read 7_messy_y2.txt");
 
     // Skip comment lines and parse the grid
     let grid_lines: Vec<&str> = test_data.lines()
@@ -419,11 +290,11 @@ fn test_7_messy_x2() {
     let test_text = grid_lines.join("\n");
 
     let (grid, obs_x, obs_y, expected_visible, expected_interesting, observer_corners) =
-        parse_messy_x_test(&test_text);
+        parse_messy_y_test(&test_text);
 
-    println!("\n=== Test 7_messy_x2.txt ===");
+    println!("\n=== Test 7_messy_y2.txt ===");
     println!("Grid: {}x{}", grid.cols, grid.rows);
-    println!("Observer at ({}, {}) + ({}, {}) [messy X]", obs_x, obs_y, obs_x + 1, obs_y);
+    println!("Observer at ({}, {}) + ({}, {}) [messy Y]", obs_x, obs_y, obs_x, obs_y + 1);
     println!("Expected {} visible cells", expected_visible.len());
     println!("Expected {} interesting corners", expected_interesting.len());
     println!("Expected {} observer corners", observer_corners.len());
@@ -431,17 +302,17 @@ fn test_7_messy_x2() {
     // Test all 4 variants with 3FLIP
     let variants = vec![
         ("original", (grid.clone(), obs_x, obs_y, expected_visible.clone(), expected_interesting.clone(), observer_corners.clone())),
-        ("h_flip", flip_messy_x_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-        ("v_flip", flip_messy_x_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
-        ("hv_flip", flip_messy_x_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("h_flip", flip_messy_y_horizontal(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("v_flip", flip_messy_y_vertical(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
+        ("hv_flip", flip_messy_y_both(&grid, obs_x, obs_y, &expected_visible, &expected_interesting, &observer_corners)),
     ];
 
     for (variant_name, (variant_grid, variant_obs_x, variant_obs_y, variant_expected_visible, variant_expected_interesting, variant_observer_corners)) in variants {
         println!("\n  Testing variant: {}", variant_name);
-        println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x + 1, variant_obs_y);
+        println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x, variant_obs_y + 1);
 
-        // Run raycasting with messy_x=true
-        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, true, false);
+        // Run raycasting with messy_y=true
+        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true);
         let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
             .map(|&id| variant_grid.get_coords(id))
             .collect();
@@ -502,5 +373,5 @@ fn test_7_messy_x2() {
         println!("  ✓ Variant {} PASSED", variant_name);
     }
 
-    println!("\nTest 7_messy_x2.txt (all 4 variants) PASSED");
+    println!("\nTest 7_messy_y2.txt (all 4 variants) PASSED");
 }

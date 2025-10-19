@@ -136,7 +136,7 @@ pub fn run_single_test(test_data: &RaycastTestData) -> (bool, usize, usize, Hash
         &test_data.blocked_cells,
     );
 
-    let actual_visible = raycast(&grid, test_data.start_x, test_data.start_y, false);
+    let actual_visible = raycast(&grid, test_data.start_x, test_data.start_y, false, false);
     let expected_set: HashSet<i32> = test_data.expected_visible.iter().copied().collect();
 
     let missing: Vec<_> = expected_set.difference(&actual_visible).copied().collect();

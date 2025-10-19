@@ -1,0 +1,94 @@
+s ... observer on two cells vertically (messy Y position)
+b .... blocked cell
+x .... non-visible cell
+o .... visible cell
+c .... interesting corner (also a visible cell)
+z .... observer cell that is also a corner! With messy position, if one of observer cells is corner, it automaticalle becomes interesting!
+
+exxoowxxoo
+xxxooixxoo
+axxcotxxco
+mxboohxboo
+pcoso coso
+loooomooso
+eooooeoooo
+     s
+i||||s||||
+n    y
+ xxoo xxoo
+nxxooXxxoo
+oxxco xxco
+nxbso(xbso
+-xxcofxxzo
+mxxoooxxoo
+exxoorxxoo
+s
+s||||n||||
+y    o
+ xxxxwxxoo
+(xxxx xxoo
+mxxxxdxxzo
+axbxxoxbso
+kcsco xxco
+eoooonxxoo
+ oooooxxoo
+t    t
+e|||| ||||
+s    a
+txxoopxxxx
+sxxoopxxxx
+ xxcolxxxx
+txbsoyxbxx
+oxxco csco
+ xxoo3osoo
+vxxooFoooo
+a    L
+l||||I
+i    P||||
+doooo
+aoooonxxoo
+tcosooxxoo
+exboorxxzo
+ xxco xbso
+txxooRxxco
+hxxooExxoo
+e    Cxxoo
+m||||I
+
+ xxoof
+wxxooo
+ixxoor
+txbso
+hxxoom
+ xxooe
+3xxoos
+F    s
+L||||y
+I
+Pxxoo-
+ xxoo
+axxoot
+nxbsoo
+dxxoo
+ xxoob
+Rxxooe
+E
+C||||d
+I    e
+!xxooc
+)xxooi
+:xxood
+ xbsoe
+ xxood
+ xxoo
+ xxool
+     a
+ ||||t
+     e
+ xxoor
+ xxoo)
+ xxoo
+ xbso:
+ xxoo
+ xxoo
+ xxoo

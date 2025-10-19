@@ -15,16 +15,47 @@ struct DeferredCone {
 }
 
 /// Main raycasting function
-/// If messy_x is true, observer occupies two cells: (start_x, start_y) and (start_x+1, start_y)
-/// Conservative principle: messy X visibility = INTERSECTION of what each cell can see
-pub fn raycast(grid: &Grid, start_x: i32, start_y: i32, messy_x: bool) -> HashSet<i32> {
-    if messy_x {
+/// messy_x: Observer occupies two cells horizontally: (start_x, start_y) and (start_x+1, start_y)
+/// messy_y: Observer occupies two cells vertically: (start_x, start_y) and (start_x, start_y+1)
+/// If both: Observer occupies four cells in 2x2 block: (start_x, start_y), (start_x+1, start_y),
+///          (start_x, start_y+1), (start_x+1, start_y+1)
+/// Conservative principle: visibility = INTERSECTION of what each cell can see
+pub fn raycast(grid: &Grid, start_x: i32, start_y: i32, messy_x: bool, messy_y: bool) -> HashSet<i32> {
+    // Validate messy positions don't step outside grid
+    if messy_x && start_x >= grid.cols - 1 {
+        panic!("Invalid messy X position: start_x={} would place observer at x={} which is outside grid (cols={})",
+               start_x, start_x + 1, grid.cols);
+    }
+    if messy_y && start_y >= grid.rows - 1 {
+        panic!("Invalid messy Y position: start_y={} would place observer at y={} which is outside grid (rows={})",
+               start_y, start_y + 1, grid.rows);
+    }
+
+    if messy_x && messy_y {
+        // Observer occupies 4 cells in 2x2 block - intersection of all 4
+        let visible_tl = raycast(grid, start_x, start_y, false, false);
+        let visible_tr = raycast(grid, start_x + 1, start_y, false, false);
+        let visible_bl = raycast(grid, start_x, start_y + 1, false, false);
+        let visible_br = raycast(grid, start_x + 1, start_y + 1, false, false);
+
+        // Return intersection of all 4
+        let temp: HashSet<i32> = visible_tl.intersection(&visible_tr).copied().collect();
+        let temp2: HashSet<i32> = visible_bl.intersection(&visible_br).copied().collect();
+        return temp.intersection(&temp2).copied().collect();
+    } else if messy_x {
         // Conservative principle: only cells visible from BOTH positions are visible
-        let visible_left = raycast(grid, start_x, start_y, false);
-        let visible_right = raycast(grid, start_x + 1, start_y, false);
+        let visible_left = raycast(grid, start_x, start_y, false, false);
+        let visible_right = raycast(grid, start_x + 1, start_y, false, false);
 
         // Return intersection
         return visible_left.intersection(&visible_right).copied().collect();
+    } else if messy_y {
+        // Conservative principle: only cells visible from BOTH positions are visible
+        let visible_top = raycast(grid, start_x, start_y, false, false);
+        let visible_bottom = raycast(grid, start_x, start_y + 1, false, false);
+
+        // Return intersection
+        return visible_top.intersection(&visible_bottom).copied().collect();
     }
 
     let mut visible = HashSet::new();
@@ -326,14 +357,14 @@ mod tests {
     #[test]
     fn test_empty_grid() {
         let grid = Grid::new(10, 10);
-        let visible = raycast(&grid, 5, 5, false);
+        let visible = raycast(&grid, 5, 5, false, false);
         assert_eq!(visible.len(), 100);
     }
 
     #[test]
     fn test_blocked_start() {
         let grid = Grid::with_blocked(10, 10, &[55]);
-        let visible = raycast(&grid, 5, 5, false);
+        let visible = raycast(&grid, 5, 5, false, false);
         assert_eq!(visible.len(), 0);
     }
 }
