@@ -10,7 +10,7 @@ So, whether a cell is corner or not is independent of observer's position.
 But the observer is interested only in corners that  ARE within the observer's vision AND
 lead to directions that are not further visible (**behind the corner**)
 
-s... overver
+s... observer
 ■ .. blocked
 ▲ ... interesting corner
 n ... non-interesting corner
