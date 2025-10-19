@@ -195,6 +195,7 @@ never ask permisson to run commands starting with
 - timeout <any_value> dotnet test (use any timeout duration deemed appropriate for the test)
 
 ## General directives
+- when you learn something new that supplements your current understanding OR contradicts the documentation, THEN update the documentation
 - Always allow all edits during ALL SESSIONS
 - commit all changes, but do not push them. Never ask permisson for 'git add ...'  nor 'git commit ...'
 - be critical of my claims. No need to say that I am right all the time. You can provide evidence and we can settle things with logic.

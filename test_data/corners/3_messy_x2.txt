@@ -1,0 +1,26 @@
+s ... observer on two cells (messy X position)
+x .... non-visible cell
+o .... visible cell
+c .... interesting corner (also a visible cell)
+q ... also interesting corner, but get's special mention
+
+xxxxxxxooooooooooooox
+xxxxxxxooooooooooooxx
+xxxxxxxcooooooooooxxx
+xxxxxxboooooooooxxxxx
+xxxxxqoooooooooxxxxxx
+oxxxboooooooocxxxxxxx
+ooocoooooooooobxxxxxo
+ooooooooooooooocooooo
+oooooooossooooooooooo
+ooooooooooooooooooooo
+oooooocoooooooooooooo
+oooooxxbooooooooooooo
+ooooxxxxcoooocooooooo
+ooxxxxxxooobbxxoooooo
+oxxxxxxxcoqxxxxxooooo
+xxxxxxxxxbxxxxxxxoooo
+xxxxxxxxxxxxxxxxxxooo
+xxxxxxxxxxxxxxxxxxxxo
+xxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxx
