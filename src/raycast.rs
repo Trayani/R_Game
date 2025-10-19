@@ -84,22 +84,6 @@ fn find_walkable_bounds(grid: &Grid, x: i32, y: i32) -> (i32, i32) {
     (start_x, end_x)
 }
 
-/// Find walkable bounds for messy X position (observer occupies x and x+1)
-fn find_walkable_bounds_messy(grid: &Grid, x: i32, y: i32) -> (i32, i32) {
-    let mut start_x = x;
-    let mut end_x = x + 1;
-
-    while start_x > 0 && !grid.is_blocked(start_x - 1, y) {
-        start_x -= 1;
-    }
-
-    while end_x < grid.cols - 1 && !grid.is_blocked(end_x + 1, y) {
-        end_x += 1;
-    }
-
-    (start_x, end_x)
-}
-
 /// Scan in one direction - EXACT match to C# getBorders + stepNxt logic
 fn scan_direction(
     grid: &Grid,

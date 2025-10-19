@@ -182,3 +182,183 @@ fn test_5_messy_x() {
 
     println!("\nAll messy X test cases passed!");
 }
+
+#[test]
+fn test_6_messy_x() {
+    let test_data = std::fs::read_to_string("test_data/corners/6_messy_x.txt")
+        .expect("Failed to read 6_messy_x.txt");
+
+    // Skip comment lines and parse the grid
+    let grid_lines: Vec<&str> = test_data.lines()
+        .skip_while(|line| line.starts_with("s ...") || line.starts_with("x ...")
+                    || line.starts_with("o ...") || line.starts_with("c ...") || line.trim().is_empty())
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+
+    let test_text = grid_lines.join("\n");
+
+    let (grid, obs_x, obs_y, expected_visible, expected_interesting, observer_corners) =
+        parse_messy_x_test(&test_text);
+
+    println!("\n=== Test 6_messy_x.txt ===");
+    println!("Grid: {}x{}", grid.cols, grid.rows);
+    println!("Observer at ({}, {}) + ({}, {}) [messy X]", obs_x, obs_y, obs_x + 1, obs_y);
+    println!("Expected {} visible cells", expected_visible.len());
+    println!("Expected {} interesting corners", expected_interesting.len());
+    println!("Expected {} observer corners", observer_corners.len());
+
+    // Run raycasting with messy_x=true
+    let visible_cells = raycast(&grid, obs_x, obs_y, true);
+    let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
+        .map(|&id| grid.get_coords(id))
+        .collect();
+
+    println!("Detected {} visible cells", visible_positions.len());
+
+    // Check visibility
+    let mut missing_visible = 0;
+    let mut false_visible = 0;
+
+    for &(x, y) in &expected_visible {
+        if !visible_positions.contains(&(x, y)) {
+            println!("MISSING visible at ({}, {})", x, y);
+            missing_visible += 1;
+        }
+    }
+
+    for &(x, y) in &visible_positions {
+        if !expected_visible.contains(&(x, y)) {
+            println!("FALSE POSITIVE visible at ({}, {})", x, y);
+            false_visible += 1;
+        }
+    }
+
+    // Detect corners
+    let all_corners = detect_all_corners(&grid);
+    let interesting_corners = filter_interesting_corners_with_observer_corners(
+        &all_corners, &visible_cells, &grid, obs_x, obs_y, true, &observer_corners);
+
+    println!("Detected {} interesting corners", interesting_corners.len());
+
+    let interesting_positions: HashSet<(i32, i32)> =
+        interesting_corners.iter().map(|c| (c.x, c.y)).collect();
+
+    // Check corners
+    let mut all_expected_interesting = expected_interesting.clone();
+    all_expected_interesting.extend(observer_corners.clone());
+
+    let mut missing_corners = 0;
+    let mut false_corners = 0;
+
+    for &(x, y) in &all_expected_interesting {
+        if !interesting_positions.contains(&(x, y)) {
+            println!("MISSING corner at ({}, {})", x, y);
+            missing_corners += 1;
+        }
+    }
+
+    for corner in &interesting_corners {
+        if !all_expected_interesting.contains(&(corner.x, corner.y)) {
+            println!("FALSE POSITIVE corner at ({}, {})", corner.x, corner.y);
+            false_corners += 1;
+        }
+    }
+
+    // Assert
+    assert_eq!(missing_visible, 0, "Missing visible cells");
+    assert_eq!(false_visible, 0, "False positive visible cells");
+    assert_eq!(missing_corners, 0, "Missing interesting corners");
+    assert_eq!(false_corners, 0, "False positive interesting corners");
+
+    println!("Test 6_messy_x.txt PASSED");
+}
+
+#[test]
+fn test_7_messy_x2() {
+    let test_data = std::fs::read_to_string("test_data/corners/7_messy_x2.txt")
+        .expect("Failed to read 7_messy_x2.txt");
+
+    // Skip comment lines and parse the grid
+    let grid_lines: Vec<&str> = test_data.lines()
+        .skip_while(|line| line.starts_with("s ...") || line.starts_with("x ...")
+                    || line.starts_with("o ...") || line.starts_with("c ...") || line.trim().is_empty())
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+
+    let test_text = grid_lines.join("\n");
+
+    let (grid, obs_x, obs_y, expected_visible, expected_interesting, observer_corners) =
+        parse_messy_x_test(&test_text);
+
+    println!("\n=== Test 7_messy_x2.txt ===");
+    println!("Grid: {}x{}", grid.cols, grid.rows);
+    println!("Observer at ({}, {}) + ({}, {}) [messy X]", obs_x, obs_y, obs_x + 1, obs_y);
+    println!("Expected {} visible cells", expected_visible.len());
+    println!("Expected {} interesting corners", expected_interesting.len());
+    println!("Expected {} observer corners", observer_corners.len());
+
+    // Run raycasting with messy_x=true
+    let visible_cells = raycast(&grid, obs_x, obs_y, true);
+    let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
+        .map(|&id| grid.get_coords(id))
+        .collect();
+
+    println!("Detected {} visible cells", visible_positions.len());
+
+    // Check visibility
+    let mut missing_visible = 0;
+    let mut false_visible = 0;
+
+    for &(x, y) in &expected_visible {
+        if !visible_positions.contains(&(x, y)) {
+            println!("MISSING visible at ({}, {})", x, y);
+            missing_visible += 1;
+        }
+    }
+
+    for &(x, y) in &visible_positions {
+        if !expected_visible.contains(&(x, y)) {
+            println!("FALSE POSITIVE visible at ({}, {})", x, y);
+            false_visible += 1;
+        }
+    }
+
+    // Detect corners
+    let all_corners = detect_all_corners(&grid);
+    let interesting_corners = filter_interesting_corners_with_observer_corners(
+        &all_corners, &visible_cells, &grid, obs_x, obs_y, true, &observer_corners);
+
+    println!("Detected {} interesting corners", interesting_corners.len());
+
+    let interesting_positions: HashSet<(i32, i32)> =
+        interesting_corners.iter().map(|c| (c.x, c.y)).collect();
+
+    // Check corners
+    let mut all_expected_interesting = expected_interesting.clone();
+    all_expected_interesting.extend(observer_corners.clone());
+
+    let mut missing_corners = 0;
+    let mut false_corners = 0;
+
+    for &(x, y) in &all_expected_interesting {
+        if !interesting_positions.contains(&(x, y)) {
+            println!("MISSING corner at ({}, {})", x, y);
+            missing_corners += 1;
+        }
+    }
+
+    for corner in &interesting_corners {
+        if !all_expected_interesting.contains(&(corner.x, corner.y)) {
+            println!("FALSE POSITIVE corner at ({}, {})", corner.x, corner.y);
+            false_corners += 1;
+        }
+    }
+
+    // Assert
+    assert_eq!(missing_visible, 0, "Missing visible cells");
+    assert_eq!(false_visible, 0, "False positive visible cells");
+    assert_eq!(missing_corners, 0, "Missing interesting corners");
+    assert_eq!(false_corners, 0, "False positive interesting corners");
+
+    println!("Test 7_messy_x2.txt PASSED");
+}
