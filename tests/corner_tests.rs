@@ -397,10 +397,12 @@ fn flip_corner_test_both(grid: &Grid, obs_x: i32, obs_y: i32,
 }
 
 /// Run corner test with a specific variant
+/// Returns (missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures)
 fn run_corner_test_variant(grid: &Grid, obs_x: i32, obs_y: i32,
                            expected_visible: &HashSet<(i32, i32)>,
-                           expected_interesting: &Vec<(i32, i32)>)
-    -> (usize, usize, usize, usize) {
+                           expected_interesting: &Vec<(i32, i32)>,
+                           check_reciprocal: bool)
+    -> (usize, usize, usize, usize, usize) {
     // Run raycasting
     let visible_cells = raycast(&grid, obs_x, obs_y);
     let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
@@ -445,7 +447,22 @@ fn run_corner_test_variant(grid: &Grid, obs_x: i32, obs_y: i32,
         }
     }
 
-    (missing_visible, false_visible, missing_interesting, false_interesting)
+    // Reciprocal visibility test: if corner C is visible from observer O, then O must be visible from C
+    let mut reciprocal_failures = 0;
+    if check_reciprocal {
+        for corner in &interesting_corners {
+            let corner_visible_cells = raycast(&grid, corner.x, corner.y);
+            let corner_visible_positions: HashSet<(i32, i32)> = corner_visible_cells.iter()
+                .map(|&id| grid.get_coords(id))
+                .collect();
+
+            if !corner_visible_positions.contains(&(obs_x, obs_y)) {
+                reciprocal_failures += 1;
+            }
+        }
+    }
+
+    (missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures)
 }
 
 #[test]
@@ -478,18 +495,18 @@ fn test_3_case_corners() {
     ];
 
     for (variant_name, variant_grid, variant_obs_x, variant_obs_y, variant_visible, variant_corners) in variants {
-        let (missing_visible, false_visible, missing_interesting, false_interesting) =
-            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners);
+        let (missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures) =
+            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners, true);
 
-        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 {
+        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 || reciprocal_failures > 0 {
             panic!(
-                "Test 3_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}",
-                variant_name, missing_visible, false_visible, missing_interesting, false_interesting
+                "Test 3_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}, reciprocal_failures: {}",
+                variant_name, missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures
             );
         }
     }
 
-    println!("All 4 variants passed!");
+    println!("All 4 variants passed (including reciprocal visibility)!");
 }
 
 #[test]
@@ -522,16 +539,16 @@ fn test_4_case_corners() {
     ];
 
     for (variant_name, variant_grid, variant_obs_x, variant_obs_y, variant_visible, variant_corners) in variants {
-        let (missing_visible, false_visible, missing_interesting, false_interesting) =
-            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners);
+        let (missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures) =
+            run_corner_test_variant(&variant_grid, variant_obs_x, variant_obs_y, &variant_visible, &variant_corners, true);
 
-        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 {
+        if missing_visible > 0 || false_visible > 0 || missing_interesting > 0 || false_interesting > 0 || reciprocal_failures > 0 {
             panic!(
-                "Test 4_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}",
-                variant_name, missing_visible, false_visible, missing_interesting, false_interesting
+                "Test 4_case [{}] failed - missing_visible: {}, false_visible: {}, missing_interesting: {}, false_interesting: {}, reciprocal_failures: {}",
+                variant_name, missing_visible, false_visible, missing_interesting, false_interesting, reciprocal_failures
             );
         }
     }
 
-    println!("All 4 variants passed!");
+    println!("All 4 variants passed (including reciprocal visibility)!");
 }

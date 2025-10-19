@@ -98,6 +98,41 @@ Test files in `test_data/*.json` follow this structure:
 
 The test suite validates the Rust implementation against the C# reference by comparing visible cell sets.
 
+## Test Strategy
+
+The project employs rigorous testing principles to ensure correctness across all scenarios:
+
+### 3-Flip Principle
+
+Every raycasting and corner detection test is validated against **4 orientations**:
+1. **Original**: Test data as written
+2. **Horizontal Flip**: Grid mirrored left-right
+3. **Vertical Flip**: Grid mirrored top-bottom
+4. **Both Flips**: Grid mirrored on both axes
+
+This ensures the algorithm works correctly regardless of grid orientation and provides 4x test coverage from a single test case. Implemented in:
+- `tests/json_tests.rs` - JSON test data validation
+- `tests/standard_tests.rs` - Standard format tests
+- `tests/corner_tests.rs` - Corner detection tests (3_case.txt, 4_case.txt)
+
+### Reciprocal Visibility Principle
+
+For corner detection tests, we validate **reciprocal visibility**: if corner C is visible from observer O, then O must be visible from C. This is a fundamental property of line-of-sight in obstacle-free paths.
+
+**Implementation**: For every detected interesting corner, the test performs raycasting from the corner's position back to the original observer. If the observer is not visible from the corner, the test fails.
+
+**Rationale**: This catches edge cases where the raycasting algorithm might have asymmetric behavior or precision issues. Since visibility is reciprocal in a static environment, this provides an additional validation layer.
+
+Applied in: `tests/corner_tests.rs` for all corner detection tests with the `check_reciprocal` parameter.
+
+### Combined Coverage
+
+Together, these principles create **8x effective test coverage** per test case:
+- 4 orientations (3-flip principle)
+- 2 directions (reciprocal visibility for each orientation)
+
+This comprehensive approach ensures algorithmic correctness across diverse scenarios.
+
 ## Development Notes
 
 - **Integer arithmetic only**: The raycasting algorithm uses pure integer math. Never introduce floating-point calculations in raycasting logic.
