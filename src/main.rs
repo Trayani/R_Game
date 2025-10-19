@@ -60,9 +60,24 @@ impl VisState {
             // Right button DOWN (continuous): move observer
             else if is_mouse_button_down(MouseButton::Right) {
                 if !self.grid.is_blocked(grid_x, grid_y) {
-                    if self.observer_x != grid_x || self.observer_y != grid_y {
-                        self.observer_x = grid_x;
-                        self.observer_y = grid_y;
+                    // Validate messy boundaries - snap to valid position if needed
+                    let mut target_x = grid_x;
+                    let mut target_y = grid_y;
+
+                    // Check messy X boundary
+                    if self.messy_x && target_x >= self.grid.cols - 1 {
+                        target_x = self.grid.cols - 2; // Snap to rightmost valid position
+                    }
+
+                    // Check messy Y boundary
+                    if self.messy_y && target_y >= self.grid.rows - 1 {
+                        target_y = self.grid.rows - 2; // Snap to bottommost valid position
+                    }
+
+                    // Only move if position changed and target is not blocked
+                    if (self.observer_x != target_x || self.observer_y != target_y) && !self.grid.is_blocked(target_x, target_y) {
+                        self.observer_x = target_x;
+                        self.observer_y = target_y;
                         self.update_visible();
                     }
                 }
