@@ -1,6 +1,7 @@
 pub mod cone;
 pub mod corners;
 pub mod grid;
+pub mod pathfinding;
 pub mod ray;
 pub mod raycast;
 

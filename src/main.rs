@@ -2,6 +2,7 @@ use arboard::Clipboard;
 use macroquad::prelude::*;
 use rustgame3::{Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
+use rustgame3::pathfinding::find_path;
 use std::collections::HashSet;
 
 /// Visualization state
@@ -311,6 +312,28 @@ impl VisState {
 
                 draw_line(corner1.0.0, corner1.0.1, corner1.1.0, corner1.1.1, 1.0, YELLOW);
                 draw_line(corner2.0.0, corner2.0.1, corner2.1.0, corner2.1.1, 1.0, YELLOW);
+            }
+
+            // Draw pathfinding path
+            if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, mouse_grid_x, mouse_grid_y, self.messy_x, self.messy_y) {
+                // Draw path lines in green
+                for i in 1..path.len() {
+                    let from = &path[i - 1];
+                    let to = &path[i];
+                    let from_x = from.x as f32 * self.cell_width + self.cell_width / 2.0;
+                    let from_y = from.y as f32 * self.cell_height + self.cell_height / 2.0;
+                    let to_x = to.x as f32 * self.cell_width + self.cell_width / 2.0;
+                    let to_y = to.y as f32 * self.cell_height + self.cell_height / 2.0;
+                    draw_line(from_x, from_y, to_x, to_y, 2.0, GREEN);
+                }
+
+                // Draw waypoint circles
+                for (i, pos) in path.iter().enumerate() {
+                    let px = pos.x as f32 * self.cell_width + self.cell_width / 2.0;
+                    let py = pos.y as f32 * self.cell_height + self.cell_height / 2.0;
+                    let radius = if i == 0 || i == path.len() - 1 { 4.0 } else { 3.0 };
+                    draw_circle(px, py, radius, GREEN);
+                }
             }
         }
 
