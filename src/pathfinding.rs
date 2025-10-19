@@ -3,6 +3,9 @@ use crate::corners::{detect_all_corners, filter_interesting_corners, Corner};
 use std::collections::{HashMap, BinaryHeap, HashSet};
 use std::cmp::Ordering;
 
+// Trace logging flag - set to true to enable debug output
+const TRACE_PATHFINDING: bool = true;
+
 /// A position on the grid
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Position {
@@ -97,7 +100,7 @@ impl CornerCache {
 
     /// Mark a corner as processed
     fn mark_processed(&mut self, pos: Position) {
-        if let Some((corners, processed)) = self.cache.get_mut(&pos) {
+        if let Some((_corners, processed)) = self.cache.get_mut(&pos) {
             *processed = true;
         }
     }
@@ -106,6 +109,35 @@ impl CornerCache {
     fn is_processed(&self, pos: &Position) -> bool {
         self.cache.get(pos).map(|(_, p)| *p).unwrap_or(false)
     }
+}
+
+/// Find path using cell IDs (for test compatibility with C# implementation)
+/// Returns (path as cell IDs, total distance)
+pub fn find_path_by_id(
+    grid: &Grid,
+    start_id: i32,
+    dest_id: i32,
+    messy_x: bool,
+    messy_y: bool,
+) -> Option<(Vec<i32>, f64)> {
+    let (start_x, start_y) = grid.get_coords(start_id);
+    let (dest_x, dest_y) = grid.get_coords(dest_id);
+
+    let path_positions = find_path(grid, start_x, start_y, dest_x, dest_y, messy_x, messy_y)?;
+
+    // Convert Position path to cell IDs
+    let path_ids: Vec<i32> = path_positions
+        .iter()
+        .map(|p| grid.get_id(p.x, p.y))
+        .collect();
+
+    // Calculate total distance
+    let mut total_dist = 0.0;
+    for i in 1..path_positions.len() {
+        total_dist += path_positions[i - 1].distance(&path_positions[i]);
+    }
+
+    Some((path_ids, total_dist))
 }
 
 /// Find path from start to destination using corner-based pathfinding
@@ -121,6 +153,13 @@ pub fn find_path(
     let start = Position::new(start_x, start_y);
     let dest = Position::new(dest_x, dest_y);
 
+    if TRACE_PATHFINDING {
+        println!("\n[find_path] START: ({},{}) -> ({},{}), messy_x={}, messy_y={}",
+                 start_x, start_y, dest_x, dest_y, messy_x, messy_y);
+        println!("[find_path] Start ID: {}, Dest ID: {}",
+                 grid.get_id(start_x, start_y), grid.get_id(dest_x, dest_y));
+    }
+
     // Step 1: Get visible cells and corners from observer
     let visible_cells = raycast(grid, start_x, start_y, messy_x, messy_y);
     let visible_positions: HashSet<Position> = visible_cells.iter()
@@ -130,8 +169,15 @@ pub fn find_path(
         })
         .collect();
 
+    if TRACE_PATHFINDING {
+        println!("[find_path] Visible cells from start: {} cells", visible_cells.len());
+    }
+
     // Step 2: Early exit - if destination is visible, return direct path
     if visible_positions.contains(&dest) {
+        if TRACE_PATHFINDING {
+            println!("[find_path] Destination is directly visible - returning direct path");
+        }
         return Some(vec![start, dest]);
     }
 
@@ -139,9 +185,32 @@ pub fn find_path(
     let all_corners = detect_all_corners(grid);
     let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
 
-    let targets = determine_targets(&dest, &all_corners, grid);
+    if TRACE_PATHFINDING {
+        println!("[find_path] Start interesting corners: {} corners", interesting_corners.len());
+        for (i, corner) in interesting_corners.iter().enumerate().take(5) {
+            println!("  [{}] Corner at ({},{}) = ID {}", i, corner.x, corner.y, grid.get_id(corner.x, corner.y));
+        }
+        if interesting_corners.len() > 5 {
+            println!("  ... and {} more", interesting_corners.len() - 5);
+        }
+    }
+
+    let targets = determine_targets(&dest, grid);
     if targets.is_empty() {
+        if TRACE_PATHFINDING {
+            println!("[find_path] No target corners found - no path possible");
+        }
         return None; // No valid targets
+    }
+
+    if TRACE_PATHFINDING {
+        println!("[find_path] Target corners: {} corners", targets.len());
+        for (i, target) in targets.iter().enumerate().take(5) {
+            println!("  [{}] Target at ({},{}) = ID {}", i, target.x, target.y, grid.get_id(target.x, target.y));
+        }
+        if targets.len() > 5 {
+            println!("  ... and {} more", targets.len() - 5);
+        }
     }
 
     // Step 4: Initialize search
@@ -164,8 +233,15 @@ pub fn find_path(
     }
 
     // Step 5: Process queue
+    let mut iterations = 0;
     while let Some(node) = queue.pop() {
+        iterations += 1;
         let pos = node.position;
+
+        if TRACE_PATHFINDING && iterations <= 10 {
+            println!("[A*] Iteration {}: Expanding ({},{}) = ID {}, dist={:.2}",
+                     iterations, pos.x, pos.y, grid.get_id(pos.x, pos.y), node.total_distance);
+        }
 
         // Skip if already processed with better distance
         if let Some(&best_dist) = best_distances.get(&pos) {
@@ -176,6 +252,10 @@ pub fn find_path(
 
         // Check if this is a target
         if targets.contains(&pos) {
+            if TRACE_PATHFINDING {
+                println!("[A*] Found target at ({},{}) = ID {}, dist={:.2}",
+                         pos.x, pos.y, grid.get_id(pos.x, pos.y), node.total_distance);
+            }
             if node.total_distance < min_distance {
                 min_distance = node.total_distance;
                 let mut path = node.path.clone();
@@ -195,6 +275,10 @@ pub fn find_path(
 
         // Get this corner's interesting corners
         let next_corners = cache.get_or_compute(pos, grid, messy_x, messy_y);
+
+        if TRACE_PATHFINDING && iterations <= 10 {
+            println!("  Found {} next corners from ({},{})", next_corners.len(), pos.x, pos.y);
+        }
 
         for next_corner in next_corners {
             let next_pos = Position::new(next_corner.x, next_corner.y);
@@ -220,41 +304,51 @@ pub fn find_path(
         }
     }
 
+    if TRACE_PATHFINDING {
+        if let Some(ref path) = optimal_path {
+            println!("[find_path] FOUND PATH: {} waypoints, dist={:.2}", path.len(), min_distance);
+            println!("[find_path] Path IDs: {:?}", path.iter().map(|p| grid.get_id(p.x, p.y)).collect::<Vec<_>>());
+        } else {
+            println!("[find_path] NO PATH FOUND after {} iterations", iterations);
+        }
+    }
+
     optimal_path
 }
 
 /// Determine target corners for pathfinding
-fn determine_targets(dest: &Position, all_corners: &[Corner], grid: &Grid) -> HashSet<Position> {
+/// These are corners from which the destination is visible
+fn determine_targets(dest: &Position, grid: &Grid) -> HashSet<Position> {
     let mut targets = HashSet::new();
 
-    // Check if destination itself is a corner
-    for corner in all_corners {
+    // Raycast FROM the destination to find which corners can see it
+    // This matches C# behavior where dest's interesting corners become targets
+    let dest_visible = raycast(grid, dest.x, dest.y, false, false);
+
+    // Detect all corners in the grid
+    let all_corners = detect_all_corners(grid);
+
+    // Filter for interesting corners visible from destination
+    let dest_corners = filter_interesting_corners(
+        &all_corners,
+        &dest_visible,
+        grid,
+        dest.x,
+        dest.y,
+        false,
+    );
+
+    // These corners can "see" the destination, so they are valid targets
+    for corner in dest_corners {
+        targets.insert(Position::new(corner.x, corner.y));
+    }
+
+    // Check if destination itself is a corner - if so, add it as the only target
+    for corner in &all_corners {
         if corner.x == dest.x && corner.y == dest.y {
-            targets.insert(*dest);
-            return targets; // If destination is a corner, it's the only target
-        }
-    }
-
-    // If destination is not a corner, we need to find corners from which
-    // the destination is visible. These become our targets.
-    // We'll accept any corner that could "see" the destination.
-
-    // For now, use a simple heuristic: any corner within reasonable range
-    // A better approach: actually check visibility from each corner to dest
-    for corner in all_corners {
-        let dx = (corner.x - dest.x).abs();
-        let dy = (corner.y - dest.y).abs();
-        // Consider corners within a reasonable distance as potential targets
-        let dist_sq = dx * dx + dy * dy;
-        if dist_sq <= 100 {  // Within ~10 cells
-            targets.insert(Position::new(corner.x, corner.y));
-        }
-    }
-
-    // If no targets found nearby, use all corners as potential targets
-    if targets.is_empty() {
-        for corner in all_corners {
-            targets.insert(Position::new(corner.x, corner.y));
+            targets.clear();  // Clear other targets
+            targets.insert(*dest);  // Dest is the only target
+            break;
         }
     }
 
