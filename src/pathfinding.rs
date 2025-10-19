@@ -116,6 +116,42 @@ impl CornerCache {
     }
 }
 
+/// Check if all cells between start_x and dest_x on row y are walkable
+fn check_cells_between(grid: &Grid, start_x: i32, dest_x: i32, y: i32) -> bool {
+    let min_x = start_x.min(dest_x);
+    let max_x = start_x.max(dest_x);
+
+    for x in min_x..=max_x {
+        if grid.get_cell(x, y) != 0 {
+            return false;  // Obstacle found
+        }
+    }
+    true  // All cells clear
+}
+
+/// Get the line segment bounds (startX, endX) for a given position on row y
+/// Returns None if the cell is blocked
+fn get_line_segment_at(grid: &Grid, x: i32, y: i32) -> Option<(i32, i32)> {
+    // Check if starting position is walkable
+    if grid.get_cell(x, y) != 0 {
+        return None;
+    }
+
+    // Scan left to find start of line segment
+    let mut start_x = x;
+    while start_x > 0 && grid.get_cell(start_x - 1, y) == 0 {
+        start_x -= 1;
+    }
+
+    // Scan right to find end of line segment
+    let mut end_x = x;
+    while end_x < grid.cols - 1 && grid.get_cell(end_x + 1, y) == 0 {
+        end_x += 1;
+    }
+
+    Some((start_x, end_x))
+}
+
 /// Find path using cell IDs (for test compatibility with C# implementation)
 /// Returns (path as cell IDs, total distance)
 pub fn find_path_by_id(
@@ -190,14 +226,34 @@ pub fn find_path(
     // IMPORTANT: "Same line" means same LINE SEGMENT (connected walkable cells),
     // NOT just same Y coordinate! C# checks: l == l2 (same Line object)
     if start_y == dest_y {
-        let dest_visible = visible_positions.contains(&dest);
+        let distance = (dest_x - start_x).abs();
+        let same_segment;
 
         if TRACE_PATHFINDING {
-            println!("[find_path] Start and dest on same row (Y={}), dest_visible={}", start_y, dest_visible);
+            println!("[find_path] Start and dest on same row (Y={}), distance={}", start_y, distance);
         }
 
-        // If dest is visible on same row, they're on same line segment
-        if dest_visible {
+        // Within 10 cells: scan ad-hoc for obstacles
+        if distance <= 10 {
+            if TRACE_PATHFINDING {
+                println!("[find_path] Distance <= 10, checking cells ad-hoc");
+            }
+            same_segment = check_cells_between(grid, start_x, dest_x, start_y);
+        }
+        // Beyond 10 cells: use visibility check
+        else {
+            if TRACE_PATHFINDING {
+                println!("[find_path] Distance > 10, using visibility check");
+            }
+            same_segment = visible_positions.contains(&dest);
+        }
+
+        if TRACE_PATHFINDING {
+            println!("[find_path] Same segment? {}", same_segment);
+        }
+
+        // If they're on same line segment, apply alignment logic
+        if same_segment {
             // If no messy flags, return direct path
             if !messy_x && !messy_y {
                 if TRACE_PATHFINDING {
@@ -206,13 +262,46 @@ pub fn find_path(
                 return Some(vec![start, dest]);
             }
 
-            // With messy_y, add alignment waypoint
+            // With messy_y, check if alignment waypoint is needed
             if messy_y {
-                if TRACE_PATHFINDING {
-                    println!("[find_path] Same line segment messyY: adding alignment waypoint");
+                // Get the line segment from the row BELOW start position
+                let below_y = start_y + 1;
+                if let Some((lx_start, lx_end)) = get_line_segment_at(grid, start_x, below_y) {
+                    if TRACE_PATHFINDING {
+                        println!("[find_path] Line below: startX={}, endX={}", lx_start, lx_end);
+                        println!("[find_path] dest.X={}, start < dest: {}", dest_x, start_x < dest_x);
+                    }
+
+                    let mut waypoints = Vec::new();
+
+                    // C# logic: Add waypoint if dest is outside line bounds
+                    if start_x > dest_x {
+                        // Moving left: check if dest is left of line start
+                        if dest_x < lx_start {
+                            if TRACE_PATHFINDING {
+                                println!("[find_path] Adding alignment waypoint: dest.X < lx_start");
+                            }
+                            waypoints.push(Position::new(lx_start, start_y));
+                        }
+                    } else if dest_x > lx_end {
+                        // Moving right: check if dest is right of line end
+                        if TRACE_PATHFINDING {
+                            println!("[find_path] Adding alignment waypoint: dest.X > lx_end");
+                        }
+                        waypoints.push(Position::new(lx_end, start_y));
+                    }
+
+                    // Build path: start + waypoints + dest
+                    let mut path = vec![start];
+                    path.extend(waypoints);
+                    path.push(dest);
+                    return Some(path);
+                } else {
+                    // Line below is blocked - fall through to normal pathfinding
+                    if TRACE_PATHFINDING {
+                        println!("[find_path] Line below is blocked - using normal pathfinding");
+                    }
                 }
-                let path = vec![start, start, dest];  // start, alignment at start, dest
-                return Some(path);
             }
 
             // With messy_x
@@ -224,8 +313,7 @@ pub fn find_path(
             return Some(vec![start, dest]);
         }
 
-        // Same row but dest NOT visible - they're on different line segments
-        // Continue with normal pathfinding (don't apply same-line special case)
+        // Same row but different line segments - continue with normal pathfinding
         if TRACE_PATHFINDING {
             println!("[find_path] Same row but different line segments - continuing with normal pathfinding");
         }
