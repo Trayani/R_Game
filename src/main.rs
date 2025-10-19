@@ -9,6 +9,8 @@ struct VisState {
     grid: Grid,
     observer_x: i32,
     observer_y: i32,
+    messy_x: bool,
+    messy_y: bool,
     visible_cells: HashSet<i32>,
     all_corners: Vec<Corner>,
     interesting_corners: Vec<Corner>,
@@ -21,7 +23,9 @@ impl VisState {
         let grid = Grid::new(40, 40);
         let observer_x = 20;
         let observer_y = 20;
-        let visible_cells = raycast(&grid, observer_x, observer_y, false, false);
+        let messy_x = false;
+        let messy_y = false;
+        let visible_cells = raycast(&grid, observer_x, observer_y, messy_x, messy_y);
 
         let all_corners = detect_all_corners(&grid);
         let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y, false);
@@ -30,6 +34,8 @@ impl VisState {
             grid,
             observer_x,
             observer_y,
+            messy_x,
+            messy_y,
             visible_cells,
             all_corners,
             interesting_corners,
@@ -65,11 +71,79 @@ impl VisState {
     }
 
     fn update_visible(&mut self) {
-        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, false, false);
+        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
 
         // Update corners
         self.all_corners = detect_all_corners(&self.grid);
         self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y, false);
+    }
+
+    fn toggle_messy_x(&mut self) {
+        // Check if toggling messy X would put observer out of bounds
+        if !self.messy_x && self.observer_x >= self.grid.cols - 1 {
+            // Can't enable messy X at rightmost column
+            return;
+        }
+        self.messy_x = !self.messy_x;
+        self.update_visible();
+    }
+
+    fn toggle_messy_y(&mut self) {
+        // Check if toggling messy Y would put observer out of bounds
+        if !self.messy_y && self.observer_y >= self.grid.rows - 1 {
+            // Can't enable messy Y at bottom row
+            return;
+        }
+        self.messy_y = !self.messy_y;
+        self.update_visible();
+    }
+
+    /// Check if a given cell is part of the observer
+    fn is_observer_cell(&self, x: i32, y: i32) -> bool {
+        // Check primary observer cell
+        if x == self.observer_x && y == self.observer_y {
+            return true;
+        }
+        // Check messy X cell
+        if self.messy_x && x == self.observer_x + 1 && y == self.observer_y {
+            return true;
+        }
+        // Check messy Y cell
+        if self.messy_y && x == self.observer_x && y == self.observer_y + 1 {
+            return true;
+        }
+        // Check messy X+Y cell
+        if self.messy_x && self.messy_y && x == self.observer_x + 1 && y == self.observer_y + 1 {
+            return true;
+        }
+        false
+    }
+
+    /// Get the conservative observer cell for border line drawing.
+    /// Conservative = the observer cell closest to the target, which gives the narrower view cone.
+    fn get_conservative_observer_cell(&self, target_x: i32, target_y: i32) -> (i32, i32) {
+        // Collect all observer cells
+        let mut observer_cells = vec![(self.observer_x, self.observer_y)];
+
+        if self.messy_x {
+            observer_cells.push((self.observer_x + 1, self.observer_y));
+        }
+        if self.messy_y {
+            observer_cells.push((self.observer_x, self.observer_y + 1));
+        }
+        if self.messy_x && self.messy_y {
+            observer_cells.push((self.observer_x + 1, self.observer_y + 1));
+        }
+
+        // Find the observer cell with minimum distance to target
+        observer_cells.iter()
+            .min_by_key(|(ox, oy)| {
+                let dx = target_x - ox;
+                let dy = target_y - oy;
+                dx * dx + dy * dy  // Squared distance (no need for sqrt)
+            })
+            .copied()
+            .unwrap()
     }
 
     fn grid_to_string(&self) -> String {
@@ -78,8 +152,8 @@ impl VisState {
         for y in 0..self.grid.rows {
             for x in 0..self.grid.cols {
                 let cell_id = self.grid.get_id(x, y);
-                let symbol = if x == self.observer_x && y == self.observer_y {
-                    's' // Start position
+                let symbol = if self.is_observer_cell(x, y) {
+                    's' // Observer position (any cell in messy observer)
                 } else if self.grid.is_blocked(x, y) {
                     '■' // Blocked cell
                 } else if self.visible_cells.contains(&cell_id) {
@@ -162,7 +236,10 @@ impl VisState {
                 let px = x as f32 * self.cell_width;
                 let py = y as f32 * self.cell_height;
 
-                let color = if x == self.observer_x && y == self.observer_y {
+                // Check if this cell is part of the observer
+                let is_observer = self.is_observer_cell(x, y);
+
+                let color = if is_observer {
                     BLUE // Observer
                 } else if self.grid.is_blocked(x, y) {
                     RED // Blocked
@@ -186,8 +263,11 @@ impl VisState {
 
         // Only draw line if mouse is within grid bounds
         if mouse_grid_x >= 0 && mouse_grid_x < self.grid.cols && mouse_grid_y >= 0 && mouse_grid_y < self.grid.rows {
-            let observer_center_x = self.observer_x as f32 * self.cell_width + self.cell_width / 2.0;
-            let observer_center_y = self.observer_y as f32 * self.cell_height + self.cell_height / 2.0;
+            // Determine which observer cell to use for border lines (conservative = closest to mouse)
+            let (border_obs_x, border_obs_y) = self.get_conservative_observer_cell(mouse_grid_x, mouse_grid_y);
+
+            let observer_center_x = border_obs_x as f32 * self.cell_width + self.cell_width / 2.0;
+            let observer_center_y = border_obs_y as f32 * self.cell_height + self.cell_height / 2.0;
             let mouse_center_x = mouse_grid_x as f32 * self.cell_width + self.cell_width / 2.0;
             let mouse_center_y = mouse_grid_y as f32 * self.cell_height + self.cell_height / 2.0;
 
@@ -199,11 +279,11 @@ impl VisState {
             let dy = mouse_center_y - observer_center_y;
 
             if dx != 0.0 || dy != 0.0 {
-                // Get all four corners of observer cell
-                let obs_left = self.observer_x as f32 * self.cell_width;
-                let obs_right = (self.observer_x + 1) as f32 * self.cell_width;
-                let obs_top = self.observer_y as f32 * self.cell_height;
-                let obs_bottom = (self.observer_y + 1) as f32 * self.cell_height;
+                // Get all four corners of conservative observer cell
+                let obs_left = border_obs_x as f32 * self.cell_width;
+                let obs_right = (border_obs_x + 1) as f32 * self.cell_width;
+                let obs_top = border_obs_y as f32 * self.cell_height;
+                let obs_bottom = (border_obs_y + 1) as f32 * self.cell_height;
 
                 // Get all four corners of mouse cell
                 let mouse_left = mouse_grid_x as f32 * self.cell_width;
@@ -242,10 +322,18 @@ impl VisState {
         }
 
         // Draw info
+        let messy_status = match (self.messy_x, self.messy_y) {
+            (false, false) => String::new(),
+            (true, false) => " [Messy X]".to_string(),
+            (false, true) => " [Messy Y]".to_string(),
+            (true, true) => " [Messy X+Y]".to_string(),
+        };
+
         let info = format!(
-            "Observer: ({}, {})\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle\nRight hold: move observer\nC: copy grid | Esc: close",
+            "Observer: ({}, {}){}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y\nC: copy grid | Esc: close",
             self.observer_x,
             self.observer_y,
+            messy_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len()
@@ -266,6 +354,16 @@ async fn main() {
         // Copy grid to clipboard on C key
         if is_key_pressed(KeyCode::C) {
             state.copy_to_clipboard();
+        }
+
+        // Toggle messy X on M key
+        if is_key_pressed(KeyCode::M) {
+            state.toggle_messy_x();
+        }
+
+        // Toggle messy Y on N key
+        if is_key_pressed(KeyCode::N) {
+            state.toggle_messy_y();
         }
 
         // Close window on Escape
