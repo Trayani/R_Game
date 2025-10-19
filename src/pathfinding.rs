@@ -90,12 +90,22 @@ impl CornerCache {
         }
 
         // Compute corners for this position
+        // For pathfinding, we need ALL visible corners (not just "interesting" ones)
+        // C# computes all corners visible from a position for navigation
         let visible_cells = raycast(grid, pos.x, pos.y, messy_x, messy_y);
         let all_corners = detect_all_corners(grid);
-        let interesting = filter_interesting_corners(&all_corners, &visible_cells, grid, pos.x, pos.y, messy_x);
 
-        self.cache.insert(pos, (interesting.clone(), false));
-        interesting
+        // Filter to get ALL corners that are visible (not just interesting/partially hidden)
+        let visible_corners: Vec<Corner> = all_corners.iter()
+            .filter(|corner| {
+                let corner_id = grid.get_id(corner.x, corner.y);
+                visible_cells.contains(&corner_id)
+            })
+            .cloned()
+            .collect();
+
+        self.cache.insert(pos, (visible_corners.clone(), false));
+        visible_corners
     }
 
     /// Mark a corner as processed
