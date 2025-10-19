@@ -329,7 +329,24 @@ pub fn find_path(
 
     // Step 3: Get interesting corners from start (partially hidden corners that lead to unexplored areas)
     let all_corners = detect_all_corners(grid);
-    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
+    let mut interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
+
+    // Step 3b: ALIGNMENT PRINCIPLE - Add start position as corner if messy
+    // When at a messy position, the entity must first align to the clean position before traveling
+    // The clean version of the start position is a reachable corner at distance 1.0
+    if messy_x || messy_y {
+        if TRACE_PATHFINDING {
+            println!("[find_path] Messy position detected - adding start position as alignment corner");
+        }
+        // Add start position as first corner (alignment target)
+        // Directions don't matter for alignment corner - it's just a waypoint
+        use std::collections::HashSet;
+        interesting_corners.insert(0, Corner {
+            x: start_x,
+            y: start_y,
+            directions: HashSet::new()
+        });
+    }
 
     if TRACE_PATHFINDING {
         println!("[find_path] Start interesting corners: {} corners", interesting_corners.len());
