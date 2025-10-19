@@ -116,12 +116,27 @@ fn check_se_corner(grid: &Grid, x: i32, y: i32, corner: &mut Corner) {
 
 /// Filter corners to find "interesting" ones - those visible to observer AND
 /// leading to directions that are not further visible (behind the corner)
+/// For messy X with observer_corners: corners explicitly marked as observer corners are auto-added
 pub fn filter_interesting_corners(
     all_corners: &[Corner],
     visible_cells: &HashSet<i32>,
     grid: &Grid,
     observer_x: i32,
     observer_y: i32,
+    messy_x: bool,
+) -> Vec<Corner> {
+    filter_interesting_corners_with_observer_corners(all_corners, visible_cells, grid, observer_x, observer_y, messy_x, &[])
+}
+
+/// Extended version that allows specifying observer corners (corners occupied by observer that should be auto-added)
+pub fn filter_interesting_corners_with_observer_corners(
+    all_corners: &[Corner],
+    visible_cells: &HashSet<i32>,
+    grid: &Grid,
+    observer_x: i32,
+    observer_y: i32,
+    _messy_x: bool,
+    observer_corners: &[(i32, i32)],
 ) -> Vec<Corner> {
     let mut interesting = Vec::new();
 
@@ -130,6 +145,12 @@ pub fn filter_interesting_corners(
 
         // Corner must be visible
         if !visible_cells.contains(&corner_id) {
+            continue;
+        }
+
+        // If this corner is marked as an observer corner (e.g., 'z' marker), auto-add as interesting
+        if observer_corners.contains(&(corner.x, corner.y)) {
+            interesting.push(corner.clone());
             continue;
         }
 

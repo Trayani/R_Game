@@ -13,17 +13,19 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_data/corners/3_messy_x2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/test_data/corners/7_messy_x2.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_data/corners/5_messy_x.txt" beforeDir="false" afterPath="$PROJECT_DIR$/test_data/corners/6_messy_x.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test_data/corners/CORNERS.md" beforeDir="false" afterPath="$PROJECT_DIR$/test_data/corners/CORNERS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/corners.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/corners.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/raycast.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/raycast.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/common/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/common/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/corner_tests.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/corner_tests.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/standard_tests.rs" beforeDir="false" afterPath="$PROJECT_DIR$/tests/standard_tests.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:dev" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:test" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -94,7 +96,7 @@
       <command value="cargo test" />
     </option>
   </component>
-  <component name="RunManager" selected="Cargo.Run rustgame3">
+  <component name="RunManager" selected="Cargo.test">
     <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="buildProfileId" value="dev" />
       <option name="command" value="run --package rustgame3 --bin rustgame3" />
@@ -150,9 +152,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Cargo.test" />
         <item itemvalue="Cargo.Run rustgame3" />
         <item itemvalue="Cargo.Test ray" />
-        <item itemvalue="Cargo.test" />
       </list>
     </recent_temporary>
   </component>
@@ -170,7 +172,7 @@
       <workItem from="1760732640419" duration="24812000" />
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
-      <workItem from="1760796207505" duration="23538000" />
+      <workItem from="1760796207505" duration="24688000" />
     </task>
     <servers />
   </component>

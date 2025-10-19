@@ -15,7 +15,18 @@ struct DeferredCone {
 }
 
 /// Main raycasting function
-pub fn raycast(grid: &Grid, start_x: i32, start_y: i32) -> HashSet<i32> {
+/// If messy_x is true, observer occupies two cells: (start_x, start_y) and (start_x+1, start_y)
+/// Conservative principle: messy X visibility = INTERSECTION of what each cell can see
+pub fn raycast(grid: &Grid, start_x: i32, start_y: i32, messy_x: bool) -> HashSet<i32> {
+    if messy_x {
+        // Conservative principle: only cells visible from BOTH positions are visible
+        let visible_left = raycast(grid, start_x, start_y, false);
+        let visible_right = raycast(grid, start_x + 1, start_y, false);
+
+        // Return intersection
+        return visible_left.intersection(&visible_right).copied().collect();
+    }
+
     let mut visible = HashSet::new();
 
     if grid.is_blocked(start_x, start_y) {
@@ -25,10 +36,11 @@ pub fn raycast(grid: &Grid, start_x: i32, start_y: i32) -> HashSet<i32> {
     let mut lanes: Vec<Vec<(i32, i32)>> = vec![Vec::new(); grid.rows as usize];
 
     let (row_start_x, row_end_x) = find_walkable_bounds(grid, start_x, start_y);
+
     lanes[start_y as usize].push((row_start_x + 1, row_end_x + 1));
 
-    scan_direction(grid, start_x, start_y, 1, row_start_x, row_end_x, &mut lanes);
-    scan_direction(grid, start_x, start_y, -1, row_start_x, row_end_x, &mut lanes);
+    scan_direction(grid, start_x, start_y, 1, row_start_x, row_end_x, &mut lanes, false);
+    scan_direction(grid, start_x, start_y, -1, row_start_x, row_end_x, &mut lanes, false);
 
     // Debug output (disabled)
     // if (grid.rows == 12 && grid.cols == 12 && start_x == 3 && start_y == 3)
@@ -72,6 +84,22 @@ fn find_walkable_bounds(grid: &Grid, x: i32, y: i32) -> (i32, i32) {
     (start_x, end_x)
 }
 
+/// Find walkable bounds for messy X position (observer occupies x and x+1)
+fn find_walkable_bounds_messy(grid: &Grid, x: i32, y: i32) -> (i32, i32) {
+    let mut start_x = x;
+    let mut end_x = x + 1;
+
+    while start_x > 0 && !grid.is_blocked(start_x - 1, y) {
+        start_x -= 1;
+    }
+
+    while end_x < grid.cols - 1 && !grid.is_blocked(end_x + 1, y) {
+        end_x += 1;
+    }
+
+    (start_x, end_x)
+}
+
 /// Scan in one direction - EXACT match to C# getBorders + stepNxt logic
 fn scan_direction(
     grid: &Grid,
@@ -81,6 +109,7 @@ fn scan_direction(
     row_start_x: i32,
     row_end_x: i32,
     lanes: &mut Vec<Vec<(i32, i32)>>,
+    messy_x: bool,
 ) {
     // Debug disabled
     // let debug = grid.rows == 10 && grid.cols == 10 && start_x == 5 && start_y == 3;
@@ -103,7 +132,14 @@ fn scan_direction(
     let mut found_segment = None;
     for &(seg_start, seg_end) in &segments {
         // C# line 127: Check if start position is within this segment
-        if start_x >= seg_start && start_x <= seg_end {
+        // For messy X, check if either observer cell is in segment
+        let in_segment = if messy_x {
+            (start_x >= seg_start && start_x <= seg_end) || (start_x + 1 >= seg_start && start_x + 1 <= seg_end)
+        } else {
+            start_x >= seg_start && start_x <= seg_end
+        };
+
+        if in_segment {
             found_segment = Some((seg_start, seg_end));
             break;
         }
@@ -115,8 +151,12 @@ fn scan_direction(
     };
 
     // Initialize first cone (C# getBorders lines 197-210)
-    let ray_right = RayState::new(row_end_x - start_x, 1, -1, 0);
-    let ray_left = RayState::new(start_x - row_start_x, 1, -1, 0);
+    // For messy X: use conservative positions (rightmost for right ray, leftmost for left ray)
+    let observer_right_x = if messy_x { start_x + 1 } else { start_x };
+    let observer_left_x = start_x;
+
+    let ray_right = RayState::new(row_end_x - observer_right_x, 1, -1, 0);
+    let ray_left = RayState::new(observer_left_x - row_start_x, 1, -1, 0);
 
     let initial_cone = DeferredCone {
         ray_right,
@@ -130,18 +170,20 @@ fn scan_direction(
 
     // C# getBorders line 218: pf.stepNxt(pfn, ...)
     let mut pfn = Vec::new(); // Deferred cones list
-    process_cone(grid, start_x, start_y, dir, initial_cone, lanes, &mut pfn);
+    process_cone(grid, observer_left_x, observer_right_x, start_y, dir, initial_cone, lanes, &mut pfn);
 
     // C# getBorders lines 244-248: Process deferred cones
     while let Some(deferred) = pfn.pop() {
-        process_cone(grid, start_x, start_y, dir, deferred, lanes, &mut pfn);
+        process_cone(grid, observer_left_x, observer_right_x, start_y, dir, deferred, lanes, &mut pfn);
     }
 }
 
 /// Process a single cone (matches C# PFContext.stepNxt)
+/// For messy X: observer_left_x and observer_right_x may differ (conservative positioning)
 fn process_cone(
     grid: &Grid,
-    start_x: i32,
+    observer_left_x: i32,
+    observer_right_x: i32,
     start_y: i32,
     dir: i32,
     mut cone: DeferredCone,
@@ -154,11 +196,11 @@ fn process_cone(
 
         // right() method
         cone.ray_right.increment_y_step();
-        let calc_border_r = start_x + cone.ray_right.calculate_border();
+        let calc_border_r = observer_right_x + cone.ray_right.calculate_border();
         let mut border_x_r = calc_border_r.min(cone.prev_l_end_x);
 
         if border_x_r >= cone.curr_l_end_x {
-            cone.ray_right.diff_x = cone.curr_l_end_x - start_x;
+            cone.ray_right.diff_x = cone.curr_l_end_x - observer_right_x;
             cone.ray_right.diff_y = dir * (cone.curr_l_y - start_y);
 
             if cone.ray_right.diff_x >= 0 {
@@ -170,7 +212,7 @@ fn process_cone(
                 cone.ray_right.y_step = 1;
                 cone.ray_right.diff_y -= 1;
                 cone.ray_right.rounding = cone.ray_right.diff_y - 1;
-                border_x_r = start_x + cone.ray_right.calculate_border();
+                border_x_r = observer_right_x + cone.ray_right.calculate_border();
             }
         } else if border_x_r < cone.curr_l_start_x {
             break;
@@ -178,10 +220,10 @@ fn process_cone(
 
         // left() method
         cone.ray_left.increment_y_step();
-        let mut border_x_l = start_x - cone.ray_left.calculate_border();
+        let mut border_x_l = observer_left_x - cone.ray_left.calculate_border();
 
         if border_x_l <= cone.curr_l_start_x {
-            cone.ray_left.diff_x = start_x - cone.curr_l_start_x;
+            cone.ray_left.diff_x = observer_left_x - cone.curr_l_start_x;
             cone.ray_left.diff_y = dir * (cone.curr_l_y - start_y);
 
             if cone.ray_left.diff_x >= 0 {
@@ -193,7 +235,7 @@ fn process_cone(
                 cone.ray_left.y_step = 1;
                 cone.ray_left.diff_y -= 1;
                 cone.ray_left.rounding = cone.ray_left.diff_y - 1;
-                border_x_l = start_x - cone.ray_left.calculate_border();
+                border_x_l = observer_left_x - cone.ray_left.calculate_border();
             }
         } else if border_x_l > cone.curr_l_end_x {
             break;
@@ -300,14 +342,14 @@ mod tests {
     #[test]
     fn test_empty_grid() {
         let grid = Grid::new(10, 10);
-        let visible = raycast(&grid, 5, 5);
+        let visible = raycast(&grid, 5, 5, false);
         assert_eq!(visible.len(), 100);
     }
 
     #[test]
     fn test_blocked_start() {
         let grid = Grid::with_blocked(10, 10, &[55]);
-        let visible = raycast(&grid, 5, 5);
+        let visible = raycast(&grid, 5, 5, false);
         assert_eq!(visible.len(), 0);
     }
 }

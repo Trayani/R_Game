@@ -133,6 +133,44 @@ Together, these principles create **8x effective test coverage** per test case:
 
 This comprehensive approach ensures algorithmic correctness across diverse scenarios.
 
+## Messy X Position
+
+**Messy X** is a special observer state where the observer occupies two adjacent horizontal cells instead of a single cell. This represents an observer whose position is not cleanly aligned to one cell.
+
+### Implementation
+
+When `messy_x=true` is passed to `raycast()`:
+- Observer occupies cells `(x, y)` and `(x+1, y)`
+- **Conservative Principle**: Visibility is the INTERSECTION of what each cell can see independently
+- Only cells visible from BOTH observer positions are considered visible
+- This ensures the most restrictive (conservative) visibility calculation
+
+### Rationale
+
+The conservative principle ensures that obstacles blocking one observer cell properly block visibility:
+- If the left cell `(x, y)` has blocked vision in a direction, messy X cannot see in that direction
+- If the right cell `(x+1, y)` has blocked vision in a direction, messy X cannot see in that direction
+- Result: Messy X visibility ≤ min(left visibility, right visibility)
+
+### Corner Detection with Messy X
+
+For corner detection with messy X:
+- Corners are detected normally based on grid structure
+- **Observer Corners**: If an observer cell is itself a corner (marked with 'z' in tests), it's automatically interesting
+- Use `filter_interesting_corners_with_observer_corners()` to specify observer corners explicitly
+
+### Test Data Format
+
+Messy X tests use these markers:
+- `s`: Observer cell (two adjacent 's' markers indicate messy X position)
+- `z`: Observer corner - a cell that is both an observer position AND a corner (auto-interesting)
+- `b`: Blocked cell
+- `o`: Visible cell
+- `c`: Interesting corner
+- `x`: Non-visible cell
+
+Test file: `test_data/corners/5_messy_x.txt`
+
 ## Development Notes
 
 - **Integer arithmetic only**: The raycasting algorithm uses pure integer math. Never introduce floating-point calculations in raycasting logic.
