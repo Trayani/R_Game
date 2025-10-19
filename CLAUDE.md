@@ -169,7 +169,64 @@ Messy X tests use these markers:
 - `c`: Interesting corner
 - `x`: Non-visible cell
 
-Test file: `test_data/corners/5_messy_x.txt`
+Test files: `test_data/corners/6_messy_x.txt`, `test_data/corners/7_messy_x2.txt`
+
+### 3FLIP Formula for Messy X
+
+When flipping grids with messy X observers, the observer position transforms as:
+- **Horizontal flip**: `new_obs_x = cols - obs_x - 2` (messy X offset formula)
+- **Vertical flip**: `new_obs_y = rows - 1 - obs_y` (standard formula)
+- **Both flips (hv_flip)**: Apply both formulas
+
+The `-2` offset in horizontal flip accounts for the two-cell width of the messy X observer.
+
+## Messy Y Position
+
+**Messy Y** is the vertical counterpart to messy X - the observer occupies two adjacent vertical cells instead of a single cell.
+
+### Implementation
+
+When `messy_y=true` is passed to `raycast()`:
+- Observer occupies cells `(x, y)` and `(x, y+1)`
+- **Conservative Principle**: Visibility is the INTERSECTION of what each cell can see independently
+- Only cells visible from BOTH observer positions are considered visible
+- Messy Y is mathematically the **transpose** of messy X
+
+### 3FLIP Formula for Messy Y
+
+When flipping grids with messy Y observers, the observer position transforms as:
+- **Horizontal flip**: `new_obs_x = cols - 1 - obs_x` (standard formula)
+- **Vertical flip**: `new_obs_y = rows - obs_y - 2` (messy Y offset formula)
+- **Both flips (hv_flip)**: Apply both formulas
+
+The `-2` offset in vertical flip accounts for the two-cell height of the messy Y observer. This is the transpose of messy X flip formulas.
+
+### Test Data Creation
+
+Messy Y test data is created by **transposing** messy X test files:
+1. Transpose the grid (rows ↔ columns)
+2. Transform observer position: `(obs_x, obs_y) → (obs_y, obs_x)`
+3. This converts horizontal adjacency `(x, y) + (x+1, y)` to vertical adjacency `(obs_y, obs_x) + (obs_y, obs_x+1)`
+
+**Important**: The observer markers ('s') must be handled specially during transposition to maintain adjacency. Simple character transposition will break the two-cell observer into diagonal positions.
+
+Test files: `test_data/corners/messy_y/6_messy_y.txt`, `test_data/corners/messy_y/7_messy_y2.txt`
+
+## Messy X+Y Position
+
+When both `messy_x=true` and `messy_y=true` are passed to `raycast()`:
+- Observer occupies a 2×2 block of cells: `(x, y)`, `(x+1, y)`, `(x, y+1)`, `(x+1, y+1)`
+- Visibility is the INTERSECTION of all 4 cells' individual visibility
+- Most conservative observer state possible
+
+### Grid Boundary Validation
+
+All messy positions validate that the observer doesn't extend beyond grid boundaries:
+- Messy X: `x < cols - 1` (observer cannot start at rightmost column)
+- Messy Y: `y < rows - 1` (observer cannot start at bottom row)
+- Messy X+Y: Both conditions must be satisfied
+
+Invalid positions trigger a panic with a descriptive error message.
 
 ## Development Notes
 
