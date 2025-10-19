@@ -119,48 +119,6 @@ impl VisState {
         false
     }
 
-    /// Get the conservative observer cell for border line drawing.
-    /// Conservative = the observer cell in the corner that faces the target direction.
-    /// This gives the narrowest view cone from the messy observer to the target.
-    fn get_conservative_observer_cell(&self, target_x: i32, target_y: i32) -> (i32, i32) {
-        // Calculate direction from observer center to target
-        let center_x = if self.messy_x {
-            self.observer_x as f32 + 0.5  // Center between two cells
-        } else {
-            self.observer_x as f32 + 0.5  // Center of single cell
-        };
-
-        let center_y = if self.messy_y {
-            self.observer_y as f32 + 0.5  // Center between two cells
-        } else {
-            self.observer_y as f32 + 0.5  // Center of single cell
-        };
-
-        let target_center_x = target_x as f32 + 0.5;
-        let target_center_y = target_y as f32 + 0.5;
-
-        let dx = target_center_x - center_x;
-        let dy = target_center_y - center_y;
-
-        // Determine which observer cell to use based on target direction
-        let use_right = dx >= 0.0;
-        let use_bottom = dy >= 0.0;
-
-        let obs_x = if self.messy_x && use_right {
-            self.observer_x + 1  // Use right cell
-        } else {
-            self.observer_x  // Use left cell
-        };
-
-        let obs_y = if self.messy_y && use_bottom {
-            self.observer_y + 1  // Use bottom cell
-        } else {
-            self.observer_y  // Use top cell
-        };
-
-        (obs_x, obs_y)
-    }
-
     fn grid_to_string(&self) -> String {
         let mut result = String::new();
 
@@ -278,11 +236,16 @@ impl VisState {
 
         // Only draw line if mouse is within grid bounds
         if mouse_grid_x >= 0 && mouse_grid_x < self.grid.cols && mouse_grid_y >= 0 && mouse_grid_y < self.grid.rows {
-            // Determine which observer cell to use for border lines (conservative = closest to mouse)
-            let (border_obs_x, border_obs_y) = self.get_conservative_observer_cell(mouse_grid_x, mouse_grid_y);
+            // Calculate observer block bounds (entire messy block, not just one cell)
+            let obs_block_left = self.observer_x;
+            let obs_block_right = if self.messy_x { self.observer_x + 1 } else { self.observer_x };
+            let obs_block_top = self.observer_y;
+            let obs_block_bottom = if self.messy_y { self.observer_y + 1 } else { self.observer_y };
 
-            let observer_center_x = border_obs_x as f32 * self.cell_width + self.cell_width / 2.0;
-            let observer_center_y = border_obs_y as f32 * self.cell_height + self.cell_height / 2.0;
+            // Observer block center
+            let observer_center_x = (obs_block_left as f32 + obs_block_right as f32) / 2.0 * self.cell_width + self.cell_width / 2.0;
+            let observer_center_y = (obs_block_top as f32 + obs_block_bottom as f32) / 2.0 * self.cell_height + self.cell_height / 2.0;
+
             let mouse_center_x = mouse_grid_x as f32 * self.cell_width + self.cell_width / 2.0;
             let mouse_center_y = mouse_grid_y as f32 * self.cell_height + self.cell_height / 2.0;
 
@@ -294,11 +257,11 @@ impl VisState {
             let dy = mouse_center_y - observer_center_y;
 
             if dx != 0.0 || dy != 0.0 {
-                // Get all four corners of conservative observer cell
-                let obs_left = border_obs_x as f32 * self.cell_width;
-                let obs_right = (border_obs_x + 1) as f32 * self.cell_width;
-                let obs_top = border_obs_y as f32 * self.cell_height;
-                let obs_bottom = (border_obs_y + 1) as f32 * self.cell_height;
+                // Get all corners of the ENTIRE observer block (not just one cell)
+                let obs_left_px = obs_block_left as f32 * self.cell_width;
+                let obs_right_px = (obs_block_right + 1) as f32 * self.cell_width;
+                let obs_top_px = obs_block_top as f32 * self.cell_height;
+                let obs_bottom_px = (obs_block_bottom + 1) as f32 * self.cell_height;
 
                 // Get all four corners of mouse cell
                 let mouse_left = mouse_grid_x as f32 * self.cell_width;
@@ -309,10 +272,10 @@ impl VisState {
                 // Find which corners are on opposite sides of the center line
                 // Using cross product to determine which side each corner is on
                 let corners = [
-                    ((obs_left, obs_top), (mouse_left, mouse_top)),       // top-left
-                    ((obs_right, obs_top), (mouse_right, mouse_top)),     // top-right
-                    ((obs_left, obs_bottom), (mouse_left, mouse_bottom)), // bottom-left
-                    ((obs_right, obs_bottom), (mouse_right, mouse_bottom)), // bottom-right
+                    ((obs_left_px, obs_top_px), (mouse_left, mouse_top)),       // top-left
+                    ((obs_right_px, obs_top_px), (mouse_right, mouse_top)),     // top-right
+                    ((obs_left_px, obs_bottom_px), (mouse_left, mouse_bottom)), // bottom-left
+                    ((obs_right_px, obs_bottom_px), (mouse_right, mouse_bottom)), // bottom-right
                 ];
 
                 let mut side_values: Vec<(f32, usize)> = Vec::new();
