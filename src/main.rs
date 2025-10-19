@@ -316,7 +316,7 @@ impl VisState {
 
             // Draw pathfinding path
             if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, mouse_grid_x, mouse_grid_y, self.messy_x, self.messy_y) {
-                // Draw path lines as thick black line
+                // Draw path lines with white outline and black core
                 for i in 1..path.len() {
                     let from = &path[i - 1];
                     let to = &path[i];
@@ -324,14 +324,22 @@ impl VisState {
                     let from_y = from.y as f32 * self.cell_height + self.cell_height / 2.0;
                     let to_x = to.x as f32 * self.cell_width + self.cell_width / 2.0;
                     let to_y = to.y as f32 * self.cell_height + self.cell_height / 2.0;
+
+                    // White outline
+                    draw_line(from_x, from_y, to_x, to_y, 6.0, WHITE);
+                    // Black core
                     draw_line(from_x, from_y, to_x, to_y, 4.0, BLACK);
                 }
 
-                // Draw waypoint circles
+                // Draw waypoint circles with white outline and black core
                 for (i, pos) in path.iter().enumerate() {
                     let px = pos.x as f32 * self.cell_width + self.cell_width / 2.0;
                     let py = pos.y as f32 * self.cell_height + self.cell_height / 2.0;
                     let radius = if i == 0 || i == path.len() - 1 { 5.0 } else { 4.0 };
+
+                    // White outline
+                    draw_circle(px, py, radius + 1.0, WHITE);
+                    // Black core
                     draw_circle(px, py, radius, BLACK);
                 }
             }
