@@ -4,7 +4,7 @@ use std::collections::{HashMap, BinaryHeap, HashSet};
 use std::cmp::Ordering;
 
 // Trace logging flag - set to true to enable debug output
-const TRACE_PATHFINDING: bool = true;
+const TRACE_PATHFINDING: bool = false;
 
 /// A position on the grid
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -187,8 +187,17 @@ pub fn find_path(
 
     if TRACE_PATHFINDING {
         println!("[find_path] Start interesting corners: {} corners", interesting_corners.len());
-        for (i, corner) in interesting_corners.iter().enumerate().take(5) {
-            println!("  [{}] Corner at ({},{}) = ID {}", i, corner.x, corner.y, grid.get_id(corner.x, corner.y));
+        println!("[find_path] Expected corners in path: 4056=(0,39), 4310=(6,41)");
+
+        let has_4056 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4056);
+        let has_4310 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4310);
+        println!("[find_path] Has 4056? {}, Has 4310? {}", has_4056, has_4310);
+
+        for (i, corner) in interesting_corners.iter().enumerate() {
+            let id = grid.get_id(corner.x, corner.y);
+            if id == 4056 || id == 4310 || i < 5 {
+                println!("  [{}] Corner at ({},{}) = ID {}", i, corner.x, corner.y, id);
+            }
         }
         if interesting_corners.len() > 5 {
             println!("  ... and {} more", interesting_corners.len() - 5);
@@ -220,16 +229,17 @@ pub fn find_path(
     let mut min_distance = f64::MAX;
     let mut optimal_path: Option<Vec<Position>> = None;
 
-    // Enqueue initial interesting corners
-    for corner in &interesting_corners {
-        let pos = Position::new(corner.x, corner.y);
-        let distance = start.distance(&pos);
-        best_distances.insert(pos, distance);
-        queue.push(PathNode {
-            position: pos,
-            total_distance: distance,
-            path: vec![start, pos],
-        });
+    // Start A* from the start position itself (not from visible corners)
+    // The start position will expand to its interesting corners
+    best_distances.insert(start, 0.0);
+    queue.push(PathNode {
+        position: start,
+        total_distance: 0.0,
+        path: vec![start],
+    });
+
+    if TRACE_PATHFINDING {
+        println!("[find_path] Starting A* from start position");
     }
 
     // Step 5: Process queue
@@ -259,7 +269,10 @@ pub fn find_path(
             if node.total_distance < min_distance {
                 min_distance = node.total_distance;
                 let mut path = node.path.clone();
-                path.push(dest);
+                // Only add dest if target is not already the destination
+                if pos != dest {
+                    path.push(dest);
+                }
                 optimal_path = Some(path);
             }
             continue;
@@ -274,7 +287,12 @@ pub fn find_path(
         cache.mark_processed(pos);
 
         // Get this corner's interesting corners
-        let next_corners = cache.get_or_compute(pos, grid, messy_x, messy_y);
+        // Special case: if we're at start position, use pre-computed interesting_corners
+        let next_corners = if pos == start {
+            interesting_corners.clone()
+        } else {
+            cache.get_or_compute(pos, grid, messy_x, messy_y)
+        };
 
         if TRACE_PATHFINDING && iterations <= 10 {
             println!("  Found {} next corners from ({},{})", next_corners.len(), pos.x, pos.y);
