@@ -1,4 +1,4 @@
-use rustgame3::{Grid, raycast, corners::{detect_all_corners, filter_interesting_corners}};
+use rustgame3::{Grid, raycast, corners::{detect_all_corners, filter_interesting_corners}, pathfinding::find_path_by_id};
 use std::fs;
 
 fn main() {
@@ -10,8 +10,11 @@ fn main() {
 
     println!("===== VERIFYING RUST PATH FOR TEST 002: 1211 -> 4396 =====\n");
 
-    // Rust path: [1211, 3622, 2125, 4396]
-    let rust_path = vec![1211, 3622, 2125, 4396];
+    // Run actual pathfinding to get Rust path
+    let (rust_path, dist) = find_path_by_id(&grid, 1211, 4396, false, false)
+        .expect("Failed to find path");
+
+    println!("Distance: {:.2}", dist);
 
     println!("Rust path: {:?}", rust_path);
     println!("\nPath coordinates:");

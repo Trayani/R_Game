@@ -147,18 +147,8 @@ pub fn find_path_by_id(
         total_dist += path_positions[i - 1].distance(&path_positions[i]);
     }
 
-    // C# returns waypoints in reverse order (path is built backward then reversed)
-    // To match C# output, reverse the intermediate waypoints (exclude start and dest)
-    if path_ids.len() > 2 {
-        let mut result = vec![path_ids[0]];  // start
-        let mut middle: Vec<i32> = path_ids[1..path_ids.len()-1].to_vec();
-        middle.reverse();
-        result.extend(middle);
-        result.push(path_ids[path_ids.len()-1]);  // dest
-        Some((result, total_dist))
-    } else {
-        Some((path_ids, total_dist))
-    }
+    // Return path as-is (waypoints are already in correct forward order)
+    Some((path_ids, total_dist))
 }
 
 /// Find path from start to destination using corner-based pathfinding
@@ -202,26 +192,33 @@ pub fn find_path(
         return Some(vec![start, dest]);
     }
 
-    // Step 3: Determine target corners
+    // Step 3: Get ALL visible corners from start (not just "interesting" ones)
+    // C# computes all corners visible from a position for navigation
     let all_corners = detect_all_corners(grid);
-    let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
+    let start_visible_corners: Vec<Corner> = all_corners.iter()
+        .filter(|corner| {
+            let corner_id = grid.get_id(corner.x, corner.y);
+            visible_cells.contains(&corner_id)
+        })
+        .cloned()
+        .collect();
 
     if TRACE_PATHFINDING {
-        println!("[find_path] Start interesting corners: {} corners", interesting_corners.len());
-        println!("[find_path] Expected corners in path: 4056=(0,39), 4310=(6,41)");
+        println!("[find_path] Start ALL visible corners: {} corners", start_visible_corners.len());
+        println!("[find_path] Expected corners in path: 4056=(72,48), 4310=(77,51)");
 
-        let has_4056 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4056);
-        let has_4310 = interesting_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4310);
+        let has_4056 = start_visible_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4056);
+        let has_4310 = start_visible_corners.iter().any(|c| grid.get_id(c.x, c.y) == 4310);
         println!("[find_path] Has 4056? {}, Has 4310? {}", has_4056, has_4310);
 
-        for (i, corner) in interesting_corners.iter().enumerate() {
+        for (i, corner) in start_visible_corners.iter().enumerate() {
             let id = grid.get_id(corner.x, corner.y);
             if id == 4056 || id == 4310 || i < 5 {
                 println!("  [{}] Corner at ({},{}) = ID {}", i, corner.x, corner.y, id);
             }
         }
-        if interesting_corners.len() > 5 {
-            println!("  ... and {} more", interesting_corners.len() - 5);
+        if start_visible_corners.len() > 5 {
+            println!("  ... and {} more", start_visible_corners.len() - 5);
         }
     }
 
@@ -307,10 +304,10 @@ pub fn find_path(
         // Mark as processed
         cache.mark_processed(pos);
 
-        // Get this corner's interesting corners
-        // Special case: if we're at start position, use pre-computed interesting_corners
+        // Get this corner's visible corners
+        // Special case: if we're at start position, use pre-computed start_visible_corners
         let next_corners = if pos == start {
-            interesting_corners.clone()
+            start_visible_corners.clone()
         } else {
             cache.get_or_compute(pos, grid, messy_x, messy_y)
         };
