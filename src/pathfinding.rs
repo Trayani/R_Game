@@ -137,7 +137,18 @@ pub fn find_path_by_id(
         total_dist += path_positions[i - 1].distance(&path_positions[i]);
     }
 
-    Some((path_ids, total_dist))
+    // C# returns waypoints in reverse order (path is built backward then reversed)
+    // To match C# output, reverse the intermediate waypoints (exclude start and dest)
+    if path_ids.len() > 2 {
+        let mut result = vec![path_ids[0]];  // start
+        let mut middle: Vec<i32> = path_ids[1..path_ids.len()-1].to_vec();
+        middle.reverse();
+        result.extend(middle);
+        result.push(path_ids[path_ids.len()-1]);  // dest
+        Some((result, total_dist))
+    } else {
+        Some((path_ids, total_dist))
+    }
 }
 
 /// Find path from start to destination using corner-based pathfinding

@@ -66,7 +66,6 @@ fn test2x_001_4396_to_1211() {
 }
 
 #[test]
-#[ignore]
 fn test2x_002_1211_to_4396() {
     // test4(pf, 1211, 4396, 1, true, false, false, 4310, 4056);
     let grid = load_test_grid();
@@ -74,7 +73,6 @@ fn test2x_002_1211_to_4396() {
 }
 
 #[test]
-#[ignore]
 fn test2x_003_1211_to_4310() {
     // test4(pf, 1211, 4310, 1, true, false, false, 4056);
     let grid = load_test_grid();
@@ -82,7 +80,6 @@ fn test2x_003_1211_to_4310() {
 }
 
 #[test]
-#[ignore]
 fn test2x_004_875_to_4396() {
     // test4(pf, 875, 4396, 1, true, false, false, 4310, 4056, 1211);
     let grid = load_test_grid();
@@ -90,7 +87,6 @@ fn test2x_004_875_to_4396() {
 }
 
 #[test]
-#[ignore]
 fn test2x_005_4396_to_875() {
     // test4(pf, 4396, 875, 1, true, false, false, 1211, 4056, 4310);
     let grid = load_test_grid();
@@ -120,7 +116,6 @@ fn test2x_005_4396_to_875() {
 // Line 322: test3(2679, 2768, 1, false, false, false, 2851, 2845) - messyY=false, messyX=false - INCLUDE!
 
 #[test]
-#[ignore]
 fn test2x_006_2679_to_2768() {
     let grid = load_test_grid();
     assert_path(&grid, 2679, 2768, Some(&[2851, 2845]), "006");
@@ -130,7 +125,6 @@ fn test2x_006_2679_to_2768() {
 // Line 326: test3(2597, 2768, 1, false, false, false, 2851, 2845, 2679) - INCLUDE!
 
 #[test]
-#[ignore]
 fn test2x_007_2597_to_2768() {
     let grid = load_test_grid();
     assert_path(&grid, 2597, 2768, Some(&[2851, 2845, 2679]), "007");
@@ -142,7 +136,6 @@ fn test2x_007_2597_to_2768() {
 // Line 331: test3(2680, 2768, 1, false, false, false, 2851, 2845, 2679) - INCLUDE!
 
 #[test]
-#[ignore]
 fn test2x_008_2680_to_2768() {
     let grid = load_test_grid();
     assert_path(&grid, 2680, 2768, Some(&[2851, 2845, 2679]), "008");
@@ -150,7 +143,6 @@ fn test2x_008_2680_to_2768() {
 
 // Line 344: test3(2679, 2768, 1, false, false, false, 2851, 2845) - INCLUDE!
 #[test]
-#[ignore]
 fn test2x_009_2679_to_2768_again() {
     let grid = load_test_grid();
     assert_path(&grid, 2679, 2768, Some(&[2851, 2845]), "009");
@@ -160,7 +152,6 @@ fn test2x_009_2679_to_2768_again() {
 // test() => test2() => test3(reverse, messyY=false, messyX=false) - INCLUDE!
 
 #[test]
-#[ignore]
 fn test2x_010_2254_to_2255() {
     // test(2254, 2255, 1); - no waypoints means direct path
     let grid = load_test_grid();
@@ -168,7 +159,6 @@ fn test2x_010_2254_to_2255() {
 }
 
 #[test]
-#[ignore]
 fn test2x_011_4240_to_4980() {
     // test(4240, 4980, 1, 4732);
     let grid = load_test_grid();
@@ -176,7 +166,6 @@ fn test2x_011_4240_to_4980() {
 }
 
 #[test]
-#[ignore]
 fn test2x_012_5429_to_5507() {
     // test(5429, 5507, 1); - no waypoints
     let grid = load_test_grid();
@@ -184,7 +173,6 @@ fn test2x_012_5429_to_5507() {
 }
 
 #[test]
-#[ignore]
 fn test2x_013_947_to_2110() {
     // test(947, 2110, 1, 1114);
     let grid = load_test_grid();
@@ -192,7 +180,6 @@ fn test2x_013_947_to_2110() {
 }
 
 #[test]
-#[ignore]
 fn test2x_014_4820_to_4490() {
     // test(4820, 4490, 1, 4573);
     let grid = load_test_grid();
@@ -200,7 +187,6 @@ fn test2x_014_4820_to_4490() {
 }
 
 #[test]
-#[ignore]
 fn test2x_015_2341_to_5507_long_path() {
     // test(2341, 5507, 1, 5505, 5585, 5570, 5321, 5156, 4908, 4576, 4574, 4901, 4898, 4732, 4323, 4330, 5245, 5247, 4087, 2759, 2424);
     let grid = load_test_grid();
@@ -218,7 +204,6 @@ fn test2x_015_2341_to_5507_long_path() {
 
 // Lines 377-380: test() calls (size=1)
 #[test]
-#[ignore]
 fn test2x_016_946_to_2437() {
     // test(946, 2437, 1, 2523, 3769, 3771, 2194, 1114);
     let grid = load_test_grid();
@@ -226,7 +211,6 @@ fn test2x_016_946_to_2437() {
 }
 
 #[test]
-#[ignore]
 fn test2x_017_946_to_2440() {
     // test(946, 2440, 1, 3769, 3771, 2194, 1114);
     let grid = load_test_grid();
@@ -234,7 +218,6 @@ fn test2x_017_946_to_2440() {
 }
 
 #[test]
-#[ignore]
 fn test2x_018_4829_to_4750() {
     // test(4829, 4750, 1, 5247, 5245);
     let grid = load_test_grid();
@@ -247,7 +230,6 @@ fn test2x_018_4829_to_4750() {
 
 // Lines 412: test() with modified grid
 #[test]
-#[ignore]
 fn test2x_019_4829_to_4750_with_blocks() {
     // test(4829, 4750, 1, 4917, 5083, 5247, 5245);
     let mut grid = load_test_grid();
