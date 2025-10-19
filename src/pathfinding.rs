@@ -186,55 +186,48 @@ pub fn find_path(
         println!("[find_path] Visible cells from start: {} cells", visible_cells.len());
     }
 
-    // Step 2: Check for same-line special case (start and dest on same row)
-    // This requires special handling when messy flags are set
+    // Step 2: Check for same-line special case
+    // IMPORTANT: "Same line" means same LINE SEGMENT (connected walkable cells),
+    // NOT just same Y coordinate! C# checks: l == l2 (same Line object)
     if start_y == dest_y {
+        let dest_visible = visible_positions.contains(&dest);
+
         if TRACE_PATHFINDING {
-            println!("[find_path] Start and dest on same line (Y={})", start_y);
+            println!("[find_path] Start and dest on same row (Y={}), dest_visible={}", start_y, dest_visible);
         }
 
-        // If no messy flags, check if destination is visible for direct path
-        if !messy_x && !messy_y {
-            if visible_positions.contains(&dest) {
+        // If dest is visible on same row, they're on same line segment
+        if dest_visible {
+            // If no messy flags, return direct path
+            if !messy_x && !messy_y {
                 if TRACE_PATHFINDING {
-                    println!("[find_path] Same line, clean position, dest visible - direct path");
+                    println!("[find_path] Same line segment, clean position - direct path");
                 }
                 return Some(vec![start, dest]);
             }
-        }
 
-        // With messy_y, need to check if alignment waypoint is required
-        // This matches C# logic in PathFinder.cs:356-368
-        if messy_y {
-            if TRACE_PATHFINDING {
-                println!("[find_path] Same line with messyY=true - checking if alignment needed");
-            }
-
-            // C# gets line from row BELOW: getLineFromRow(start + grid.cols, size)
-            // We need to find what line segment exists at the row below start
-            // For simplicity, we'll check if the destination can be reached from the messy position
-            // If not, we need an alignment waypoint
-
-            // TODO: Implement proper line segment checking from row below
-            // For now, use simplified logic: only add alignment if dest is NOT visible from messy position
-            if !visible_positions.contains(&dest) {
+            // With messy_y, add alignment waypoint
+            if messy_y {
                 if TRACE_PATHFINDING {
-                    println!("[find_path] Same line messyY: dest not visible from messy, adding alignment waypoint");
+                    println!("[find_path] Same line segment messyY: adding alignment waypoint");
                 }
-                let mut path = vec![start, start, dest];  // start, alignment at start, dest
+                let path = vec![start, start, dest];  // start, alignment at start, dest
                 return Some(path);
-            } else {
-                if TRACE_PATHFINDING {
-                    println!("[find_path] Same line messyY: dest IS visible from messy, direct path");
-                }
+            }
+
+            // With messy_x
+            if messy_x {
+                // TODO: Implement messyX alignment logic
                 return Some(vec![start, dest]);
             }
+
+            return Some(vec![start, dest]);
         }
 
-        // With messy_x, similar logic for horizontal alignment
-        if messy_x {
-            // TODO: Implement messyX alignment logic
-            // For now, treat as normal case
+        // Same row but dest NOT visible - they're on different line segments
+        // Continue with normal pathfinding (don't apply same-line special case)
+        if TRACE_PATHFINDING {
+            println!("[find_path] Same row but different line segments - continuing with normal pathfinding");
         }
     }
 
