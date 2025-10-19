@@ -102,7 +102,7 @@ The test suite validates the Rust implementation against the C# reference by com
 
 The project employs rigorous testing principles to ensure correctness across all scenarios:
 
-### 3-Flip Principle
+### 3-Flip Principle ("3FLIP")
 
 Every raycasting and corner detection test is validated against **4 orientations**:
 1. **Original**: Test data as written
@@ -115,7 +115,7 @@ This ensures the algorithm works correctly regardless of grid orientation and pr
 - `tests/standard_tests.rs` - Standard format tests
 - `tests/corner_tests.rs` - Corner detection tests (3_case.txt, 4_case.txt)
 
-### Reciprocal Visibility Principle
+### Reciprocal Visibility Principle ("RECI")
 
 For corner detection tests, we validate **reciprocal visibility**: if corner C is visible from observer O, then O must be visible from C. This is a fundamental property of line-of-sight in obstacle-free paths.
 

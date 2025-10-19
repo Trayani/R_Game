@@ -32,3 +32,8 @@ u□▲□□□□□□□□□□□□□□□□□□□□□□▲□u
 □u□▲□□□□□□▲□▲□□□□□□□□□□□□□□□□
 □□□□□□□□□□□■□□□□□□□□□□□□□□□□□
 □□□□□□□□□□u□u□□□□□□□□□□□□□□□□
+
+
+# MESSY X
+is a state, where the observer is placed on two cells in the same row. His position is no "cleanly" at one cell only.
+That affects vision calculation: ray casting needs to use the cell that is more conservative for given direction and left/right border. 

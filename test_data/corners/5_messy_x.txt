@@ -1,17 +1,21 @@
 s ... observer on two cells (messy X position)
+b .... blocked cell
 x .... non-visible cell
 o .... visible cell
 c .... interesting corner (also a visible cell)
+z .... observer cell that is also a corner! With messy position, if one of observer cells is corner, it automaticalle becomes interesting!
 
-oxxxxooo
-ooxbxooo
-oococooo
-oooooooo
-ooossooo
-oooooooo
-ooococoo
-oooxbxoo
-oooxxxxo
-ooxxxxxx
-ooxxxxxx
+example in non-messy (make tests to validate them  with 3FLIP and RECI!):
+xxxxcoo | xxxxxxx | xxxxcoo | xxxxxxx | oocxxxx | xxxxxxx | xxxxxxx | xxxxxxx | xxxxxxx
+xxxbooo | xxxbxxx | xxxbsoo | xxxbxxx | ooobxxx | xxxbxxx | xxxbxxx | xxxbxxx | xxxbxxx
+oocosoo | oocscoo | xxxxcoo | oocscoo | oosocoo | ooosooo | ooosooo | ooosooo | ooosooo
+ooooooo | ooooooo | xxxxooo | ooooooo | ooooooo | ooooooo | ooooooo | ooooooo | ooooooo
+
+with messy X (for now do not apply 3FLIP nor RECI for messy - to be decided later) :
+
+xxxxcoo | xxxxxxx | xxxxxxx | xxxxcoo  | xxxxxxx
+xxxbooo | xxxbxxx | xxxbxxx | xxxbsso  | xxxbxxx
+oocosso | oocszoo | oozscoo | xxxxcoo  | oozscoo
+ooooooo | ooooooo | ooooooo | xxxxooo  | ooooooo
+
 
