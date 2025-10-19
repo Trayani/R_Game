@@ -58,7 +58,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Cargo.Run rustgame3.executor": "Run",
+    "Cargo.Run rustgame3.executor": "Debug",
     "Cargo.Test ray.executor": "Debug",
     "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
@@ -166,7 +166,7 @@
       <workItem from="1760732640419" duration="24812000" />
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
-      <workItem from="1760796207505" duration="35020000" />
+      <workItem from="1760796207505" duration="37406000" />
     </task>
     <servers />
   </component>

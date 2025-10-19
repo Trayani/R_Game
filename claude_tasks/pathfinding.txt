@@ -1,0 +1,13 @@
+Pathfinding ("PF")
+1. observer collects interesting corners, and visible cells
+2. is that destination within the vision? yes => return early a direct path
+3. determine target corners: if the destination cell IS a corner, then destination IS the target. Else, the destionation's
+corners are targets!
+4. Set a minimal distance = MAX_NUMBER_VALUE
+4. Process enqueued corners. is the enqueued corner a target?
+YES: mark it as reached. If it's total Distance is lower then minimal distance, mark it as the optimal path and set new minimal distance
+NO: collect the corner's interesting corners and continue
+
+Track already inspected corners! when a corner is computed, cache it's corners and "already processed" flag.
+When a corner shows up again from the queue, check if it was already processed OR it's total distance is higher then
+the potential new distance from a different path. If a better distance is found for already processed corner, it needs to be enqueued again
