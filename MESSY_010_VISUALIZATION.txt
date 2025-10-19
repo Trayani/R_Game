@@ -1,0 +1,200 @@
+=================================================================================
+TEST messy_010 DETAILED VISUALIZATION
+=================================================================================
+
+Test: 6637 → 6552 with messyY=true
+Expected path: [6637, 6636, 6637, 6552]
+
+=================================================================================
+GRID LAYOUT
+=================================================================================
+
+     Col: 77  78  79  80  81  82  83
+         ========================
+Row 77:  |  .  .  .  .  .  .  . |
+Row 78:  |  . [D] .  .  .  .  . |  D = 6552 (DEST)
+Row 79:  |  .  . [1][S] . [A] . |  S = 6637 (START, messy)
+Row 80:  |  .  .  .  .  2  .  . |  1 = 6636 (first waypoint)
+Row 81:  |  .  .  .  .  .  .  . |  A = 6639 (alternate path)
+         ========================  2 = 6721 (another corner)
+
+Position Details:
+- 6552 = (78, 78) [DEST]
+- 6636 = (79, 79) [Waypoint 1]
+- 6637 = (80, 79) [START - appears twice!]
+- 6639 = (82, 79) [Alternate corner - Rust chooses this]
+- 6721 = (81, 80) [Another corner]
+
+=================================================================================
+MESSY POSITION EXPLANATION
+=================================================================================
+
+START Position 6637 with messyY=true:
+┌─────────────────────────────────────────┐
+│  Row 79:    ...  [  6637  ]  ...        │  ← Entity spans BOTH rows
+│  Row 80:    ...  [  6637  ]  ...        │
+└─────────────────────────────────────────┘
+
+The entity occupies HALF of row 79 and HALF of row 80.
+It's positioned at (80, 79.5) - between rows!
+
+This is the "MESSY" state - not aligned to grid.
+
+CLEAN Position 6637 (alignment target):
+┌─────────────────────────────────────────┐
+│  Row 79:    ...  [  6637  ]  ...        │  ← Entity fully on row 79
+│  Row 80:    ...     .         ...       │
+└─────────────────────────────────────────┘
+
+The entity fully occupies row 79.
+It's positioned at (80, 79.0) - ON the row!
+
+This is the "CLEAN" state - aligned to grid.
+
+=================================================================================
+C# PATH COMPUTATION
+=================================================================================
+
+Step 1: Compute corners from MESSY start 6637
+─────────────────────────────────────────────────
+Result: [6637, 6721, 6639, ...]
+         ^^^^
+         START POSITION IS A CORNER! (distance 1.00)
+
+This is the alignment target - the clean version of the start position.
+
+Step 2: Iterate through corners and test paths
+─────────────────────────────────────────────────
+
+ITERATION 0: Test corner 6637 (distance 1.00 from start)
+┌────────────────────────────────────────────────────────┐
+│ 1. Corner: 6637 at distance 1.00                      │
+│ 2. Run A* FROM corner 6637 TO dest 6552               │
+│    (treating 6637 as CLEAN position)                  │
+│ 3. A* finds path: [6636]                              │
+│    Meaning: From 6637, go through 6636 to reach 6552  │
+│ 4. Distance from 6637 to 6552: 2.41                   │
+│ 5. Total distance: 1.00 + 2.41 = 3.41                 │
+│                                                        │
+│ 6. BUILD WAYPOINT LIST:                               │
+│    waypoints = [6636]        (from A*)                │
+│    waypoints.Add(6637)       (append corner!)         │
+│    waypoints = [6636, 6637]  ← FINAL                  │
+└────────────────────────────────────────────────────────┘
+
+Step 3: Build full path
+─────────────────────────────────────────────────
+Full path = [start] + waypoints + [dest]
+          = [6637] + [6636, 6637] + [6552]
+          = [6637, 6636, 6637, 6552]
+                   ^^^^  ^^^^
+                   START APPEARS TWICE!
+
+=================================================================================
+TRAVEL SEQUENCE
+=================================================================================
+
+Position  →  Position  Movement Description
+────────────────────────────────────────────────────────────────────────────
+6637(M)   →  6636      Move LEFT from messy start to first waypoint
+                       Entity moves from (80, 79.5) to (79, 79)
+                       Distance: ~1.0
+
+6636      →  6637(C)    Move RIGHT back to start (ALIGNMENT!)
+                       Entity moves from (79, 79) to (80, 79.0)
+                       NOW CLEAN - aligned to grid!
+                       Distance: 1.0
+
+6637(C)   →  6552       Move to destination
+                       Entity moves from (80, 79) to (78, 78)
+                       Distance: ~2.83
+────────────────────────────────────────────────────────────────────────────
+
+Legend: (M) = Messy position, (C) = Clean position
+
+=================================================================================
+WHY THE ALIGNMENT PATTERN?
+=================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  From MESSY position (80, 79.5):                                       │
+│  ─────────────────────────────────────                                 │
+│  • Limited visibility (entity spans two rows)                          │
+│  • Some corners may not be visible from this fractional position       │
+│  • Cannot reliably navigate while misaligned                           │
+│                                                                         │
+│  From CLEAN position (80, 79.0):                                       │
+│  ─────────────────────────────────────                                 │
+│  • Full visibility from grid-aligned position                          │
+│  • All corners properly visible                                        │
+│  • Normal pathfinding works correctly                                  │
+│                                                                         │
+│  Solution: ALIGN FIRST, then navigate!                                 │
+│  ───────────────────────────────────────                               │
+│  1. From messy start, move to nearby corner (6636)                     │
+│  2. From corner, return to START but now CLEAN (6637)                  │
+│  3. From clean start, navigate normally to dest                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+=================================================================================
+RUST CURRENT BEHAVIOR
+=================================================================================
+
+Rust path: [6637, 6636, 6639, 6552]
+
+┌────────────────────────────────────────────────────────────────────────┐
+│  Step 1: Start at 6637 (messy)                                        │
+│  Step 2: Move to 6636 ✓ (same as C#)                                  │
+│  Step 3: Move to 6639 ✗ (WRONG! Should be 6637)                       │
+│  Step 4: Move to 6552 (dest)                                          │
+└────────────────────────────────────────────────────────────────────────┘
+
+Why does Rust choose 6639?
+• Rust runs SINGLE A* search from start through all corners
+• A* finds geometrically valid path: 6637 → 6636 → 6639 → 6552
+• Doesn't enforce corner iteration structure
+• Doesn't append corner to its own path
+
+Rust is missing:
+• FOR-loop over corners testing paths from each corner
+• Appending corner ID to path from that corner
+• This creates the alignment pattern automatically
+
+=================================================================================
+THE KEY DIFFERENCE
+=================================================================================
+
+C# Algorithm:                      Rust Algorithm:
+──────────────                     ───────────────
+FOR each corner:                   Run A* once from start to dest
+  Run A* from corner to dest       through all interesting corners
+  Append corner to path
+  Track best path                  Choose shortest total path
+
+Result: Corner appears in path     Result: Direct path through corners
+after its own waypoints           without revisiting start
+
+=================================================================================
+C# CODE REFERENCE: PathFinder.pfxXX.cs:107
+=================================================================================
+
+for (int i = 0; i < corner.corners.Length; ++i) {
+    ref var cor = ref corner.corners[i];
+
+    var (d, p, cached) = pfxXXS(cor.ci, destCorner, size, minDist);
+
+    if (p != null && (d + cor.dist < minDist)) {
+        minDist = d + cor.dist;
+        path = p;
+        p.Add(cor.id);  ← THIS LINE! Appends corner to its own path
+    }
+}
+
+For corner 6637:
+• pfxXXS returns: p = [6636]
+• Line 107 executes: p.Add(6637)
+• Result: p = [6636, 6637]
+
+This creates the pattern where 6637 appears as a waypoint AFTER 6636!
+
+=================================================================================
