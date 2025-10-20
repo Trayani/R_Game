@@ -739,31 +739,14 @@ async fn main() {
                     actor_cpos.messy_x,
                     actor_cpos.messy_y,
                 ) {
-                    // Check if we should skip the first waypoint
-                    // Skip if: path has at least 2 waypoints AND first waypoint is the current cell
-                    // BUT don't skip if the path requires messy state change (realignment needed)
+                    // Skip the first waypoint if it's the actor's current cell
+                    // The path is just an approximation of which cells to visit
+                    // The actor can move directly from its floating position to the next cell
                     if path.len() >= 2 {
                         let first_waypoint = &path[0];
-                        let is_first_waypoint_current_cell =
-                            first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y;
-
-                        if is_first_waypoint_current_cell {
-                            // Check if next waypoint requires messy state change
-                            let second_waypoint = &path[1];
-
-                            // Calculate what messy state would be needed to reach second waypoint
-                            let dx = (second_waypoint.x - actor_cpos.cell_x).abs();
-                            let dy = (second_waypoint.y - actor_cpos.cell_y).abs();
-
-                            // If moving diagonally or more than 1 cell away, might need realignment
-                            // Otherwise, we can skip the first waypoint
-                            let needs_realignment = (dx > 1 || dy > 1) || (dx == 1 && dy == 1);
-
-                            if !needs_realignment {
-                                // Skip first waypoint - actor can move directly to next cell
-                                path.remove(0);
-                                println!("Skipped first waypoint (actor already in cell)");
-                            }
+                        if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
+                            path.remove(0);
+                            println!("Skipped first waypoint (actor already in cell)");
                         }
                     }
 
