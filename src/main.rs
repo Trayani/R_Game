@@ -354,44 +354,33 @@ impl VisState {
     }
 
     fn draw_path_list(&self, path: &[rustgame3::pathfinding::Position]) {
-        // Calculate panel position on the right side
-        let grid_width = self.grid.cols as f32 * self.cell_width;
-        let panel_x = grid_width + 20.0;
-        let panel_y = 10.0;
-        let line_height = 20.0;
+        // Build the horizontal path string
+        let mut path_parts: Vec<String> = Vec::new();
+
+        for pos in path.iter() {
+            let cell_id = self.grid.get_id(pos.x, pos.y);
+            path_parts.push(format!("({},{})#{}", pos.x, pos.y, cell_id));
+        }
+
+        let path_text = format!("PATH: {}", path_parts.join(" -> "));
+
+        // Calculate position at bottom of grid
+        let grid_height = self.grid.rows as f32 * self.cell_height;
+        let y_pos = grid_height + 20.0;
         let font_size = 18.0;
 
-        // Draw panel background
-        let panel_width = 150.0;
-        let panel_height = (path.len() as f32 * line_height) + 40.0;
+        // Draw on a dark background for readability
+        let text_width = measure_text(&path_text, None, font_size as u16, 1.0).width;
         draw_rectangle(
-            panel_x,
-            panel_y,
-            panel_width,
-            panel_height,
+            5.0,
+            y_pos - 18.0,
+            text_width + 10.0,
+            25.0,
             Color::from_rgba(20, 20, 20, 220)
         );
 
-        // Draw panel title
-        draw_text("PATH:", panel_x + 5.0, panel_y + 20.0, font_size, WHITE);
-
-        // Draw each path position
-        for (i, pos) in path.iter().enumerate() {
-            let y_pos = panel_y + 40.0 + (i as f32 * line_height);
-            let cell_id = self.grid.get_id(pos.x, pos.y);
-
-            // Different color for start and end
-            let color = if i == 0 {
-                Color::from_rgba(100, 200, 255, 255) // Light blue for start
-            } else if i == path.len() - 1 {
-                Color::from_rgba(255, 200, 100, 255) // Light orange for end
-            } else {
-                WHITE
-            };
-
-            let text = format!("{}. ({},{}) [{}]", i, pos.x, pos.y, cell_id);
-            draw_text(&text, panel_x + 5.0, y_pos, font_size, color);
-        }
+        // Draw the path text
+        draw_text(&path_text, 10.0, y_pos, font_size, WHITE);
     }
 
     fn draw(&self) {
