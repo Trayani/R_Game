@@ -230,6 +230,35 @@ pub fn find_path_with_cache(
     messy_y: bool,
     cached_corners: Option<&Vec<Corner>>,
 ) -> Option<Vec<Position>> {
+    find_path_internal(grid, start_x, start_y, dest_x, dest_y, messy_x, messy_y, cached_corners, None)
+}
+
+/// Find path with avoidance set - cells to avoid (other actors' paths)
+pub fn find_path_with_avoidance(
+    grid: &Grid,
+    start_x: i32,
+    start_y: i32,
+    dest_x: i32,
+    dest_y: i32,
+    messy_x: bool,
+    messy_y: bool,
+    cached_corners: Option<&Vec<Corner>>,
+    avoid_cells: Option<&HashSet<Position>>,
+) -> Option<Vec<Position>> {
+    find_path_internal(grid, start_x, start_y, dest_x, dest_y, messy_x, messy_y, cached_corners, avoid_cells)
+}
+
+fn find_path_internal(
+    grid: &Grid,
+    start_x: i32,
+    start_y: i32,
+    dest_x: i32,
+    dest_y: i32,
+    messy_x: bool,
+    messy_y: bool,
+    cached_corners: Option<&Vec<Corner>>,
+    avoid_cells: Option<&HashSet<Position>>,
+) -> Option<Vec<Position>> {
     let start = Position::new(start_x, start_y);
     let dest = Position::new(dest_x, dest_y);
 
@@ -566,11 +595,57 @@ pub fn find_path_with_cache(
             let next_pos = Position::new(next_corner.x, next_corner.y);
             // Special case: alignment corner transition has cost 1.0, not 0
             let is_alignment_transition = pos == start && next_pos == start && node.path.len() == 1;
-            let distance_to_next = if is_alignment_transition {
+            let mut distance_to_next = if is_alignment_transition {
                 1.0  // Cost of aligning from messy to clean
             } else {
                 pos.distance(&next_pos)
             };
+
+            // Apply radius-based avoidance penalty to create natural spreading around congested areas
+            if let Some(avoid_set) = avoid_cells {
+                if next_pos != dest {
+                    // Check if this cell or nearby cells are occupied by other paths
+                    // This creates a "pressure" effect that pushes actors to take wider arcs
+                    let mut proximity_penalty: f64 = 0.0;
+
+                    // Direct occupation: strong penalty
+                    if avoid_set.contains(&next_pos) {
+                        proximity_penalty += 0.8; // 80% penalty for direct overlap
+                    }
+
+                    // Check adjacent cells (radius 1) - moderate penalty
+                    for dx in -1_i32..=1_i32 {
+                        for dy in -1_i32..=1_i32 {
+                            if dx == 0 && dy == 0 { continue; } // Skip center (already checked)
+                            let check_pos = Position::new(next_pos.x + dx, next_pos.y + dy);
+                            if avoid_set.contains(&check_pos) {
+                                // Penalty decreases with distance
+                                // Adjacent cells: 20% penalty
+                                proximity_penalty += 0.20;
+                            }
+                        }
+                    }
+
+                    // Check radius 2 cells (corners and diagonals) - light penalty
+                    for dx in -2_i32..=2_i32 {
+                        for dy in -2_i32..=2_i32 {
+                            // Skip cells we already checked (radius 0 and 1)
+                            if dx.abs() <= 1 && dy.abs() <= 1 { continue; }
+                            let check_pos = Position::new(next_pos.x + dx, next_pos.y + dy);
+                            if avoid_set.contains(&check_pos) {
+                                // Cells at radius 2: 5% penalty
+                                proximity_penalty += 0.05;
+                            }
+                        }
+                    }
+
+                    // Apply cumulative penalty (capped to avoid excessive cost)
+                    // This creates natural spreading: later actors feel "pressure" and take wider paths
+                    let penalty_multiplier = 1.0 + proximity_penalty.min(2.0); // Cap at 3x cost
+                    distance_to_next *= penalty_multiplier;
+                }
+            }
+
             let total_distance = node.total_distance + distance_to_next;
 
             if TRACE_PATHFINDING && iterations <= 3 {
