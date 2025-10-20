@@ -58,7 +58,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Cargo.Run rustgame3.executor": "Run",
+    "Cargo.Run rustgame3.executor": "Debug",
     "Cargo.Test ray.executor": "Debug",
     "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
