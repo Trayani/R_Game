@@ -713,8 +713,8 @@ async fn main() {
         // Place actor at mouse position on O key
         if is_key_pressed(KeyCode::O) {
             let (mouse_x, mouse_y) = mouse_position();
-            // Actor size is smaller than cell size (10 pixels for a 15-20 pixel cell)
-            let actor_size = state.cell_width.min(state.cell_height) * 0.6;
+            // Actor size matches cell width
+            let actor_size = state.cell_width;
             let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actor = Some(actor);
         }
