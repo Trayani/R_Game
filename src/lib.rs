@@ -7,7 +7,7 @@ pub mod pathfinding;
 pub mod ray;
 pub mod raycast;
 
-pub use action_log::{Action, ActionLog, LoggedAction};
+pub use action_log::{Action, ActionLog, ActionPhase, LoggedAction};
 pub use actor::{Actor, CellPosition};
 pub use grid::Grid;
 pub use raycast::raycast;

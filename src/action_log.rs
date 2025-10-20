@@ -1,6 +1,13 @@
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
 
+/// Action phase - whether the action is starting or finishing
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ActionPhase {
+    Start,
+    Finish,
+}
+
 /// User actions that interact with the grid or actors
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Action {
@@ -26,13 +33,15 @@ pub enum Action {
     PasteGrid { rows: i32, cols: i32 },
 }
 
-/// Logged action with timestamp
+/// Logged action with timestamp and phase
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LoggedAction {
     /// Milliseconds since start
     pub timestamp_ms: u64,
     /// The action
     pub action: Action,
+    /// Whether this is the start or finish of the action
+    pub phase: ActionPhase,
 }
 
 /// Action logger
@@ -49,15 +58,26 @@ impl ActionLog {
         }
     }
 
-    /// Log an action with current timestamp
-    pub fn log(&mut self, action: Action) {
+    /// Log an action with current timestamp and phase
+    pub fn log(&mut self, action: Action, phase: ActionPhase) {
         let elapsed = self.start_time.elapsed();
         let timestamp_ms = elapsed.as_millis() as u64;
 
         self.actions.push(LoggedAction {
             timestamp_ms,
             action,
+            phase,
         });
+    }
+
+    /// Log the start of an action
+    pub fn log_start(&mut self, action: Action) {
+        self.log(action, ActionPhase::Start);
+    }
+
+    /// Log the finish of an action
+    pub fn log_finish(&mut self, action: Action) {
+        self.log(action, ActionPhase::Finish);
     }
 
     /// Get all logged actions
@@ -74,9 +94,45 @@ impl ActionLog {
 
     /// Print log to console
     pub fn print(&self) {
-        println!("\n=== Action Log ({} actions) ===", self.actions.len());
+        println!("\n=== Action Log ({} events) ===", self.actions.len());
         for (i, logged) in self.actions.iter().enumerate() {
-            println!("[{:6}ms] #{:3} {:?}", logged.timestamp_ms, i + 1, logged.action);
+            let phase_str = match logged.phase {
+                ActionPhase::Start => "START ",
+                ActionPhase::Finish => "FINISH",
+            };
+            println!("[{:6}ms] #{:3} {} {:?}", logged.timestamp_ms, i + 1, phase_str, logged.action);
+        }
+        println!("=== End of Log ===\n");
+    }
+
+    /// Print log with duration analysis
+    pub fn print_with_durations(&self) {
+        use std::collections::HashMap;
+
+        println!("\n=== Action Log with Durations ===");
+
+        // Track start times for each action type
+        let mut start_times: HashMap<String, u64> = HashMap::new();
+
+        for (i, logged) in self.actions.iter().enumerate() {
+            let action_key = format!("{:?}", logged.action);
+
+            match logged.phase {
+                ActionPhase::Start => {
+                    start_times.insert(action_key.clone(), logged.timestamp_ms);
+                    println!("[{:6}ms] #{:3} START  {:?}", logged.timestamp_ms, i + 1, logged.action);
+                }
+                ActionPhase::Finish => {
+                    if let Some(start_ms) = start_times.remove(&action_key) {
+                        let duration = logged.timestamp_ms - start_ms;
+                        println!("[{:6}ms] #{:3} FINISH {:?} [duration: {}ms]",
+                                logged.timestamp_ms, i + 1, logged.action, duration);
+                    } else {
+                        println!("[{:6}ms] #{:3} FINISH {:?} [no matching start]",
+                                logged.timestamp_ms, i + 1, logged.action);
+                    }
+                }
+            }
         }
         println!("=== End of Log ===\n");
     }
@@ -90,17 +146,20 @@ impl ActionLog {
         let mut destination_sets = 0;
         let mut total_actors_commanded = 0;
 
+        // Only count finish events to get actual completed action counts
         for logged in &self.actions {
-            match &logged.action {
-                Action::SetBlocked { .. } => blocked_count += 1,
-                Action::SetFree { .. } => free_count += 1,
-                Action::ToggleCell { .. } => toggle_count += 1,
-                Action::SpawnActor { .. } => actor_spawns += 1,
-                Action::SetActorDestination { actor_count, .. } => {
-                    destination_sets += 1;
-                    total_actors_commanded += actor_count;
+            if matches!(logged.phase, ActionPhase::Finish) {
+                match &logged.action {
+                    Action::SetBlocked { .. } => blocked_count += 1,
+                    Action::SetFree { .. } => free_count += 1,
+                    Action::ToggleCell { .. } => toggle_count += 1,
+                    Action::SpawnActor { .. } => actor_spawns += 1,
+                    Action::SetActorDestination { actor_count, .. } => {
+                        destination_sets += 1;
+                        total_actors_commanded += actor_count;
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
 
@@ -112,11 +171,12 @@ impl ActionLog {
 
         format!(
             "Session Duration: {}ms\n\
-             Total Actions: {}\n\
+             Total Events: {} ({} action pairs)\n\
              Grid Modifications: {} blocked, {} freed, {} toggled\n\
              Actor Operations: {} spawned, {} destination commands ({} total actors commanded)",
             duration,
             self.actions.len(),
+            self.actions.len() / 2,
             blocked_count,
             free_count,
             toggle_count,

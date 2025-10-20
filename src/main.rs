@@ -63,25 +63,28 @@ impl VisState {
             // Shift + Left hold: set cell as blocked (drawing mode)
             if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Left) {
                 if self.grid.cells[cell_id as usize] != 1 {
+                    self.action_log.log_start(Action::SetBlocked { x: grid_x, y: grid_y });
                     self.grid.set_cell(grid_x, grid_y, 1);
-                    self.action_log.log(Action::SetBlocked { x: grid_x, y: grid_y });
                     self.update_visible();
+                    self.action_log.log_finish(Action::SetBlocked { x: grid_x, y: grid_y });
                 }
             }
             // Shift + Right hold: set cell as free (erasing mode)
             else if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Right) {
                 if self.grid.cells[cell_id as usize] != 0 {
+                    self.action_log.log_start(Action::SetFree { x: grid_x, y: grid_y });
                     self.grid.set_cell(grid_x, grid_y, 0);
-                    self.action_log.log(Action::SetFree { x: grid_x, y: grid_y });
                     self.update_visible();
+                    self.action_log.log_finish(Action::SetFree { x: grid_x, y: grid_y });
                 }
             }
             // Left click (without shift): toggle obstacle
             else if is_mouse_button_pressed(MouseButton::Left) {
+                self.action_log.log_start(Action::ToggleCell { x: grid_x, y: grid_y });
                 let current = self.grid.cells[cell_id as usize];
                 self.grid.set_cell(grid_x, grid_y, if current == 1 { 0 } else { 1 });
-                self.action_log.log(Action::ToggleCell { x: grid_x, y: grid_y });
                 self.update_visible();
+                self.action_log.log_finish(Action::ToggleCell { x: grid_x, y: grid_y });
             }
             // Right button DOWN (without shift, continuous): move observer
             else if is_mouse_button_down(MouseButton::Right) {
@@ -102,15 +105,21 @@ impl VisState {
 
                     // Only move if position changed and target is not blocked
                     if (self.observer_x != target_x || self.observer_y != target_y) && !self.grid.is_blocked(target_x, target_y) {
-                        self.observer_x = target_x;
-                        self.observer_y = target_y;
-                        self.action_log.log(Action::MoveObserver {
+                        self.action_log.log_start(Action::MoveObserver {
                             x: target_x,
                             y: target_y,
                             messy_x: self.messy_x,
                             messy_y: self.messy_y,
                         });
+                        self.observer_x = target_x;
+                        self.observer_y = target_y;
                         self.update_visible();
+                        self.action_log.log_finish(Action::MoveObserver {
+                            x: target_x,
+                            y: target_y,
+                            messy_x: self.messy_x,
+                            messy_y: self.messy_y,
+                        });
                     }
                 }
             }
@@ -131,9 +140,10 @@ impl VisState {
             // Can't enable messy X at rightmost column
             return;
         }
+        self.action_log.log_start(Action::ToggleMessyX);
         self.messy_x = !self.messy_x;
-        self.action_log.log(Action::ToggleMessyX);
         self.update_visible();
+        self.action_log.log_finish(Action::ToggleMessyX);
     }
 
     fn toggle_messy_y(&mut self) {
@@ -142,16 +152,17 @@ impl VisState {
             // Can't enable messy Y at bottom row
             return;
         }
+        self.action_log.log_start(Action::ToggleMessyY);
         self.messy_y = !self.messy_y;
-        self.action_log.log(Action::ToggleMessyY);
         self.update_visible();
+        self.action_log.log_finish(Action::ToggleMessyY);
     }
 
     fn set_destination(&mut self, x: i32, y: i32) {
         if x >= 0 && x < self.grid.cols && y >= 0 && y < self.grid.rows {
+            self.action_log.log_start(Action::SetObserverDestination { x, y });
             self.destination_x = Some(x);
             self.destination_y = Some(y);
-            self.action_log.log(Action::SetObserverDestination { x, y });
 
             // Print path to terminal for text selection
             if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, x, y, self.messy_x, self.messy_y) {
@@ -165,6 +176,7 @@ impl VisState {
             } else {
                 println!("No path found to ({}, {})", x, y);
             }
+            self.action_log.log_finish(Action::SetObserverDestination { x, y });
         }
     }
 
@@ -235,6 +247,11 @@ impl VisState {
             Ok(mut clipboard) => {
                 match clipboard.get_text() {
                     Ok(text) => {
+                        // Log start before parsing
+                        self.action_log.log_start(Action::PasteGrid {
+                            rows: 0,  // Will be updated after parse
+                            cols: 0,
+                        });
                         match self.parse_grid_from_string(&text) {
                             Ok(_) => {
                                 println!("Grid layout pasted from clipboard!");
@@ -368,8 +385,8 @@ impl VisState {
         // Increment grid revision since we modified cells
         self.grid.revision += 1;
 
-        // Log the paste action
-        self.action_log.log(Action::PasteGrid {
+        // Log the paste action finish
+        self.action_log.log_finish(Action::PasteGrid {
             rows: self.grid.rows,
             cols: self.grid.cols,
         });
@@ -729,11 +746,12 @@ async fn main() {
         // Place actor at mouse position on O key (Shift+O spawns multiple)
         if is_key_pressed(KeyCode::O) {
             let (mouse_x, mouse_y) = mouse_position();
+            state.action_log.log_start(Action::SpawnActor { x: mouse_x, y: mouse_y });
             // Actor size matches cell width
             let actor_size = state.cell_width;
             let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actors.push(actor);
-            state.action_log.log(Action::SpawnActor { x: mouse_x, y: mouse_y });
+            state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor spawned at ({:.1}, {:.1}). Total actors: {}", mouse_x, mouse_y, state.actors.len());
         }
 
@@ -743,6 +761,12 @@ async fn main() {
                 let (mouse_x, mouse_y) = mouse_position();
                 let dest_grid_x = (mouse_x / state.cell_width) as i32;
                 let dest_grid_y = (mouse_y / state.cell_height) as i32;
+
+                state.action_log.log_start(Action::SetActorDestination {
+                    x: dest_grid_x,
+                    y: dest_grid_y,
+                    actor_count: state.actors.len(),
+                });
 
                 let mut paths_set = 0;
                 let mut no_paths = 0;
@@ -777,7 +801,7 @@ async fn main() {
                     }
                 }
 
-                state.action_log.log(Action::SetActorDestination {
+                state.action_log.log_finish(Action::SetActorDestination {
                     x: dest_grid_x,
                     y: dest_grid_y,
                     actor_count: state.actors.len(),
@@ -847,9 +871,9 @@ async fn main() {
 
         // Close window on Escape
         if is_key_pressed(KeyCode::Escape) {
-            // Print summary and full log
+            // Print summary and full log with durations
             println!("\n{}", state.action_log.summary());
-            state.action_log.print();
+            state.action_log.print_with_durations();
 
             // Save to file
             if let Err(e) = state.action_log.save_to_file("action_log.json") {
