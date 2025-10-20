@@ -475,7 +475,7 @@ pub fn find_path(
         // 1. At start position with path=[start]: messy position, use messy visibility
         // 2. At start position with path=[start, start]: alignment corner, use clean visibility
         // 3. Any other position: compute corners with clean flags
-        let next_corners = if pos == start && node.path.len() == 1 {
+        let mut next_corners = if pos == start && node.path.len() == 1 {
             // First visit to start: messy position
             interesting_corners.clone()
         } else if pos == start && node.path.len() == 2 && node.path[1] == start {
@@ -486,6 +486,30 @@ pub fn find_path(
             // Any other corner
             cache.get_or_compute(pos, grid, false, false)
         };
+
+        // CRITICAL FIX: Add any finished corners that are visible but not in interesting corners
+        // This ensures we can reach the destination even if it's not "interesting"
+        let visible_from_pos = raycast(grid, pos.x, pos.y, false, false);
+        for (finished_pos, _dist) in &finished_corners {
+            let finished_id = grid.get_id(finished_pos.x, finished_pos.y);
+            if visible_from_pos.contains(&finished_id) {
+                // Check if this finished corner is already in next_corners
+                let already_present = next_corners.iter().any(|c| c.x == finished_pos.x && c.y == finished_pos.y);
+                if !already_present {
+                    // Add it as a reachable corner
+                    use std::collections::HashSet;
+                    next_corners.push(Corner {
+                        x: finished_pos.x,
+                        y: finished_pos.y,
+                        directions: HashSet::new(), // Directions don't matter for destination
+                    });
+                    if TRACE_PATHFINDING {
+                        println!("  Added finished corner ({},{}) = ID {} to neighbors (not interesting but visible)",
+                                 finished_pos.x, finished_pos.y, finished_id);
+                    }
+                }
+            }
+        }
 
         if TRACE_PATHFINDING && iterations <= 10 {
             println!("  Found {} next corners from ({},{})", next_corners.len(), pos.x, pos.y);
