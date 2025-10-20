@@ -489,7 +489,15 @@ pub fn find_path(
 
         // CRITICAL FIX: Add any finished corners that are visible but not in interesting corners
         // This ensures we can reach the destination even if it's not "interesting"
-        let visible_from_pos = raycast(grid, pos.x, pos.y, false, false);
+        // Use appropriate messy flags based on current position context
+        let (use_messy_x, use_messy_y) = if pos == start && node.path.len() == 1 {
+            // First visit to start: use original messy flags
+            (messy_x, messy_y)
+        } else {
+            // Any other position (including alignment corner): use clean flags
+            (false, false)
+        };
+        let visible_from_pos = raycast(grid, pos.x, pos.y, use_messy_x, use_messy_y);
         for (finished_pos, _dist) in &finished_corners {
             let finished_id = grid.get_id(finished_pos.x, finished_pos.y);
             if visible_from_pos.contains(&finished_id) {
