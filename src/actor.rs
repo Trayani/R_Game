@@ -1,4 +1,5 @@
 use crate::Grid;
+use crate::pathfinding::Position;
 
 /// Actor represents a dynamic element in the grid with precise floating-point positioning
 #[derive(Clone, Debug)]
@@ -13,9 +14,15 @@ pub struct Actor {
     /// Speed: roughly the number of pixels the actor can travel per frame
     pub speed: f32,
 
-    /// Destination in floating-point coordinates (None if no destination set)
-    pub dest_x: Option<f32>,
-    pub dest_y: Option<f32>,
+    /// Pathfinding waypoints (in cell coordinates)
+    pub path: Vec<Position>,
+
+    /// Current waypoint index in the path
+    pub current_waypoint: usize,
+
+    /// Cell dimensions for converting path to screen coordinates
+    pub cell_width: f32,
+    pub cell_height: f32,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -32,14 +39,16 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(fpos_x: f32, fpos_y: f32, size: f32, speed: f32) -> Self {
+    pub fn new(fpos_x: f32, fpos_y: f32, size: f32, speed: f32, cell_width: f32, cell_height: f32) -> Self {
         Actor {
             size,
             fpos_x,
             fpos_y,
             speed,
-            dest_x: None,
-            dest_y: None,
+            path: Vec::new(),
+            current_waypoint: 0,
+            cell_width,
+            cell_height,
         }
     }
 
@@ -82,37 +91,69 @@ impl Actor {
         }
     }
 
-    /// Set the destination for the actor
-    pub fn set_destination(&mut self, dest_x: f32, dest_y: f32) {
-        self.dest_x = Some(dest_x);
-        self.dest_y = Some(dest_y);
+    /// Set a path for the actor to follow
+    pub fn set_path(&mut self, path: Vec<Position>) {
+        self.path = path;
+        self.current_waypoint = 0;
     }
 
-    /// Clear the destination
-    pub fn clear_destination(&mut self) {
-        self.dest_x = None;
-        self.dest_y = None;
+    /// Clear the current path
+    pub fn clear_path(&mut self) {
+        self.path.clear();
+        self.current_waypoint = 0;
     }
 
-    /// Move the actor towards its destination (call once per frame)
-    /// Returns true if the actor reached its destination
+    /// Check if actor has a path to follow
+    pub fn has_path(&self) -> bool {
+        !self.path.is_empty() && self.current_waypoint < self.path.len()
+    }
+
+    /// Get the current waypoint in screen coordinates
+    fn get_current_waypoint_screen_coords(&self) -> Option<(f32, f32)> {
+        if self.current_waypoint < self.path.len() {
+            let waypoint = &self.path[self.current_waypoint];
+            let screen_x = waypoint.x as f32 * self.cell_width + self.cell_width / 2.0;
+            let screen_y = waypoint.y as f32 * self.cell_height + self.cell_height / 2.0;
+            Some((screen_x, screen_y))
+        } else {
+            None
+        }
+    }
+
+    /// Move the actor along its path (call once per frame)
+    /// Returns true if the actor reached the end of its path
     pub fn update(&mut self, delta_time: f32) -> bool {
-        if let (Some(dest_x), Some(dest_y)) = (self.dest_x, self.dest_y) {
-            // Calculate direction vector
-            let dx = dest_x - self.fpos_x;
-            let dy = dest_y - self.fpos_y;
+        if !self.has_path() {
+            return true;
+        }
+
+        // Get current waypoint in screen coordinates
+        if let Some((waypoint_x, waypoint_y)) = self.get_current_waypoint_screen_coords() {
+            // Calculate direction vector to current waypoint
+            let dx = waypoint_x - self.fpos_x;
+            let dy = waypoint_y - self.fpos_y;
 
             // Calculate distance
             let distance = (dx * dx + dy * dy).sqrt();
 
-            // Check if we've reached the destination
+            // Check if we've reached the current waypoint
             let movement_this_frame = self.speed * delta_time;
             if distance <= movement_this_frame {
-                // Snap to destination
-                self.fpos_x = dest_x;
-                self.fpos_y = dest_y;
-                self.clear_destination();
-                return true;
+                // Snap to waypoint
+                self.fpos_x = waypoint_x;
+                self.fpos_y = waypoint_y;
+
+                // Move to next waypoint
+                self.current_waypoint += 1;
+
+                // Check if we've reached the end of the path
+                if self.current_waypoint >= self.path.len() {
+                    self.clear_path();
+                    return true;
+                }
+
+                // Continue moving towards next waypoint in the same frame
+                return self.update(delta_time);
             }
 
             // Normalize direction and move
@@ -124,9 +165,14 @@ impl Actor {
 
             false
         } else {
-            // No destination set
+            // No valid waypoint
             true
         }
+    }
+
+    /// Get the final destination of the path (if any)
+    pub fn get_path_destination(&self) -> Option<Position> {
+        self.path.last().copied()
     }
 
     /// Get the corners of the actor's square in screen coordinates
@@ -157,6 +203,8 @@ mod tests {
             5.0 * cell_height + cell_height / 2.0,
             10.0,  // Size smaller than cell
             100.0,
+            cell_width,
+            cell_height,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -178,6 +226,8 @@ mod tests {
             5.0 * cell_height + cell_height / 2.0,
             10.0,
             100.0,
+            cell_width,
+            cell_height,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -197,6 +247,8 @@ mod tests {
             5.0 * cell_height + cell_height,  // On the border
             10.0,
             100.0,
+            cell_width,
+            cell_height,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -216,6 +268,8 @@ mod tests {
             5.0 * cell_height + cell_height,
             10.0,
             100.0,
+            cell_width,
+            cell_height,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -224,15 +278,28 @@ mod tests {
     }
 
     #[test]
-    fn test_actor_movement() {
-        let mut actor = Actor::new(0.0, 0.0, 10.0, 100.0);
-        actor.set_destination(100.0, 0.0);
+    fn test_actor_path_following() {
+        let cell_width = 20.0;
+        let cell_height = 15.0;
+        // Start actor at cell (0,0) center
+        let start_x = 0.0 * cell_width + cell_width / 2.0;
+        let start_y = 0.0 * cell_height + cell_height / 2.0;
+        let mut actor = Actor::new(start_x, start_y, 10.0, 100.0, cell_width, cell_height);
 
-        // Move with delta_time = 1.0 (100 pixels in 1 second)
-        let reached = actor.update(1.0);
+        // Create a simple path: (1,0) -> (2,0) -> (2,1)
+        let path = vec![
+            Position { x: 1, y: 0 },
+            Position { x: 2, y: 0 },
+            Position { x: 2, y: 1 },
+        ];
+        actor.set_path(path);
 
-        assert!(reached);
-        assert_eq!(actor.fpos_x, 100.0);
-        assert_eq!(actor.fpos_y, 0.0);
+        assert!(actor.has_path());
+        assert_eq!(actor.current_waypoint, 0);
+
+        // Move a little bit - should not finish the entire path
+        let reached = actor.update(0.1);
+        assert!(!reached); // Should not have finished the entire path yet
+        assert!(actor.has_path()); // Should still have a path to follow
     }
 }

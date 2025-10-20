@@ -433,15 +433,54 @@ impl VisState {
             draw_rectangle(left, top, actor_width, actor_height, Color::from_rgba(200, 100, 255, 150));
 
             // Draw border
-            draw_rectangle_lines(left, top, actor_width, actor_height, 2.0, PURPLE);
+            draw_rectangle_lines(left, top, actor_width, actor_height, 2.0, BLACK);
 
             // Draw center point
             draw_circle(actor.fpos_x, actor.fpos_y, 3.0, MAGENTA);
 
-            // If actor has a destination, draw a line to it
-            if let (Some(dest_x), Some(dest_y)) = (actor.dest_x, actor.dest_y) {
-                draw_line(actor.fpos_x, actor.fpos_y, dest_x, dest_y, 2.0, MAGENTA);
-                draw_circle(dest_x, dest_y, 5.0, MAGENTA);
+            // If actor has a path, draw the path and destination
+            if actor.has_path() {
+                // Draw path waypoints
+                for i in 0..actor.path.len() {
+                    let pos = &actor.path[i];
+                    let px = pos.x as f32 * self.cell_width + self.cell_width / 2.0;
+                    let py = pos.y as f32 * self.cell_height + self.cell_height / 2.0;
+
+                    // Highlight current waypoint differently
+                    if i == actor.current_waypoint {
+                        draw_circle(px, py, 6.0, MAGENTA);
+                    } else if i < actor.current_waypoint {
+                        // Already visited waypoints
+                        draw_circle(px, py, 4.0, Color::from_rgba(150, 50, 150, 100));
+                    } else {
+                        // Future waypoints
+                        draw_circle(px, py, 4.0, Color::from_rgba(200, 100, 255, 150));
+                    }
+
+                    // Draw lines between waypoints
+                    if i > 0 {
+                        let prev_pos = &actor.path[i - 1];
+                        let prev_px = prev_pos.x as f32 * self.cell_width + self.cell_width / 2.0;
+                        let prev_py = prev_pos.y as f32 * self.cell_height + self.cell_height / 2.0;
+
+                        let line_color = if i <= actor.current_waypoint {
+                            Color::from_rgba(150, 50, 150, 100) // Visited path
+                        } else {
+                            Color::from_rgba(200, 100, 255, 150) // Future path
+                        };
+                        draw_line(prev_px, prev_py, px, py, 2.0, line_color);
+                    }
+                }
+
+                // Draw line from actor to current waypoint
+                if actor.get_path_destination().is_some() {
+                    if actor.current_waypoint < actor.path.len() {
+                        let waypoint = &actor.path[actor.current_waypoint];
+                        let wx = waypoint.x as f32 * self.cell_width + self.cell_width / 2.0;
+                        let wy = waypoint.y as f32 * self.cell_height + self.cell_height / 2.0;
+                        draw_line(actor.fpos_x, actor.fpos_y, wx, wy, 2.0, MAGENTA);
+                    }
+                }
             }
         }
     }
@@ -676,15 +715,35 @@ async fn main() {
             let (mouse_x, mouse_y) = mouse_position();
             // Actor size is smaller than cell size (10 pixels for a 15-20 pixel cell)
             let actor_size = state.cell_width.min(state.cell_height) * 0.6;
-            let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0); // 120 pixels/second speed
+            let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actor = Some(actor);
         }
 
-        // Set actor destination on P key
+        // Set actor destination on P key (uses pathfinding)
         if is_key_pressed(KeyCode::P) {
             if let Some(ref mut actor) = state.actor {
                 let (mouse_x, mouse_y) = mouse_position();
-                actor.set_destination(mouse_x, mouse_y);
+                let dest_grid_x = (mouse_x / state.cell_width) as i32;
+                let dest_grid_y = (mouse_y / state.cell_height) as i32;
+
+                // Calculate actor's current cell position
+                let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                // Find path using pathfinding
+                if let Some(path) = find_path(
+                    &state.grid,
+                    actor_cpos.cell_x,
+                    actor_cpos.cell_y,
+                    dest_grid_x,
+                    dest_grid_y,
+                    actor_cpos.messy_x,
+                    actor_cpos.messy_y,
+                ) {
+                    actor.set_path(path.clone());
+                    println!("Actor path set: {} waypoints", path.len());
+                } else {
+                    println!("No path found for actor to ({}, {})", dest_grid_x, dest_grid_y);
+                }
             }
         }
 
