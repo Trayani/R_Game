@@ -19,7 +19,7 @@ struct VisState {
     interesting_corners: Vec<Corner>,
     cell_width: f32,
     cell_height: f32,
-    actor: Option<Actor>,
+    actors: Vec<Actor>,
 }
 
 impl VisState {
@@ -47,7 +47,7 @@ impl VisState {
             interesting_corners,
             cell_width: 20.0,
             cell_height: 15.0,
-            actor: None,
+            actors: Vec::new(),
         }
     }
 
@@ -427,7 +427,7 @@ impl VisState {
     }
 
     fn draw_actor(&self) {
-        if let Some(ref actor) = self.actor {
+        for actor in &self.actors {
             let (left, top, right, bottom) = actor.get_bounds();
 
             // Draw actor square with semi-transparent purple fill
@@ -648,21 +648,14 @@ impl VisState {
             String::new()
         };
 
-        let actor_status = if let Some(ref actor) = self.actor {
-            let cpos = actor.calculate_cell_position(&self.grid, self.cell_width, self.cell_height);
-            let messy_str = match (cpos.messy_x, cpos.messy_y) {
-                (false, false) => "clean",
-                (true, false) => "messy X",
-                (false, true) => "messy Y",
-                (true, true) => "messy X+Y",
-            };
-            format!(" | Actor: ({:.1}, {:.1}) @ cell ({}, {}) [{}]", actor.fpos_x, actor.fpos_y, cpos.cell_x, cpos.cell_y, messy_str)
+        let actor_status = if !self.actors.is_empty() {
+            format!(" | Actors: {}", self.actors.len())
         } else {
             String::new()
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y | O: place actor | P: actor destination\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y | O: spawn actor (multiple allowed) | P: set destination for all actors\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -713,57 +706,63 @@ async fn main() {
             state.set_destination(mouse_grid_x, mouse_grid_y);
         }
 
-        // Place actor at mouse position on O key
+        // Place actor at mouse position on O key (Shift+O spawns multiple)
         if is_key_pressed(KeyCode::O) {
             let (mouse_x, mouse_y) = mouse_position();
             // Actor size matches cell width
             let actor_size = state.cell_width;
             let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
-            state.actor = Some(actor);
+            state.actors.push(actor);
+            println!("Actor spawned at ({:.1}, {:.1}). Total actors: {}", mouse_x, mouse_y, state.actors.len());
         }
 
-        // Set actor destination on P key (uses pathfinding)
+        // Set actor destination on P key (uses pathfinding) - applies to ALL actors
         if is_key_pressed(KeyCode::P) {
-            if let Some(ref mut actor) = state.actor {
+            if !state.actors.is_empty() {
                 let (mouse_x, mouse_y) = mouse_position();
                 let dest_grid_x = (mouse_x / state.cell_width) as i32;
                 let dest_grid_y = (mouse_y / state.cell_height) as i32;
 
-                // Calculate actor's current cell position
-                let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+                let mut paths_set = 0;
+                let mut no_paths = 0;
 
-                // Find path using pathfinding
-                if let Some(mut path) = find_path(
-                    &state.grid,
-                    actor_cpos.cell_x,
-                    actor_cpos.cell_y,
-                    dest_grid_x,
-                    dest_grid_y,
-                    actor_cpos.messy_x,
-                    actor_cpos.messy_y,
-                ) {
-                    // Skip the first waypoint if it's the actor's current cell
-                    // The path is just an approximation of which cells to visit
-                    // The actor can move directly from its floating position to the next cell
-                    if path.len() >= 2 {
-                        let first_waypoint = &path[0];
-                        if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
-                            path.remove(0);
-                            println!("Skipped first waypoint (actor already in cell)");
+                for actor in &mut state.actors {
+                    // Calculate actor's current cell position
+                    let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                    // Find path using pathfinding
+                    if let Some(mut path) = find_path(
+                        &state.grid,
+                        actor_cpos.cell_x,
+                        actor_cpos.cell_y,
+                        dest_grid_x,
+                        dest_grid_y,
+                        actor_cpos.messy_x,
+                        actor_cpos.messy_y,
+                    ) {
+                        // Skip the first waypoint if it's the actor's current cell
+                        if path.len() >= 2 {
+                            let first_waypoint = &path[0];
+                            if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
+                                path.remove(0);
+                            }
                         }
-                    }
 
-                    actor.set_path(path.clone(), state.grid.get_revision());
-                    println!("Actor path set: {} waypoints", path.len());
-                } else {
-                    println!("No path found for actor to ({}, {})", dest_grid_x, dest_grid_y);
+                        actor.set_path(path, state.grid.get_revision());
+                        paths_set += 1;
+                    } else {
+                        no_paths += 1;
+                    }
                 }
+
+                println!("Destination set to ({}, {}): {} actors have paths, {} blocked",
+                    dest_grid_x, dest_grid_y, paths_set, no_paths);
             }
         }
 
-        // Check if actor's path needs recalculation due to grid changes
+        // Check if actors' paths need recalculation due to grid changes
         // OR if actor has a destination but no path (blocked, waiting for opening)
-        if let Some(ref mut actor) = state.actor {
+        for actor in &mut state.actors {
             let should_recalculate = actor.is_path_outdated(state.grid.get_revision())
                 || (actor.destination.is_some() && !actor.has_path());
 
@@ -792,15 +791,19 @@ async fn main() {
                         let was_stopped = !actor.has_path();
                         actor.set_path(path, state.grid.get_revision());
                         if was_stopped {
-                            println!("Actor resumed - path found after obstacle removed");
-                        } else {
-                            println!("Actor path recalculated due to grid change");
+                            // Only print once when first actor resumes to avoid spam
+                            static mut RESUME_LOGGED: bool = false;
+                            unsafe {
+                                if !RESUME_LOGGED {
+                                    println!("Actor(s) resumed - path found after obstacle removed");
+                                    RESUME_LOGGED = true;
+                                }
+                            }
                         }
                     } else {
                         // No path found - clear the path but keep destination
                         if actor.has_path() {
                             actor.clear_path();
-                            println!("No path found after grid change - actor stopped (will retry if grid changes)");
                         }
                     }
                 }
@@ -808,8 +811,8 @@ async fn main() {
         }
 
         // Update actor movement
-        if let Some(ref mut actor) = state.actor {
-            let delta_time = get_frame_time();
+        let delta_time = get_frame_time();
+        for actor in &mut state.actors {
             actor.update(delta_time);
         }
 
