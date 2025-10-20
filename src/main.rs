@@ -876,10 +876,10 @@ async fn main() {
             state.action_log.print_with_durations();
 
             // Save to file
-            if let Err(e) = state.action_log.save_to_file("action_log.json") {
+            if let Err(e) = state.action_log.save_to_file("multi_actor_action_log.json") {
                 eprintln!("Failed to save action log: {}", e);
             } else {
-                println!("Action log saved to action_log.json");
+                println!("Action log saved to multi_actor_action_log.json");
             }
 
             break;
