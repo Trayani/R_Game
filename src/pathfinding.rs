@@ -547,17 +547,7 @@ pub fn find_path(
         }
     }
 
-    // Step 7: Simplify path by removing unnecessary waypoints
-    if let Some(path) = optimal_path {
-        let simplified = simplify_path(&path, grid, messy_x, messy_y);
-        if TRACE_PATHFINDING {
-            println!("[find_path] Simplified path: {} waypoints (was {})", simplified.len(), path.len());
-            println!("[find_path] Simplified IDs: {:?}", simplified.iter().map(|p| grid.get_id(p.x, p.y)).collect::<Vec<_>>());
-        }
-        Some(simplified)
-    } else {
-        None
-    }
+    optimal_path
 }
 
 /// Compute "finished corners" - corners that can see the destination with their distances
@@ -599,48 +589,6 @@ fn compute_finished_corners(dest: &Position, grid: &Grid) -> HashMap<Position, f
     }
 
     finished
-}
-
-/// Simplify path by removing unnecessary intermediate waypoints
-/// Uses line-of-sight checking to skip waypoints that aren't needed
-fn simplify_path(path: &[Position], grid: &Grid, messy_x: bool, messy_y: bool) -> Vec<Position> {
-    if path.len() <= 2 {
-        return path.to_vec();  // Can't simplify paths with 2 or fewer waypoints
-    }
-
-    let mut simplified = vec![path[0]];  // Always keep start
-    let mut current_idx = 0;
-
-    while current_idx < path.len() - 1 {
-        // Try to skip ahead as far as possible
-        let mut farthest_visible = current_idx + 1;
-
-        for test_idx in (current_idx + 2)..path.len() {
-            let current_pos = path[current_idx];
-            let test_pos = path[test_idx];
-
-            // Check if we can see from current to test position
-            let visible_from_current = raycast(grid, current_pos.x, current_pos.y, messy_x, messy_y);
-            let test_id = grid.get_id(test_pos.x, test_pos.y);
-
-            if visible_from_current.contains(&test_id) {
-                farthest_visible = test_idx;
-            } else {
-                break;  // Can't skip any further
-            }
-        }
-
-        // Add the farthest visible waypoint
-        simplified.push(path[farthest_visible]);
-        current_idx = farthest_visible;
-    }
-
-    if TRACE_PATHFINDING {
-        println!("[simplify_path] Original: {:?}", path.iter().map(|p| grid.get_id(p.x, p.y)).collect::<Vec<_>>());
-        println!("[simplify_path] Simplified: {:?}", simplified.iter().map(|p| grid.get_id(p.x, p.y)).collect::<Vec<_>>());
-    }
-
-    simplified
 }
 
 /// Determine target corners for pathfinding (DEPRECATED - use compute_finished_corners)
