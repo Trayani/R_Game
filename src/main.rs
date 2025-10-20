@@ -12,6 +12,8 @@ struct VisState {
     observer_y: i32,
     messy_x: bool,
     messy_y: bool,
+    destination_x: Option<i32>,
+    destination_y: Option<i32>,
     visible_cells: HashSet<i32>,
     all_corners: Vec<Corner>,
     interesting_corners: Vec<Corner>,
@@ -37,6 +39,8 @@ impl VisState {
             observer_y,
             messy_x,
             messy_y,
+            destination_x: None,
+            destination_y: None,
             visible_cells,
             all_corners,
             interesting_corners,
@@ -112,6 +116,26 @@ impl VisState {
         }
         self.messy_y = !self.messy_y;
         self.update_visible();
+    }
+
+    fn set_destination(&mut self, x: i32, y: i32) {
+        if x >= 0 && x < self.grid.cols && y >= 0 && y < self.grid.rows {
+            self.destination_x = Some(x);
+            self.destination_y = Some(y);
+
+            // Print path to terminal for text selection
+            if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, x, y, self.messy_x, self.messy_y) {
+                let path_parts: Vec<String> = path.iter()
+                    .map(|pos| {
+                        let cell_id = self.grid.get_id(pos.x, pos.y);
+                        format!("({},{})#{}", pos.x, pos.y, cell_id)
+                    })
+                    .collect();
+                println!("PATH: {}", path_parts.join(" -> "));
+            } else {
+                println!("No path found to ({}, {})", x, y);
+            }
+        }
     }
 
     /// Check if a given cell is part of the observer
@@ -413,14 +437,29 @@ impl VisState {
         // Draw corner indicators
         self.draw_corners();
 
-        // Draw line from observer to mouse cell center
+        // Get mouse position
         let (mouse_x, mouse_y) = mouse_position();
         let mouse_grid_x = (mouse_x / self.cell_width) as i32;
         let mouse_grid_y = (mouse_y / self.cell_height) as i32;
 
-        // Only draw line if mouse is within grid bounds
+        // Draw mouse cell highlight (light overlay)
         if mouse_grid_x >= 0 && mouse_grid_x < self.grid.cols && mouse_grid_y >= 0 && mouse_grid_y < self.grid.rows {
-            // Calculate observer block bounds (entire messy block, not just one cell)
+            let px = mouse_grid_x as f32 * self.cell_width;
+            let py = mouse_grid_y as f32 * self.cell_height;
+            draw_rectangle(px, py, self.cell_width - 1.0, self.cell_height - 1.0, Color::from_rgba(255, 255, 255, 50));
+        }
+
+        // Draw destination cell highlight (if set)
+        if let (Some(dest_x), Some(dest_y)) = (self.destination_x, self.destination_y) {
+            let px = dest_x as f32 * self.cell_width;
+            let py = dest_y as f32 * self.cell_height;
+            // Draw orange/yellow border for destination
+            draw_rectangle_lines(px, py, self.cell_width - 1.0, self.cell_height - 1.0, 3.0, ORANGE);
+        }
+
+        // Draw pathfinding path to destination (if set)
+        if let (Some(dest_x), Some(dest_y)) = (self.destination_x, self.destination_y) {
+            // Calculate observer block bounds
             let obs_block_left = self.observer_x;
             let obs_block_right = if self.messy_x { self.observer_x + 1 } else { self.observer_x };
             let obs_block_top = self.observer_y;
@@ -430,51 +469,46 @@ impl VisState {
             let observer_center_x = (obs_block_left as f32 + obs_block_right as f32) / 2.0 * self.cell_width + self.cell_width / 2.0;
             let observer_center_y = (obs_block_top as f32 + obs_block_bottom as f32) / 2.0 * self.cell_height + self.cell_height / 2.0;
 
-            let mouse_center_x = mouse_grid_x as f32 * self.cell_width + self.cell_width / 2.0;
-            let mouse_center_y = mouse_grid_y as f32 * self.cell_height + self.cell_height / 2.0;
+            let dest_center_x = dest_x as f32 * self.cell_width + self.cell_width / 2.0;
+            let dest_center_y = dest_y as f32 * self.cell_height + self.cell_height / 2.0;
 
-            // Draw center line
-            draw_line(observer_center_x, observer_center_y, mouse_center_x, mouse_center_y, 2.0, YELLOW);
+            // Draw center line to destination
+            draw_line(observer_center_x, observer_center_y, dest_center_x, dest_center_y, 2.0, YELLOW);
 
             // Calculate which corners to use for edge lines
-            let dx = mouse_center_x - observer_center_x;
-            let dy = mouse_center_y - observer_center_y;
+            let dx = dest_center_x - observer_center_x;
+            let dy = dest_center_y - observer_center_y;
 
             if dx != 0.0 || dy != 0.0 {
-                // Get all corners of the ENTIRE observer block (not just one cell)
+                // Get all corners of the ENTIRE observer block
                 let obs_left_px = obs_block_left as f32 * self.cell_width;
                 let obs_right_px = (obs_block_right + 1) as f32 * self.cell_width;
                 let obs_top_px = obs_block_top as f32 * self.cell_height;
                 let obs_bottom_px = (obs_block_bottom + 1) as f32 * self.cell_height;
 
-                // Get all four corners of mouse cell
-                let mouse_left = mouse_grid_x as f32 * self.cell_width;
-                let mouse_right = (mouse_grid_x + 1) as f32 * self.cell_width;
-                let mouse_top = mouse_grid_y as f32 * self.cell_height;
-                let mouse_bottom = (mouse_grid_y + 1) as f32 * self.cell_height;
+                // Get all four corners of destination cell
+                let dest_left = dest_x as f32 * self.cell_width;
+                let dest_right = (dest_x + 1) as f32 * self.cell_width;
+                let dest_top = dest_y as f32 * self.cell_height;
+                let dest_bottom = (dest_y + 1) as f32 * self.cell_height;
 
-                // Find which corners are on opposite sides of the center line
-                // Using cross product to determine which side each corner is on
                 let corners = [
-                    ((obs_left_px, obs_top_px), (mouse_left, mouse_top)),       // top-left
-                    ((obs_right_px, obs_top_px), (mouse_right, mouse_top)),     // top-right
-                    ((obs_left_px, obs_bottom_px), (mouse_left, mouse_bottom)), // bottom-left
-                    ((obs_right_px, obs_bottom_px), (mouse_right, mouse_bottom)), // bottom-right
+                    ((obs_left_px, obs_top_px), (dest_left, dest_top)),
+                    ((obs_right_px, obs_top_px), (dest_right, dest_top)),
+                    ((obs_left_px, obs_bottom_px), (dest_left, dest_bottom)),
+                    ((obs_right_px, obs_bottom_px), (dest_right, dest_bottom)),
                 ];
 
                 let mut side_values: Vec<(f32, usize)> = Vec::new();
                 for (i, ((ox, oy), _)) in corners.iter().enumerate() {
-                    // Cross product with direction vector to determine side
                     let corner_dx = ox - observer_center_x;
                     let corner_dy = oy - observer_center_y;
                     let cross = dx * corner_dy - dy * corner_dx;
                     side_values.push((cross, i));
                 }
 
-                // Sort by cross product value
                 side_values.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
-                // Draw lines to the two extreme corners (most negative and most positive cross product)
                 let corner1 = corners[side_values[0].1];
                 let corner2 = corners[side_values[3].1];
 
@@ -483,7 +517,7 @@ impl VisState {
             }
 
             // Draw pathfinding path
-            if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, mouse_grid_x, mouse_grid_y, self.messy_x, self.messy_y) {
+            if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, dest_x, dest_y, self.messy_x, self.messy_y) {
                 // Draw path lines with white outline and black core
                 for i in 1..path.len() {
                     let from = &path[i - 1];
@@ -511,7 +545,7 @@ impl VisState {
                     draw_circle(px, py, radius, BLACK);
                 }
 
-                // Draw path list on the right side
+                // Draw path list at bottom
                 self.draw_path_list(&path);
             }
         }
@@ -524,11 +558,18 @@ impl VisState {
             (true, true) => " [Messy X+Y]".to_string(),
         };
 
+        let dest_status = if let (Some(dx), Some(dy)) = (self.destination_x, self.destination_y) {
+            format!(" | Dest: ({}, {})", dx, dy)
+        } else {
+            String::new()
+        };
+
         let info = format!(
-            "Observer: ({}, {}){}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y | D: set destination\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
+            dest_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len()
@@ -564,6 +605,14 @@ async fn main() {
         // Toggle messy Y on N key
         if is_key_pressed(KeyCode::N) {
             state.toggle_messy_y();
+        }
+
+        // Set destination on D key (to current mouse position)
+        if is_key_pressed(KeyCode::D) {
+            let (mouse_x, mouse_y) = mouse_position();
+            let mouse_grid_x = (mouse_x / state.cell_width) as i32;
+            let mouse_grid_y = (mouse_y / state.cell_height) as i32;
+            state.set_destination(mouse_grid_x, mouse_grid_y);
         }
 
         // Close window on Escape
