@@ -90,7 +90,7 @@ fn test_simple_obstacle() {
 fn test_u_shaped_corridor() {
     println!("\n=== Test 3: U-Shaped Corridor ===");
 
-    let mut grid = Grid::new(15, 10);
+    let mut grid = Grid::new(15, 15);  // Grid::new(rows, cols) - need at least 13 cols for dest at X=12
 
     // Create U-shaped obstacle
     for y in 2..8 {
