@@ -61,21 +61,21 @@ impl VisState {
             // Shift + Left hold: set cell as blocked (drawing mode)
             if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Left) {
                 if self.grid.cells[cell_id as usize] != 1 {
-                    self.grid.cells[cell_id as usize] = 1;
+                    self.grid.set_cell(grid_x, grid_y, 1);
                     self.update_visible();
                 }
             }
             // Shift + Right hold: set cell as free (erasing mode)
             else if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Right) {
                 if self.grid.cells[cell_id as usize] != 0 {
-                    self.grid.cells[cell_id as usize] = 0;
+                    self.grid.set_cell(grid_x, grid_y, 0);
                     self.update_visible();
                 }
             }
             // Left click (without shift): toggle obstacle
             else if is_mouse_button_pressed(MouseButton::Left) {
                 let current = self.grid.cells[cell_id as usize];
-                self.grid.cells[cell_id as usize] = if current == 1 { 0 } else { 1 };
+                self.grid.set_cell(grid_x, grid_y, if current == 1 { 0 } else { 1 });
                 self.update_visible();
             }
             // Right button DOWN (without shift, continuous): move observer
@@ -350,6 +350,9 @@ impl VisState {
         self.observer_y = obs_y;
         self.messy_x = messy_x;
         self.messy_y = messy_y;
+
+        // Increment grid revision since we modified cells
+        self.grid.revision += 1;
 
         Ok(())
     }
@@ -750,10 +753,45 @@ async fn main() {
                         }
                     }
 
-                    actor.set_path(path.clone());
+                    actor.set_path(path.clone(), state.grid.get_revision());
                     println!("Actor path set: {} waypoints", path.len());
                 } else {
                     println!("No path found for actor to ({}, {})", dest_grid_x, dest_grid_y);
+                }
+            }
+        }
+
+        // Check if actor's path needs recalculation due to grid changes
+        if let Some(ref mut actor) = state.actor {
+            if actor.is_path_outdated(state.grid.get_revision()) {
+                // Grid has changed - recalculate path to destination
+                if let Some(dest) = actor.destination {
+                    let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                    if let Some(mut path) = find_path(
+                        &state.grid,
+                        actor_cpos.cell_x,
+                        actor_cpos.cell_y,
+                        dest.x,
+                        dest.y,
+                        actor_cpos.messy_x,
+                        actor_cpos.messy_y,
+                    ) {
+                        // Skip first waypoint if it's the current cell
+                        if path.len() >= 2 {
+                            let first_waypoint = &path[0];
+                            if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
+                                path.remove(0);
+                            }
+                        }
+
+                        actor.set_path(path, state.grid.get_revision());
+                        println!("Actor path recalculated due to grid change");
+                    } else {
+                        // No path found - clear the path
+                        actor.clear_path();
+                        println!("No path found after grid change - actor stopped");
+                    }
                 }
             }
         }

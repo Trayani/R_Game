@@ -23,6 +23,12 @@ pub struct Actor {
     /// Cell dimensions for converting path to screen coordinates
     pub cell_width: f32,
     pub cell_height: f32,
+
+    /// Grid revision number when the path was calculated
+    pub path_grid_revision: u64,
+
+    /// Destination cell coordinates (for path recalculation)
+    pub destination: Option<Position>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -49,6 +55,8 @@ impl Actor {
             current_waypoint: 0,
             cell_width,
             cell_height,
+            path_grid_revision: 0,
+            destination: None,
         }
     }
 
@@ -92,20 +100,29 @@ impl Actor {
     }
 
     /// Set a path for the actor to follow
-    pub fn set_path(&mut self, path: Vec<Position>) {
+    pub fn set_path(&mut self, path: Vec<Position>, grid_revision: u64) {
+        // Store the destination for potential recalculation
+        self.destination = path.last().copied();
         self.path = path;
         self.current_waypoint = 0;
+        self.path_grid_revision = grid_revision;
     }
 
     /// Clear the current path
     pub fn clear_path(&mut self) {
         self.path.clear();
         self.current_waypoint = 0;
+        self.destination = None;
     }
 
     /// Check if actor has a path to follow
     pub fn has_path(&self) -> bool {
         !self.path.is_empty() && self.current_waypoint < self.path.len()
+    }
+
+    /// Check if the path is outdated (grid has changed since path was calculated)
+    pub fn is_path_outdated(&self, current_grid_revision: u64) -> bool {
+        self.has_path() && self.path_grid_revision != current_grid_revision
     }
 
     /// Get the current waypoint in screen coordinates
@@ -292,7 +309,7 @@ mod tests {
             Position { x: 2, y: 0 },
             Position { x: 2, y: 1 },
         ];
-        actor.set_path(path);
+        actor.set_path(path, 0);
 
         assert!(actor.has_path());
         assert_eq!(actor.current_waypoint, 0);

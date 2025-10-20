@@ -5,6 +5,8 @@ pub struct Grid {
     pub rows: i32,
     pub cols: i32,
     pub cells: Vec<i32>,
+    /// Revision number - incremented whenever grid cells change
+    pub revision: u64,
 }
 
 impl Grid {
@@ -14,6 +16,7 @@ impl Grid {
             rows,
             cols,
             cells: vec![0; (rows * cols) as usize],
+            revision: 0,
         }
     }
 
@@ -66,7 +69,16 @@ impl Grid {
     pub fn set_cell(&mut self, x: i32, y: i32, value: i32) {
         if x >= 0 && x < self.cols && y >= 0 && y < self.rows {
             let id = self.get_id(x, y);
-            self.cells[id as usize] = value;
+            let old_value = self.cells[id as usize];
+            if old_value != value {
+                self.cells[id as usize] = value;
+                self.revision += 1;
+            }
         }
+    }
+
+    /// Get current grid revision number
+    pub fn get_revision(&self) -> u64 {
+        self.revision
     }
 }
