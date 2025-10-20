@@ -2,7 +2,7 @@ use arboard::Clipboard;
 use macroquad::prelude::*;
 use rustgame3::{Action, ActionLog, Actor, Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
-use rustgame3::pathfinding::{find_path, find_path_with_cache, find_path_with_avoidance};
+use rustgame3::pathfinding::{find_path, find_path_with_cache};
 use std::collections::HashSet;
 
 /// Visualization state
@@ -394,49 +394,6 @@ impl VisState {
         Ok(())
     }
 
-    /// Find an available destination cell near the target position
-    /// Tries the target first, then expands in a spiral pattern to find a free cell
-    fn find_available_destination(
-        &self,
-        target_x: i32,
-        target_y: i32,
-        occupied: &HashSet<(i32, i32)>,
-    ) -> (i32, i32) {
-        // Check if target is available
-        if !occupied.contains(&(target_x, target_y)) && !self.grid.is_blocked(target_x, target_y) {
-            return (target_x, target_y);
-        }
-
-        // Spiral search pattern: expand outward in concentric squares
-        for radius in 1..=10 {
-            // Check cells in a square pattern at this radius
-            for dx in -radius..=radius {
-                for dy in -radius..=radius {
-                    // Only check the perimeter (not interior cells we already checked)
-                    if (dx as i32).abs() != radius && (dy as i32).abs() != radius {
-                        continue;
-                    }
-
-                    let check_x = target_x + dx;
-                    let check_y = target_y + dy;
-
-                    // Bounds check
-                    if check_x < 0 || check_x >= self.grid.cols || check_y < 0 || check_y >= self.grid.rows {
-                        continue;
-                    }
-
-                    // Check if available
-                    if !occupied.contains(&(check_x, check_y)) && !self.grid.is_blocked(check_x, check_y) {
-                        return (check_x, check_y);
-                    }
-                }
-            }
-        }
-
-        // Fallback: return target even if occupied (pathfinding will fail naturally)
-        (target_x, target_y)
-    }
-
     fn draw_corners(&self) {
         let corner_size = 6.0; // Size of corner indicator squares
 
@@ -813,38 +770,21 @@ async fn main() {
 
                 let mut paths_set = 0;
                 let mut no_paths = 0;
-                let mut occupied_destinations = HashSet::new();
-                let mut avoid_cells = HashSet::new();
 
-                // First pass: calculate destinations for all actors
-                let mut actor_destinations = Vec::new();
-                for _actor in &state.actors {
-                    let actor_dest = state.find_available_destination(
-                        dest_grid_x,
-                        dest_grid_y,
-                        &occupied_destinations,
-                    );
-                    occupied_destinations.insert((actor_dest.0, actor_dest.1));
-                    actor_destinations.push(actor_dest);
-                }
-
-                // Second pass: calculate paths with avoidance
-                for (i, actor) in state.actors.iter_mut().enumerate() {
+                for actor in &mut state.actors {
                     // Calculate actor's current cell position
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
-                    let actor_dest = actor_destinations[i];
 
-                    // Find path using pathfinding WITH CACHED CORNERS AND AVOIDANCE
-                    if let Some(mut path) = find_path_with_avoidance(
+                    // Find path using pathfinding WITH CACHED CORNERS
+                    if let Some(mut path) = find_path_with_cache(
                         &state.grid,
                         actor_cpos.cell_x,
                         actor_cpos.cell_y,
-                        actor_dest.0,
-                        actor_dest.1,
+                        dest_grid_x,
+                        dest_grid_y,
                         actor_cpos.messy_x,
                         actor_cpos.messy_y,
                         Some(&state.all_corners),
-                        Some(&avoid_cells),
                     ) {
                         // Skip the first waypoint if it's the actor's current cell
                         if path.len() >= 2 {
@@ -852,11 +792,6 @@ async fn main() {
                             if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
                                 path.remove(0);
                             }
-                        }
-
-                        // Add this path's cells to the avoid set for subsequent actors
-                        for pos in &path {
-                            avoid_cells.insert(*pos);
                         }
 
                         actor.set_path(path, state.grid.get_revision());
