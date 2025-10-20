@@ -1,0 +1,35 @@
+ACTOR
+is a dynamic element in the grid
+- can be placed on one cell cleanly or messily on 2 or 4 cells at once!
+- has his own square bounds in floating point dimensions. Precise location of bounds determine
+- if the actor is placed cleanly or messily
+-- all actor square edges in one cell -> clean position
+-- edges span two cells in horizontally -> messy X
+-- edges span two cells in vertically  -> messy Y
+-- edges span two cell both H and V -> messy X & Y
+
+- ACTOR can move!
+-- movement is precise. Actor can move in any direction just by a few floating points his grid
+
+
+Actor properties:
+@ SIZE : floating point size of the actor's square area. SIZE must always be equal or lesser than grid cell size
+@ FLOAT POSITION ("float pos" / "fpos"): is a (float  x,float y) tuple of floating-point-precise position of the actor.
+This is the actor's square area center. Square edges are calculated by -+ SIZE/2  from the fpos.
+@ CELL POSITION ("cell pos" / cpos): is a state that describes on what cell is actor placed and if it is messy on X/Y.
+The cell is determined by the TOP-LEFT point of actor's square.
+Messiness by the position of a the DOWN-RIGHT point:
+-- messyX = topLeftCell.X <> dwnRightCell.X
+-- messyY =  topLeftCell.Y <> dwnRightCell.Y
+@ SPEED - a floating point value that roughly describes number of pixels the actor can travel
+@ DEST - cpos of a position the actor is traveling to
+
+Upon every change of position,
+
+--
+
+
+- GUI:
+- key O: set actor at the mouse position (fpos exactly at mouse position)
+- key P: set actor's destination
+- 60 frame-per-second: make the actor move a bit towards the destination
