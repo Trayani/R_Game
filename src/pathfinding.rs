@@ -459,20 +459,31 @@ pub fn find_path(
         }
 
         // Skip if already processed
-        if cache.is_processed(&pos) {
+        // Exception: if this is the alignment corner (path=[start, start]), don't skip it
+        let is_alignment_corner = pos == start && node.path.len() == 2 && node.path[1] == start;
+        if cache.is_processed(&pos) && !is_alignment_corner {
             continue;
         }
 
-        // Mark as processed
-        cache.mark_processed(pos);
+        // Mark as processed (but don't mark alignment corner, since we might visit start again)
+        if !is_alignment_corner {
+            cache.mark_processed(pos);
+        }
 
         // Get this corner's interesting corners
-        // Special case: if we're at start position, use pre-computed interesting_corners
-        // IMPORTANT: Messy flags ONLY apply to the start position!
-        // Once we reach any corner, it's grid-aligned, so we use false, false
-        let next_corners = if pos == start {
+        // Special cases:
+        // 1. At start position with path=[start]: messy position, use messy visibility
+        // 2. At start position with path=[start, start]: alignment corner, use clean visibility
+        // 3. Any other position: compute corners with clean flags
+        let next_corners = if pos == start && node.path.len() == 1 {
+            // First visit to start: messy position
             interesting_corners.clone()
+        } else if pos == start && node.path.len() == 2 && node.path[1] == start {
+            // Second visit to start (via alignment corner): clean position
+            // Compute corners with clean visibility
+            cache.get_or_compute(pos, grid, false, false)
         } else {
+            // Any other corner
             cache.get_or_compute(pos, grid, false, false)
         };
 
@@ -482,19 +493,42 @@ pub fn find_path(
 
         for next_corner in next_corners {
             let next_pos = Position::new(next_corner.x, next_corner.y);
-            let distance_to_next = pos.distance(&next_pos);
+            // Special case: alignment corner transition has cost 1.0, not 0
+            let is_alignment_transition = pos == start && next_pos == start && node.path.len() == 1;
+            let distance_to_next = if is_alignment_transition {
+                1.0  // Cost of aligning from messy to clean
+            } else {
+                pos.distance(&next_pos)
+            };
             let total_distance = node.total_distance + distance_to_next;
 
+            if TRACE_PATHFINDING && iterations <= 3 {
+                println!("    Next corner: ({},{}) = ID {}, dist={:.2}, is_align={}",
+                         next_pos.x, next_pos.y, grid.get_id(next_pos.x, next_pos.y), total_distance, is_alignment_transition);
+            }
+
             // Only enqueue if this is a better path
-            let should_enqueue = match best_distances.get(&next_pos) {
-                Some(&best_dist) => total_distance < best_dist,
-                None => true,
+            // Exception: alignment corner can always be enqueued (it's a different state)
+            let should_enqueue = if is_alignment_transition {
+                true  // Always enqueue alignment corner
+            } else {
+                match best_distances.get(&next_pos) {
+                    Some(&best_dist) => total_distance < best_dist,
+                    None => true,
+                }
             };
+
+            if TRACE_PATHFINDING && iterations <= 3 {
+                println!("      should_enqueue: {} (best_dist: {:?})", should_enqueue, best_distances.get(&next_pos));
+            }
 
             if should_enqueue {
                 best_distances.insert(next_pos, total_distance);
                 let mut new_path = node.path.clone();
                 new_path.push(next_pos);
+                if TRACE_PATHFINDING && iterations <= 3 {
+                    println!("      Enqueued with path: {:?}", new_path.iter().map(|p| grid.get_id(p.x, p.y)).collect::<Vec<_>>());
+                }
                 queue.push(PathNode {
                     position: next_pos,
                     total_distance,
