@@ -603,46 +603,63 @@ fn find_path_internal(
 
             // Apply radius-based avoidance penalty to create natural spreading around congested areas
             if let Some(avoid_set) = avoid_cells {
-                if next_pos != dest {
+                if next_pos != dest && !avoid_set.is_empty() {
                     // Check if this cell or nearby cells are occupied by other paths
                     // This creates a "pressure" effect that pushes actors to take wider arcs
                     let mut proximity_penalty: f64 = 0.0;
 
-                    // Direct occupation: strong penalty
+                    // Direct occupation: VERY strong penalty
                     if avoid_set.contains(&next_pos) {
-                        proximity_penalty += 0.8; // 80% penalty for direct overlap
+                        proximity_penalty += 5.0; // 500% penalty for direct overlap - forces alternative routes
                     }
 
-                    // Check adjacent cells (radius 1) - moderate penalty
+                    // Check adjacent cells (radius 1) - strong penalty
                     for dx in -1_i32..=1_i32 {
                         for dy in -1_i32..=1_i32 {
                             if dx == 0 && dy == 0 { continue; } // Skip center (already checked)
                             let check_pos = Position::new(next_pos.x + dx, next_pos.y + dy);
                             if avoid_set.contains(&check_pos) {
-                                // Penalty decreases with distance
-                                // Adjacent cells: 20% penalty
-                                proximity_penalty += 0.20;
+                                // Adjacent cells: significant penalty to create buffer zone
+                                proximity_penalty += 1.0; // 100% penalty per adjacent occupied cell
                             }
                         }
                     }
 
-                    // Check radius 2 cells (corners and diagonals) - light penalty
+                    // Check radius 2 cells (corners and diagonals) - moderate penalty
                     for dx in -2_i32..=2_i32 {
                         for dy in -2_i32..=2_i32 {
                             // Skip cells we already checked (radius 0 and 1)
                             if dx.abs() <= 1 && dy.abs() <= 1 { continue; }
                             let check_pos = Position::new(next_pos.x + dx, next_pos.y + dy);
                             if avoid_set.contains(&check_pos) {
-                                // Cells at radius 2: 5% penalty
-                                proximity_penalty += 0.05;
+                                // Cells at radius 2: moderate penalty
+                                proximity_penalty += 0.3; // 30% penalty
+                            }
+                        }
+                    }
+
+                    // Check radius 3 cells - light influence
+                    for dx in -3_i32..=3_i32 {
+                        for dy in -3_i32..=3_i32 {
+                            // Skip cells we already checked (radius 0, 1, 2)
+                            if dx.abs() <= 2 && dy.abs() <= 2 { continue; }
+                            let check_pos = Position::new(next_pos.x + dx, next_pos.y + dy);
+                            if avoid_set.contains(&check_pos) {
+                                // Cells at radius 3: light penalty
+                                proximity_penalty += 0.1; // 10% penalty
                             }
                         }
                     }
 
                     // Apply cumulative penalty (capped to avoid excessive cost)
                     // This creates natural spreading: later actors feel "pressure" and take wider paths
-                    let penalty_multiplier = 1.0 + proximity_penalty.min(2.0); // Cap at 3x cost
+                    let penalty_multiplier = 1.0 + proximity_penalty.min(10.0); // Cap at 11x cost
                     distance_to_next *= penalty_multiplier;
+
+                    if TRACE_PATHFINDING && proximity_penalty > 0.0 {
+                        println!("      Avoidance penalty: {:.2}x multiplier at ({},{}) - {} cells in avoid set",
+                                 penalty_multiplier, next_pos.x, next_pos.y, avoid_set.len());
+                    }
                 }
             }
 

@@ -834,6 +834,9 @@ async fn main() {
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
                     let actor_dest = actor_destinations[i];
 
+                    println!("  Actor {}: from ({},{}) to ({},{}) - {} cells in avoid set",
+                             i, actor_cpos.cell_x, actor_cpos.cell_y, actor_dest.0, actor_dest.1, avoid_cells.len());
+
                     // Find path using pathfinding WITH CACHED CORNERS AND AVOIDANCE
                     if let Some(mut path) = find_path_with_avoidance(
                         &state.grid,
@@ -854,6 +857,8 @@ async fn main() {
                             }
                         }
 
+                        println!("    Path found: {} waypoints", path.len());
+
                         // Add this path's cells to the avoid set for subsequent actors
                         for pos in &path {
                             avoid_cells.insert(*pos);
@@ -862,6 +867,7 @@ async fn main() {
                         actor.set_path(path, state.grid.get_revision());
                         paths_set += 1;
                     } else {
+                        println!("    No path found!");
                         no_paths += 1;
                     }
                 }
