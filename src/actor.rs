@@ -108,8 +108,15 @@ impl Actor {
         self.path_grid_revision = grid_revision;
     }
 
-    /// Clear the current path
+    /// Clear the current path (keeps destination for retry)
     pub fn clear_path(&mut self) {
+        self.path.clear();
+        self.current_waypoint = 0;
+        // Keep destination - actor will retry pathfinding if grid changes
+    }
+
+    /// Clear the current path and destination (completely stop)
+    pub fn clear_destination(&mut self) {
         self.path.clear();
         self.current_waypoint = 0;
         self.destination = None;

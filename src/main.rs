@@ -762,9 +762,13 @@ async fn main() {
         }
 
         // Check if actor's path needs recalculation due to grid changes
+        // OR if actor has a destination but no path (blocked, waiting for opening)
         if let Some(ref mut actor) = state.actor {
-            if actor.is_path_outdated(state.grid.get_revision()) {
-                // Grid has changed - recalculate path to destination
+            let should_recalculate = actor.is_path_outdated(state.grid.get_revision())
+                || (actor.destination.is_some() && !actor.has_path());
+
+            if should_recalculate {
+                // Grid has changed or actor is waiting - (re)calculate path to destination
                 if let Some(dest) = actor.destination {
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
 
@@ -785,12 +789,19 @@ async fn main() {
                             }
                         }
 
+                        let was_stopped = !actor.has_path();
                         actor.set_path(path, state.grid.get_revision());
-                        println!("Actor path recalculated due to grid change");
+                        if was_stopped {
+                            println!("Actor resumed - path found after obstacle removed");
+                        } else {
+                            println!("Actor path recalculated due to grid change");
+                        }
                     } else {
-                        // No path found - clear the path
-                        actor.clear_path();
-                        println!("No path found after grid change - actor stopped");
+                        // No path found - clear the path but keep destination
+                        if actor.has_path() {
+                            actor.clear_path();
+                            println!("No path found after grid change - actor stopped (will retry if grid changes)");
+                        }
                     }
                 }
             }
