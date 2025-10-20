@@ -25,11 +25,27 @@ struct VisState {
 
 impl VisState {
     fn new() -> Self {
-        let grid = Grid::new(40, 40);
-        let observer_x = 20;
-        let observer_y = 20;
-        let messy_x = false;
-        let messy_y = false;
+        // Create initial grid with default dimensions
+        let mut grid = Grid::new(40, 40);
+        let mut observer_x = 20;
+        let mut observer_y = 20;
+        let mut messy_x = false;
+        let mut messy_y = false;
+
+        // Try to load default grid layout from file
+        if let Ok(default_layout) = std::fs::read_to_string("claude_tasks/default_grid_layout.txt") {
+            // Parse the default layout
+            if let Ok((parsed_grid, obs_x, obs_y, m_x, m_y)) = Self::parse_grid_layout(&default_layout) {
+                grid = parsed_grid;
+                observer_x = obs_x;
+                observer_y = obs_y;
+                messy_x = m_x;
+                messy_y = m_y;
+            } else {
+                eprintln!("Warning: Failed to parse default_grid_layout.txt, using empty grid");
+            }
+        }
+
         let visible_cells = raycast(&grid, observer_x, observer_y, messy_x, messy_y);
 
         let all_corners = detect_all_corners(&grid);
@@ -271,6 +287,113 @@ impl VisState {
                 println!("Failed to access clipboard: {}", e);
             }
         }
+    }
+
+    /// Parse grid layout from string (static version for initialization)
+    /// Returns (Grid, observer_x, observer_y, messy_x, messy_y)
+    fn parse_grid_layout(text: &str) -> Result<(Grid, i32, i32, bool, bool), String> {
+        // Parse lines and collect grid data
+        let lines: Vec<&str> = text.lines().filter(|l| !l.is_empty()).collect();
+
+        if lines.is_empty() {
+            return Err("Empty grid data".to_string());
+        }
+
+        let rows = lines.len();
+        let cols = lines[0].chars().count();
+
+        // Validate all lines have same width
+        for (i, line) in lines.iter().enumerate() {
+            let line_width = line.chars().count();
+            if line_width != cols {
+                return Err(format!("Line {} has width {} but expected {}", i, line_width, cols));
+            }
+        }
+
+        // Create new grid with parsed dimensions
+        let mut grid = Grid::new(cols as i32, rows as i32);
+
+        // Track observer positions (for messy detection)
+        let mut observer_positions: Vec<(i32, i32)> = Vec::new();
+
+        // Parse each cell
+        for (y, line) in lines.iter().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                let cell_id = grid.get_id(x as i32, y as i32);
+
+                match ch {
+                    '■' | 'b' => {
+                        // Blocked cell
+                        grid.cells[cell_id as usize] = 1;
+                    }
+                    's' | 'z' => {
+                        // Observer position
+                        observer_positions.push((x as i32, y as i32));
+                        grid.cells[cell_id as usize] = 0; // Observer cell is free
+                    }
+                    'o' | '□' | 'c' | 'n' | 'u' | 'x' => {
+                        // Free cells (various types from test formats)
+                        grid.cells[cell_id as usize] = 0;
+                    }
+                    '▲' => {
+                        // Interesting corner marker (from test data) - treat as free
+                        grid.cells[cell_id as usize] = 0;
+                    }
+                    _ => {
+                        // Unknown character - treat as free cell
+                        grid.cells[cell_id as usize] = 0;
+                    }
+                }
+            }
+        }
+
+        // Determine observer position and messy state
+        if observer_positions.is_empty() {
+            return Err("No observer position (s) found in grid".to_string());
+        }
+
+        // Sort positions to identify patterns
+        observer_positions.sort();
+
+        // Detect messy configuration
+        let (obs_x, obs_y, messy_x, messy_y) = if observer_positions.len() == 1 {
+            // Single cell observer
+            (observer_positions[0].0, observer_positions[0].1, false, false)
+        } else if observer_positions.len() == 2 {
+            let (x1, y1) = observer_positions[0];
+            let (x2, y2) = observer_positions[1];
+
+            if y1 == y2 && x2 == x1 + 1 {
+                // Horizontal adjacency: messy X
+                (x1, y1, true, false)
+            } else if x1 == x2 && y2 == y1 + 1 {
+                // Vertical adjacency: messy Y
+                (x1, y1, false, true)
+            } else {
+                return Err(format!("Observer positions ({}, {}) and ({}, {}) are not adjacent", x1, y1, x2, y2));
+            }
+        } else if observer_positions.len() == 4 {
+            // Should be a 2x2 block for messy X+Y
+            let (x1, y1) = observer_positions[0];
+            let expected = vec![
+                (x1, y1),
+                (x1 + 1, y1),
+                (x1, y1 + 1),
+                (x1 + 1, y1 + 1),
+            ];
+            let mut sorted_expected = expected.clone();
+            sorted_expected.sort();
+
+            if observer_positions == sorted_expected {
+                (x1, y1, true, true)
+            } else {
+                return Err(format!("Observer positions don't form a 2x2 block: {:?}", observer_positions));
+            }
+        } else {
+            return Err(format!("Invalid number of observer positions: {}", observer_positions.len()));
+        };
+
+        Ok((grid, obs_x, obs_y, messy_x, messy_y))
     }
 
     fn parse_grid_from_string(&mut self, text: &str) -> Result<(), String> {
