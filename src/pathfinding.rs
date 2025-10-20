@@ -68,12 +68,22 @@ impl Ord for PathNode {
 struct CornerCache {
     /// Maps corner position -> (visible corners, processed flag)
     cache: HashMap<Position, (Vec<Corner>, bool)>,
+    /// Cached all_corners from detect_all_corners(grid)
+    all_corners_cache: Option<Vec<Corner>>,
 }
 
 impl CornerCache {
     fn new() -> Self {
         CornerCache {
             cache: HashMap::new(),
+            all_corners_cache: None,
+        }
+    }
+
+    fn new_with_corners(all_corners: Vec<Corner>) -> Self {
+        CornerCache {
+            cache: HashMap::new(),
+            all_corners_cache: Some(all_corners),
         }
     }
 
@@ -92,7 +102,15 @@ impl CornerCache {
         // Compute interesting corners for this position
         // These are corners that are partially hidden and lead to unexplored areas
         let visible_cells = raycast(grid, pos.x, pos.y, messy_x, messy_y);
-        let all_corners = detect_all_corners(grid);
+
+        // Use cached all_corners if available
+        let all_corners = if let Some(ref cached) = self.all_corners_cache {
+            cached.clone()
+        } else {
+            let corners = detect_all_corners(grid);
+            self.all_corners_cache = Some(corners.clone());
+            corners
+        };
 
         // Filter for interesting corners (partially hidden corners at visibility boundaries)
         let interesting_corners = filter_interesting_corners(
@@ -386,7 +404,7 @@ pub fn find_path_with_cache(
 
     // Step 4: Bidirectional setup - compute "finished corners" with distances to dest
     // This matches C# behavior where dest corners are marked as "finished" before search
-    let finished_corners = compute_finished_corners(&dest, grid);
+    let finished_corners = compute_finished_corners(&dest, grid, cached_corners);
     if finished_corners.is_empty() {
         if TRACE_PATHFINDING {
             println!("[find_path] No finished corners found - no path possible");
@@ -405,8 +423,12 @@ pub fn find_path_with_cache(
         }
     }
 
-    // Step 5: Initialize A* search
-    let mut cache = CornerCache::new();
+    // Step 5: Initialize A* search with cached corners
+    let mut cache = if let Some(cached) = cached_corners {
+        CornerCache::new_with_corners(cached.clone())
+    } else {
+        CornerCache::new()
+    };
     let mut queue: BinaryHeap<PathNode> = BinaryHeap::new();
     let mut best_distances: HashMap<Position, f64> = HashMap::new();
     let mut min_distance = f64::MAX;
@@ -601,14 +623,18 @@ pub fn find_path_with_cache(
 
 /// Compute "finished corners" - corners that can see the destination with their distances
 /// This implements C#'s bidirectional-style search behavior
-fn compute_finished_corners(dest: &Position, grid: &Grid) -> HashMap<Position, f64> {
+fn compute_finished_corners(dest: &Position, grid: &Grid, cached_corners: Option<&Vec<Corner>>) -> HashMap<Position, f64> {
     let mut finished = HashMap::new();
 
     // Raycast FROM the destination to find which corners can see it
     let dest_visible = raycast(grid, dest.x, dest.y, false, false);
 
-    // Detect all corners in the grid
-    let all_corners = detect_all_corners(grid);
+    // Detect all corners in the grid (use cache if available)
+    let all_corners = if let Some(cached) = cached_corners {
+        cached.clone()
+    } else {
+        detect_all_corners(grid)
+    };
 
     // Filter for interesting corners visible from destination
     let dest_corners = filter_interesting_corners(

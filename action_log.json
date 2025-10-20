@@ -1,968 +1,2310 @@
 [
   {
-    "timestamp_ms": 591,
+    "timestamp_ms": 1553,
     "action": {
-      "ToggleCell": {
-        "x": 21,
-        "y": 28
+      "MoveObserver": {
+        "x": 6,
+        "y": 19,
+        "messy_x": false,
+        "messy_y": false
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1407,
+    "timestamp_ms": 1554,
     "action": {
-      "SetBlocked": {
-        "x": 12,
-        "y": 33
+      "MoveObserver": {
+        "x": 6,
+        "y": 19,
+        "messy_x": false,
+        "messy_y": false
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 1491,
+    "timestamp_ms": 1636,
     "action": {
-      "SetBlocked": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 17,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1637,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 17,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1653,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 15,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1654,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 15,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1670,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 10,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1671,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 10,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1687,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 8,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1687,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 8,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1720,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 7,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1721,
+    "action": {
+      "MoveObserver": {
+        "x": 6,
+        "y": 7,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1803,
+    "action": {
+      "MoveObserver": {
+        "x": 7,
+        "y": 6,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1804,
+    "action": {
+      "MoveObserver": {
+        "x": 7,
+        "y": 6,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1820,
+    "action": {
+      "MoveObserver": {
+        "x": 8,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1821,
+    "action": {
+      "MoveObserver": {
+        "x": 8,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1837,
+    "action": {
+      "MoveObserver": {
         "x": 9,
-        "y": 29
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1507,
+    "timestamp_ms": 1837,
+    "action": {
+      "MoveObserver": {
+        "x": 9,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1853,
+    "action": {
+      "MoveObserver": {
+        "x": 9,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1854,
+    "action": {
+      "MoveObserver": {
+        "x": 9,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1870,
+    "action": {
+      "MoveObserver": {
+        "x": 10,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1871,
+    "action": {
+      "MoveObserver": {
+        "x": 10,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1903,
+    "action": {
+      "MoveObserver": {
+        "x": 11,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1904,
+    "action": {
+      "MoveObserver": {
+        "x": 11,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1937,
+    "action": {
+      "MoveObserver": {
+        "x": 13,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1937,
+    "action": {
+      "MoveObserver": {
+        "x": 13,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1953,
+    "action": {
+      "MoveObserver": {
+        "x": 14,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1954,
+    "action": {
+      "MoveObserver": {
+        "x": 14,
+        "y": 4,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1970,
+    "action": {
+      "MoveObserver": {
+        "x": 14,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1971,
+    "action": {
+      "MoveObserver": {
+        "x": 14,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 1987,
+    "action": {
+      "MoveObserver": {
+        "x": 15,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 1987,
+    "action": {
+      "MoveObserver": {
+        "x": 15,
+        "y": 5,
+        "messy_x": false,
+        "messy_y": false
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4653,
     "action": {
       "SetBlocked": {
         "x": 8,
-        "y": 27
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1524,
-    "action": {
-      "SetBlocked": {
-        "x": 6,
         "y": 25
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1541,
+    "timestamp_ms": 4654,
+    "action": {
+      "SetBlocked": {
+        "x": 8,
+        "y": 25
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4736,
+    "action": {
+      "SetBlocked": {
+        "x": 8,
+        "y": 23
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4737,
+    "action": {
+      "SetBlocked": {
+        "x": 8,
+        "y": 23
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4753,
+    "action": {
+      "SetBlocked": {
+        "x": 7,
+        "y": 19
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4754,
+    "action": {
+      "SetBlocked": {
+        "x": 7,
+        "y": 19
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4770,
     "action": {
       "SetBlocked": {
         "x": 6,
-        "y": 23
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1557,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
-        "y": 21
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1574,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
-        "y": 20
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1591,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
-        "y": 19
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1607,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
-        "y": 18
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1624,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
         "y": 17
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1641,
+    "timestamp_ms": 4771,
     "action": {
       "SetBlocked": {
-        "x": 5,
-        "y": 16
+        "x": 6,
+        "y": 17
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 1657,
-    "action": {
-      "SetBlocked": {
-        "x": 5,
-        "y": 15
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1674,
+    "timestamp_ms": 4787,
     "action": {
       "SetBlocked": {
         "x": 6,
         "y": 14
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1691,
+    "timestamp_ms": 4787,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 14
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4803,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 12
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4804,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 12
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4820,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 11
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4821,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 11
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4837,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 10
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4837,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 10
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4853,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4854,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 4870,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 4871,
+    "action": {
+      "SetBlocked": {
+        "x": 6,
+        "y": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5087,
     "action": {
       "SetBlocked": {
         "x": 7,
         "y": 13
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1707,
+    "timestamp_ms": 5088,
+    "action": {
+      "SetBlocked": {
+        "x": 7,
+        "y": 13
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5105,
+    "action": {
+      "SetBlocked": {
+        "x": 7,
+        "y": 16
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5106,
+    "action": {
+      "SetBlocked": {
+        "x": 7,
+        "y": 16
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5120,
     "action": {
       "SetBlocked": {
         "x": 9,
-        "y": 12
+        "y": 19
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1724,
+    "timestamp_ms": 5121,
     "action": {
       "SetBlocked": {
-        "x": 11,
-        "y": 11
+        "x": 9,
+        "y": 19
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 1741,
+    "timestamp_ms": 5137,
+    "action": {
+      "SetBlocked": {
+        "x": 10,
+        "y": 22
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5138,
+    "action": {
+      "SetBlocked": {
+        "x": 10,
+        "y": 22
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5153,
     "action": {
       "SetBlocked": {
         "x": 12,
-        "y": 10
+        "y": 24
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 1758,
+    "timestamp_ms": 5154,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 24
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5170,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 26
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5171,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 26
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5187,
     "action": {
       "SetBlocked": {
         "x": 14,
-        "y": 10
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1774,
-    "action": {
-      "SetBlocked": {
-        "x": 16,
-        "y": 9
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1791,
-    "action": {
-      "SetBlocked": {
-        "x": 17,
-        "y": 9
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1807,
-    "action": {
-      "SetBlocked": {
-        "x": 18,
-        "y": 8
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1824,
-    "action": {
-      "SetBlocked": {
-        "x": 20,
-        "y": 8
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1857,
-    "action": {
-      "SetBlocked": {
-        "x": 21,
-        "y": 7
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1874,
-    "action": {
-      "SetBlocked": {
-        "x": 23,
-        "y": 7
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1907,
-    "action": {
-      "SetBlocked": {
-        "x": 24,
-        "y": 7
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1924,
-    "action": {
-      "SetBlocked": {
-        "x": 25,
-        "y": 7
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1941,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 7
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1974,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 8
-      }
-    }
-  },
-  {
-    "timestamp_ms": 1991,
-    "action": {
-      "SetBlocked": {
-        "x": 28,
-        "y": 8
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2157,
-    "action": {
-      "SetBlocked": {
-        "x": 30,
-        "y": 11
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2174,
-    "action": {
-      "SetBlocked": {
-        "x": 32,
-        "y": 14
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2191,
-    "action": {
-      "SetBlocked": {
-        "x": 33,
-        "y": 16
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2207,
-    "action": {
-      "SetBlocked": {
-        "x": 34,
-        "y": 18
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2224,
-    "action": {
-      "SetBlocked": {
-        "x": 35,
-        "y": 20
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2324,
-    "action": {
-      "SetBlocked": {
-        "x": 35,
-        "y": 21
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2341,
-    "action": {
-      "SetBlocked": {
-        "x": 34,
-        "y": 22
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2358,
-    "action": {
-      "SetBlocked": {
-        "x": 34,
-        "y": 23
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2391,
-    "action": {
-      "SetBlocked": {
-        "x": 34,
-        "y": 24
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2474,
-    "action": {
-      "SetBlocked": {
-        "x": 33,
-        "y": 25
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2591,
-    "action": {
-      "SetBlocked": {
-        "x": 32,
-        "y": 25
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2607,
-    "action": {
-      "SetBlocked": {
-        "x": 32,
-        "y": 26
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2674,
-    "action": {
-      "SetBlocked": {
-        "x": 31,
-        "y": 26
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2724,
-    "action": {
-      "SetBlocked": {
-        "x": 31,
-        "y": 27
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2741,
-    "action": {
-      "SetBlocked": {
-        "x": 31,
         "y": 28
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 2774,
+    "timestamp_ms": 5187,
     "action": {
       "SetBlocked": {
-        "x": 31,
-        "y": 29
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2807,
-    "action": {
-      "SetBlocked": {
-        "x": 30,
-        "y": 30
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2874,
-    "action": {
-      "SetBlocked": {
-        "x": 30,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2891,
-    "action": {
-      "SetBlocked": {
-        "x": 29,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 2974,
-    "action": {
-      "SetBlocked": {
-        "x": 28,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3041,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3091,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3107,
-    "action": {
-      "SetBlocked": {
-        "x": 25,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3124,
-    "action": {
-      "SetBlocked": {
-        "x": 24,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3141,
-    "action": {
-      "SetBlocked": {
-        "x": 23,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3257,
-    "action": {
-      "SetBlocked": {
-        "x": 22,
-        "y": 31
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3274,
-    "action": {
-      "SetBlocked": {
-        "x": 21,
-        "y": 30
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3307,
-    "action": {
-      "SetBlocked": {
-        "x": 20,
-        "y": 30
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3324,
-    "action": {
-      "SetBlocked": {
-        "x": 20,
-        "y": 29
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3374,
-    "action": {
-      "SetBlocked": {
-        "x": 19,
-        "y": 29
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3424,
-    "action": {
-      "SetBlocked": {
-        "x": 18,
-        "y": 29
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3441,
-    "action": {
-      "SetBlocked": {
-        "x": 17,
+        "x": 14,
         "y": 28
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 3541,
-    "action": {
-      "SetBlocked": {
-        "x": 16,
-        "y": 28
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3674,
-    "action": {
-      "SetBlocked": {
-        "x": 16,
-        "y": 27
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3691,
+    "timestamp_ms": 5220,
     "action": {
       "SetBlocked": {
         "x": 15,
-        "y": 25
+        "y": 29
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 3707,
+    "timestamp_ms": 5221,
     "action": {
       "SetBlocked": {
-        "x": 14,
-        "y": 24
+        "x": 15,
+        "y": 29
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 3724,
-    "action": {
-      "SetBlocked": {
-        "x": 14,
-        "y": 23
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3891,
-    "action": {
-      "SetBlocked": {
-        "x": 13,
-        "y": 22
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3941,
-    "action": {
-      "SetBlocked": {
-        "x": 13,
-        "y": 21
-      }
-    }
-  },
-  {
-    "timestamp_ms": 3957,
-    "action": {
-      "SetBlocked": {
-        "x": 14,
-        "y": 20
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4007,
-    "action": {
-      "SetBlocked": {
-        "x": 14,
-        "y": 19
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4024,
+    "timestamp_ms": 5237,
     "action": {
       "SetBlocked": {
         "x": 16,
-        "y": 18
+        "y": 30
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 4041,
+    "timestamp_ms": 5237,
     "action": {
       "SetBlocked": {
-        "x": 17,
-        "y": 18
+        "x": 16,
+        "y": 30
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 4074,
+    "timestamp_ms": 5253,
     "action": {
       "SetBlocked": {
         "x": 18,
-        "y": 18
+        "y": 30
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 4107,
+    "timestamp_ms": 5254,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 30
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5270,
     "action": {
       "SetBlocked": {
         "x": 19,
-        "y": 17
+        "y": 31
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 4124,
+    "timestamp_ms": 5271,
     "action": {
       "SetBlocked": {
-        "x": 20,
-        "y": 17
+        "x": 19,
+        "y": 31
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 4141,
+    "timestamp_ms": 5287,
     "action": {
       "SetBlocked": {
         "x": 21,
-        "y": 16
+        "y": 31
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 4158,
+    "timestamp_ms": 5287,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 31
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5303,
     "action": {
       "SetBlocked": {
         "x": 22,
-        "y": 16
+        "y": 31
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 4174,
+    "timestamp_ms": 5304,
     "action": {
       "SetBlocked": {
-        "x": 24,
-        "y": 16
+        "x": 22,
+        "y": 31
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 4307,
-    "action": {
-      "SetBlocked": {
-        "x": 25,
-        "y": 16
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4441,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 17
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4457,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 19
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4491,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 20
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4507,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 21
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4574,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 22
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4591,
-    "action": {
-      "SetBlocked": {
-        "x": 27,
-        "y": 24
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4791,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 24
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4841,
-    "action": {
-      "SetBlocked": {
-        "x": 26,
-        "y": 25
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4874,
-    "action": {
-      "SetBlocked": {
-        "x": 25,
-        "y": 24
-      }
-    }
-  },
-  {
-    "timestamp_ms": 4907,
-    "action": {
-      "SetBlocked": {
-        "x": 24,
-        "y": 24
-      }
-    }
-  },
-  {
-    "timestamp_ms": 5008,
+    "timestamp_ms": 5320,
     "action": {
       "SetBlocked": {
         "x": 23,
-        "y": 24
+        "y": 32
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5141,
+    "timestamp_ms": 5321,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 32
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5337,
+    "action": {
+      "SetBlocked": {
+        "x": 24,
+        "y": 32
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5338,
+    "action": {
+      "SetBlocked": {
+        "x": 24,
+        "y": 32
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5353,
+    "action": {
+      "SetBlocked": {
+        "x": 26,
+        "y": 32
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5354,
+    "action": {
+      "SetBlocked": {
+        "x": 26,
+        "y": 32
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5370,
+    "action": {
+      "SetBlocked": {
+        "x": 27,
+        "y": 32
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5371,
+    "action": {
+      "SetBlocked": {
+        "x": 27,
+        "y": 32
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5386,
+    "action": {
+      "SetBlocked": {
+        "x": 28,
+        "y": 31
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5387,
+    "action": {
+      "SetBlocked": {
+        "x": 28,
+        "y": 31
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5403,
+    "action": {
+      "SetBlocked": {
+        "x": 29,
+        "y": 30
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5404,
+    "action": {
+      "SetBlocked": {
+        "x": 29,
+        "y": 30
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5420,
+    "action": {
+      "SetBlocked": {
+        "x": 30,
+        "y": 30
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5421,
+    "action": {
+      "SetBlocked": {
+        "x": 30,
+        "y": 30
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5437,
+    "action": {
+      "SetBlocked": {
+        "x": 31,
+        "y": 29
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5437,
+    "action": {
+      "SetBlocked": {
+        "x": 31,
+        "y": 29
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5453,
+    "action": {
+      "SetBlocked": {
+        "x": 32,
+        "y": 27
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5454,
+    "action": {
+      "SetBlocked": {
+        "x": 32,
+        "y": 27
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5470,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 26
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5471,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 26
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5486,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 25
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5487,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 25
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5503,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 24
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5504,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 24
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5520,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 22
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5521,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 22
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5537,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 20
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5538,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 20
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5553,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 19
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5554,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 19
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5570,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 17
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5571,
+    "action": {
+      "SetBlocked": {
+        "x": 34,
+        "y": 17
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5587,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 16
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5587,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 16
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5603,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 15
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5604,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 15
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5620,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 14
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5620,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 14
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5670,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 13
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5670,
+    "action": {
+      "SetBlocked": {
+        "x": 33,
+        "y": 13
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5720,
+    "action": {
+      "SetBlocked": {
+        "x": 32,
+        "y": 12
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5720,
+    "action": {
+      "SetBlocked": {
+        "x": 32,
+        "y": 12
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5920,
+    "action": {
+      "SetBlocked": {
+        "x": 31,
+        "y": 14
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5920,
+    "action": {
+      "SetBlocked": {
+        "x": 31,
+        "y": 14
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5937,
+    "action": {
+      "SetBlocked": {
+        "x": 29,
+        "y": 15
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5937,
+    "action": {
+      "SetBlocked": {
+        "x": 29,
+        "y": 15
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5953,
+    "action": {
+      "SetBlocked": {
+        "x": 28,
+        "y": 15
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5954,
+    "action": {
+      "SetBlocked": {
+        "x": 28,
+        "y": 15
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5970,
+    "action": {
+      "SetBlocked": {
+        "x": 25,
+        "y": 17
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5970,
+    "action": {
+      "SetBlocked": {
+        "x": 25,
+        "y": 17
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5986,
+    "action": {
+      "SetBlocked": {
+        "x": 25,
+        "y": 18
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5987,
+    "action": {
+      "SetBlocked": {
+        "x": 25,
+        "y": 18
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6020,
+    "action": {
+      "SetBlocked": {
+        "x": 24,
+        "y": 18
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6020,
+    "action": {
+      "SetBlocked": {
+        "x": 24,
+        "y": 18
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6086,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 19
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6087,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 19
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6103,
     "action": {
       "SetBlocked": {
         "x": 22,
-        "y": 24
+        "y": 20
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5157,
+    "timestamp_ms": 6104,
+    "action": {
+      "SetBlocked": {
+        "x": 22,
+        "y": 20
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6120,
     "action": {
       "SetBlocked": {
         "x": 21,
-        "y": 24
+        "y": 20
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5308,
+    "timestamp_ms": 6120,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 20
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6203,
     "action": {
       "SetBlocked": {
         "x": 20,
-        "y": 24
+        "y": 19
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5524,
+    "timestamp_ms": 6204,
+    "action": {
+      "SetBlocked": {
+        "x": 20,
+        "y": 19
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6220,
     "action": {
       "SetBlocked": {
         "x": 19,
-        "y": 24
+        "y": 17
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5541,
+    "timestamp_ms": 6221,
+    "action": {
+      "SetBlocked": {
+        "x": 19,
+        "y": 17
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6237,
+    "action": {
+      "SetBlocked": {
+        "x": 19,
+        "y": 16
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6237,
+    "action": {
+      "SetBlocked": {
+        "x": 19,
+        "y": 16
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6253,
     "action": {
       "SetBlocked": {
         "x": 18,
-        "y": 24
+        "y": 15
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5857,
+    "timestamp_ms": 6254,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 15
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6270,
     "action": {
       "SetBlocked": {
         "x": 17,
-        "y": 24
+        "y": 13
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 5874,
+    "timestamp_ms": 6271,
     "action": {
       "SetBlocked": {
         "x": 17,
-        "y": 23
+        "y": 13
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 7691,
+    "timestamp_ms": 6336,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 12
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6337,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 12
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6370,
+    "action": {
+      "SetBlocked": {
+        "x": 19,
+        "y": 11
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6371,
+    "action": {
+      "SetBlocked": {
+        "x": 19,
+        "y": 11
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6387,
+    "action": {
+      "SetBlocked": {
+        "x": 20,
+        "y": 10
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6387,
+    "action": {
+      "SetBlocked": {
+        "x": 20,
+        "y": 10
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6420,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 10
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6421,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 10
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6437,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6437,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6487,
+    "action": {
+      "SetBlocked": {
+        "x": 22,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6487,
+    "action": {
+      "SetBlocked": {
+        "x": 22,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6520,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6521,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6587,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 7
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6587,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 7
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6620,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 6
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6620,
+    "action": {
+      "SetBlocked": {
+        "x": 23,
+        "y": 6
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6770,
+    "action": {
+      "SetBlocked": {
+        "x": 22,
+        "y": 6
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6771,
+    "action": {
+      "SetBlocked": {
+        "x": 22,
+        "y": 6
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6787,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 6
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6787,
+    "action": {
+      "SetBlocked": {
+        "x": 21,
+        "y": 6
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6803,
+    "action": {
+      "SetBlocked": {
+        "x": 20,
+        "y": 7
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6804,
+    "action": {
+      "SetBlocked": {
+        "x": 20,
+        "y": 7
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6820,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 7
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6821,
+    "action": {
+      "SetBlocked": {
+        "x": 18,
+        "y": 7
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6837,
+    "action": {
+      "SetBlocked": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6837,
+    "action": {
+      "SetBlocked": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6853,
+    "action": {
+      "SetBlocked": {
+        "x": 15,
+        "y": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6854,
+    "action": {
+      "SetBlocked": {
+        "x": 15,
+        "y": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6870,
+    "action": {
+      "SetBlocked": {
+        "x": 14,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6870,
+    "action": {
+      "SetBlocked": {
+        "x": 14,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6887,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6887,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6903,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 10
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6904,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 10
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6953,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 11
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6954,
+    "action": {
+      "SetBlocked": {
+        "x": 13,
+        "y": 11
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6970,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 11
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6970,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 11
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6986,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 12
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 6987,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 12
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7020,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 13
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7020,
+    "action": {
+      "SetBlocked": {
+        "x": 12,
+        "y": 13
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7137,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 9
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7137,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 9
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7153,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 7
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7154,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 7
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7170,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 6
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7170,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 6
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7187,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 4
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7187,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 4
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7203,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 3
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7204,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 3
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7220,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 2
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7220,
+    "action": {
+      "SetBlocked": {
+        "x": 11,
+        "y": 2
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 7253,
+    "action": {
+      "SetBlocked": {
+        "x": 10,
+        "y": 1
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 7254,
+    "action": {
+      "SetBlocked": {
+        "x": 10,
+        "y": 1
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 8370,
+    "action": {
+      "SpawnActor": {
+        "x": 30.0,
+        "y": 330.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 8370,
+    "action": {
+      "SpawnActor": {
+        "x": 30.0,
+        "y": 330.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 8620,
+    "action": {
+      "SpawnActor": {
+        "x": 70.0,
+        "y": 439.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 8620,
+    "action": {
+      "SpawnActor": {
+        "x": 70.0,
+        "y": 439.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 8803,
     "action": {
       "SpawnActor": {
         "x": 142.0,
-        "y": 553.0
+        "y": 488.0
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 8291,
+    "timestamp_ms": 8803,
     "action": {
       "SpawnActor": {
-        "x": 76.0,
-        "y": 376.0
+        "x": 142.0,
+        "y": 488.0
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 8758,
+    "timestamp_ms": 8970,
     "action": {
       "SpawnActor": {
-        "x": 127.0,
-        "y": 152.0
+        "x": 233.0,
+        "y": 512.0
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 9541,
+    "timestamp_ms": 8970,
     "action": {
       "SpawnActor": {
-        "x": 663.0,
-        "y": 97.0
+        "x": 233.0,
+        "y": 512.0
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 10208,
+    "timestamp_ms": 9137,
     "action": {
       "SpawnActor": {
-        "x": 715.0,
-        "y": 457.0
+        "x": 555.0,
+        "y": 566.0
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 10741,
+    "timestamp_ms": 9137,
     "action": {
       "SpawnActor": {
-        "x": 526.0,
-        "y": 546.0
+        "x": 555.0,
+        "y": 566.0
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 14783,
+    "timestamp_ms": 9320,
+    "action": {
+      "SpawnActor": {
+        "x": 618.0,
+        "y": 564.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 9320,
+    "action": {
+      "SpawnActor": {
+        "x": 618.0,
+        "y": 564.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 9487,
+    "action": {
+      "SpawnActor": {
+        "x": 679.0,
+        "y": 529.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 9487,
+    "action": {
+      "SpawnActor": {
+        "x": 679.0,
+        "y": 529.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 11787,
     "action": {
       "SetActorDestination": {
-        "x": 18,
+        "x": 14,
         "y": 21,
-        "actor_count": 6
+        "actor_count": 7
       }
-    }
+    },
+    "phase": "Start"
   },
   {
-    "timestamp_ms": 17309,
+    "timestamp_ms": 11927,
     "action": {
       "SetActorDestination": {
-        "x": 37,
-        "y": 37,
-        "actor_count": 6
+        "x": 14,
+        "y": 21,
+        "actor_count": 7
       }
-    }
+    },
+    "phase": "Finish"
   },
   {
-    "timestamp_ms": 20300,
+    "timestamp_ms": 12603,
     "action": {
       "SetActorDestination": {
-        "x": 4,
-        "y": 8,
-        "actor_count": 6
+        "x": 27,
+        "y": 15,
+        "actor_count": 7
       }
-    }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 12890,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 15,
+        "actor_count": 7
+      }
+    },
+    "phase": "Finish"
   }
 ]
