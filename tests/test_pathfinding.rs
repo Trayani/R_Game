@@ -204,7 +204,7 @@ fn test_corner_to_corner() {
 fn test_messy_x_pathfinding() {
     println!("\n=== Test 7: Messy X Observer ===");
 
-    let mut grid = Grid::new(12, 10);
+    let mut grid = Grid::new(10, 12);  // Grid::new(rows, cols)
 
     // Create obstacle
     for y in 3..7 {
