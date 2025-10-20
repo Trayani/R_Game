@@ -394,6 +394,49 @@ impl VisState {
         Ok(())
     }
 
+    /// Find an available destination cell near the target position
+    /// Tries the target first, then expands in a spiral pattern to find a free cell
+    fn find_available_destination(
+        &self,
+        target_x: i32,
+        target_y: i32,
+        occupied: &HashSet<(i32, i32)>,
+    ) -> (i32, i32) {
+        // Check if target is available
+        if !occupied.contains(&(target_x, target_y)) && !self.grid.is_blocked(target_x, target_y) {
+            return (target_x, target_y);
+        }
+
+        // Spiral search pattern: expand outward in concentric squares
+        for radius in 1..=10 {
+            // Check cells in a square pattern at this radius
+            for dx in -radius..=radius {
+                for dy in -radius..=radius {
+                    // Only check the perimeter (not interior cells we already checked)
+                    if (dx as i32).abs() != radius && (dy as i32).abs() != radius {
+                        continue;
+                    }
+
+                    let check_x = target_x + dx;
+                    let check_y = target_y + dy;
+
+                    // Bounds check
+                    if check_x < 0 || check_x >= self.grid.cols || check_y < 0 || check_y >= self.grid.rows {
+                        continue;
+                    }
+
+                    // Check if available
+                    if !occupied.contains(&(check_x, check_y)) && !self.grid.is_blocked(check_x, check_y) {
+                        return (check_x, check_y);
+                    }
+                }
+            }
+        }
+
+        // Fallback: return target even if occupied (pathfinding will fail naturally)
+        (target_x, target_y)
+    }
+
     fn draw_corners(&self) {
         let corner_size = 6.0; // Size of corner indicator squares
 
@@ -759,19 +802,37 @@ async fn main() {
         if is_key_pressed(KeyCode::P) {
             if !state.actors.is_empty() {
                 let (mouse_x, mouse_y) = mouse_position();
-                let dest_grid_x = (mouse_x / state.cell_width) as i32;
-                let dest_grid_y = (mouse_y / state.cell_height) as i32;
+                let target_grid_x = (mouse_x / state.cell_width) as i32;
+                let target_grid_y = (mouse_y / state.cell_height) as i32;
 
                 state.action_log.log_start(Action::SetActorDestination {
-                    x: dest_grid_x,
-                    y: dest_grid_y,
+                    x: target_grid_x,
+                    y: target_grid_y,
                     actor_count: state.actors.len(),
                 });
 
+                // First pass: calculate unique destinations for each actor
+                let mut occupied_destinations = HashSet::new();
+                let mut actor_destinations = Vec::new();
+
+                for _actor in &state.actors {
+                    // Find unique destination for this actor using spiral search
+                    let dest = state.find_available_destination(
+                        target_grid_x,
+                        target_grid_y,
+                        &occupied_destinations,
+                    );
+
+                    // Mark this destination as occupied for next actor
+                    occupied_destinations.insert(dest);
+                    actor_destinations.push(dest);
+                }
+
+                // Second pass: assign destinations and calculate paths
                 let mut paths_set = 0;
                 let mut no_paths = 0;
 
-                for actor in &mut state.actors {
+                for (actor, dest) in state.actors.iter_mut().zip(actor_destinations.iter()) {
                     // Calculate actor's current cell position
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
 
@@ -780,8 +841,8 @@ async fn main() {
                         &state.grid,
                         actor_cpos.cell_x,
                         actor_cpos.cell_y,
-                        dest_grid_x,
-                        dest_grid_y,
+                        dest.0,
+                        dest.1,
                         actor_cpos.messy_x,
                         actor_cpos.messy_y,
                         Some(&state.all_corners),
@@ -802,13 +863,13 @@ async fn main() {
                 }
 
                 state.action_log.log_finish(Action::SetActorDestination {
-                    x: dest_grid_x,
-                    y: dest_grid_y,
+                    x: target_grid_x,
+                    y: target_grid_y,
                     actor_count: state.actors.len(),
                 });
 
-                println!("Destination set to ({}, {}): {} actors have paths, {} blocked",
-                    dest_grid_x, dest_grid_y, paths_set, no_paths);
+                println!("Destination target ({}, {}): {} actors have unique paths, {} blocked",
+                    target_grid_x, target_grid_y, paths_set, no_paths);
             }
         }
 
