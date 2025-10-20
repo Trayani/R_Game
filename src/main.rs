@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Grid, raycast};
+use rustgame3::{Actor, Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::find_path;
 use std::collections::HashSet;
@@ -19,6 +19,7 @@ struct VisState {
     interesting_corners: Vec<Corner>,
     cell_width: f32,
     cell_height: f32,
+    actor: Option<Actor>,
 }
 
 impl VisState {
@@ -46,6 +47,7 @@ impl VisState {
             interesting_corners,
             cell_width: 20.0,
             cell_height: 15.0,
+            actor: None,
         }
     }
 
@@ -421,6 +423,29 @@ impl VisState {
         draw_text(&path_text, 10.0, y_pos, font_size, WHITE);
     }
 
+    fn draw_actor(&self) {
+        if let Some(ref actor) = self.actor {
+            let (left, top, right, bottom) = actor.get_bounds();
+
+            // Draw actor square with semi-transparent purple fill
+            let actor_width = right - left;
+            let actor_height = bottom - top;
+            draw_rectangle(left, top, actor_width, actor_height, Color::from_rgba(200, 100, 255, 150));
+
+            // Draw border
+            draw_rectangle_lines(left, top, actor_width, actor_height, 2.0, PURPLE);
+
+            // Draw center point
+            draw_circle(actor.fpos_x, actor.fpos_y, 3.0, MAGENTA);
+
+            // If actor has a destination, draw a line to it
+            if let (Some(dest_x), Some(dest_y)) = (actor.dest_x, actor.dest_y) {
+                draw_line(actor.fpos_x, actor.fpos_y, dest_x, dest_y, 2.0, MAGENTA);
+                draw_circle(dest_x, dest_y, 5.0, MAGENTA);
+            }
+        }
+    }
+
     fn draw(&self) {
         clear_background(Color::from_rgba(30, 30, 30, 255));
 
@@ -564,6 +589,9 @@ impl VisState {
             }
         }
 
+        // Draw actor on top of everything
+        self.draw_actor();
+
         // Draw info
         let messy_status = match (self.messy_x, self.messy_y) {
             (false, false) => String::new(),
@@ -578,12 +606,26 @@ impl VisState {
             String::new()
         };
 
+        let actor_status = if let Some(ref actor) = self.actor {
+            let cpos = actor.calculate_cell_position(&self.grid, self.cell_width, self.cell_height);
+            let messy_str = match (cpos.messy_x, cpos.messy_y) {
+                (false, false) => "clean",
+                (true, false) => "messy X",
+                (false, true) => "messy Y",
+                (true, true) => "messy X+Y",
+            };
+            format!(" | Actor: ({:.1}, {:.1}) @ cell ({}, {}) [{}]", actor.fpos_x, actor.fpos_y, cpos.cell_x, cpos.cell_y, messy_str)
+        } else {
+            String::new()
+        };
+
         let info = format!(
-            "Observer: ({}, {}){}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y | O: place actor | P: actor destination\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
             dest_status,
+            actor_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len()
@@ -627,6 +669,29 @@ async fn main() {
             let mouse_grid_x = (mouse_x / state.cell_width) as i32;
             let mouse_grid_y = (mouse_y / state.cell_height) as i32;
             state.set_destination(mouse_grid_x, mouse_grid_y);
+        }
+
+        // Place actor at mouse position on O key
+        if is_key_pressed(KeyCode::O) {
+            let (mouse_x, mouse_y) = mouse_position();
+            // Actor size is smaller than cell size (10 pixels for a 15-20 pixel cell)
+            let actor_size = state.cell_width.min(state.cell_height) * 0.6;
+            let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0); // 120 pixels/second speed
+            state.actor = Some(actor);
+        }
+
+        // Set actor destination on P key
+        if is_key_pressed(KeyCode::P) {
+            if let Some(ref mut actor) = state.actor {
+                let (mouse_x, mouse_y) = mouse_position();
+                actor.set_destination(mouse_x, mouse_y);
+            }
+        }
+
+        // Update actor movement
+        if let Some(ref mut actor) = state.actor {
+            let delta_time = get_frame_time();
+            actor.update(delta_time);
         }
 
         // Close window on Escape
