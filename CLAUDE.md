@@ -21,12 +21,18 @@ cargo test
 
 ## Visual Demo Controls
 
-- **Left click**: Toggle obstacle at cell
-- **Right hold**: Move observer continuously (hold right mouse button and move)
-- **C key**: Copy grid to clipboard (in ■,s,o,□ format)
-- **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
+### Mouse Controls
+- **Left click**: Toggle obstacle at cell (single click)
+- **Shift + Left hold**: Draw walls (hold shift and left button, drag to paint blocked cells)
+- **Shift + Right hold**: Erase walls (hold shift and right button, drag to paint free cells)
+- **Right hold** (without shift): Move observer continuously (hold right mouse button and move)
+
+### Keyboard Controls
+- **D key**: Set destination to current mouse position
 - **M key**: Toggle messy X mode
 - **N key**: Toggle messy Y mode
+- **C key**: Copy grid to clipboard (in ■,s,o,□ format)
+- **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
 - **Esc key**: Close window
 
 ### Grid Format for Copy/Paste

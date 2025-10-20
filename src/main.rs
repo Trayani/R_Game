@@ -56,13 +56,27 @@ impl VisState {
         if grid_x >= 0 && grid_x < self.grid.cols && grid_y >= 0 && grid_y < self.grid.rows {
             let cell_id = self.grid.get_id(grid_x, grid_y);
 
-            // Left click: toggle obstacle
-            if is_mouse_button_pressed(MouseButton::Left) {
+            // Shift + Left hold: set cell as blocked (drawing mode)
+            if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Left) {
+                if self.grid.cells[cell_id as usize] != 1 {
+                    self.grid.cells[cell_id as usize] = 1;
+                    self.update_visible();
+                }
+            }
+            // Shift + Right hold: set cell as free (erasing mode)
+            else if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Right) {
+                if self.grid.cells[cell_id as usize] != 0 {
+                    self.grid.cells[cell_id as usize] = 0;
+                    self.update_visible();
+                }
+            }
+            // Left click (without shift): toggle obstacle
+            else if is_mouse_button_pressed(MouseButton::Left) {
                 let current = self.grid.cells[cell_id as usize];
                 self.grid.cells[cell_id as usize] = if current == 1 { 0 } else { 1 };
                 self.update_visible();
             }
-            // Right button DOWN (continuous): move observer
+            // Right button DOWN (without shift, continuous): move observer
             else if is_mouse_button_down(MouseButton::Right) {
                 if !self.grid.is_blocked(grid_x, grid_y) {
                     // Validate messy boundaries - snap to valid position if needed
@@ -565,7 +579,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y | D: set destination\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
