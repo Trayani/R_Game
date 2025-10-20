@@ -23,8 +23,25 @@ cargo test
 
 - **Left click**: Toggle obstacle at cell
 - **Right hold**: Move observer continuously (hold right mouse button and move)
-- **C key**: Copy grid to clipboard
+- **C key**: Copy grid to clipboard (in ■,s,o,□ format)
+- **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
+- **M key**: Toggle messy X mode
+- **N key**: Toggle messy Y mode
 - **Esc key**: Close window
+
+### Grid Format for Copy/Paste
+
+The GUI supports copying and pasting grids in a text-based format using these characters:
+- `■` or `b`: Blocked cell
+- `s` or `z`: Observer position (multiple adjacent 's' cells indicate messy X/Y)
+- `o`: Visible free cell
+- `□`: Non-visible free cell
+- `c`, `n`, `u`, `x`, `▲`: Other test format markers (treated as free cells)
+
+When pasting:
+- The grid dimensions are automatically detected from the pasted text
+- Observer position(s) are parsed to set both location and messy state
+- Adjacent observer cells are detected as messy X (horizontal), messy Y (vertical), or messy X+Y (2x2 block)
 
 The GUI displays:
 - Blue cells: Observer position

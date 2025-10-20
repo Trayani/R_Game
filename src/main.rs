@@ -176,6 +176,144 @@ impl VisState {
         }
     }
 
+    fn paste_from_clipboard(&mut self) {
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                match clipboard.get_text() {
+                    Ok(text) => {
+                        match self.parse_grid_from_string(&text) {
+                            Ok(_) => {
+                                println!("Grid layout pasted from clipboard!");
+                                self.update_visible();
+                            }
+                            Err(e) => {
+                                println!("Failed to parse grid: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("Failed to read from clipboard: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Failed to access clipboard: {}", e);
+            }
+        }
+    }
+
+    fn parse_grid_from_string(&mut self, text: &str) -> Result<(), String> {
+        // Parse lines and collect grid data
+        let lines: Vec<&str> = text.lines().filter(|l| !l.is_empty()).collect();
+
+        if lines.is_empty() {
+            return Err("Empty grid data".to_string());
+        }
+
+        let rows = lines.len();
+        let cols = lines[0].chars().count();
+
+        // Validate all lines have same width
+        for (i, line) in lines.iter().enumerate() {
+            let line_width = line.chars().count();
+            if line_width != cols {
+                return Err(format!("Line {} has width {} but expected {}", i, line_width, cols));
+            }
+        }
+
+        // Create new grid with parsed dimensions
+        let new_grid = Grid::new(cols as i32, rows as i32);
+        self.grid = new_grid;
+
+        // Track observer positions (for messy detection)
+        let mut observer_positions: Vec<(i32, i32)> = Vec::new();
+
+        // Parse each cell
+        for (y, line) in lines.iter().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                let cell_id = self.grid.get_id(x as i32, y as i32);
+
+                match ch {
+                    '■' | 'b' => {
+                        // Blocked cell
+                        self.grid.cells[cell_id as usize] = 1;
+                    }
+                    's' | 'z' => {
+                        // Observer position
+                        observer_positions.push((x as i32, y as i32));
+                        self.grid.cells[cell_id as usize] = 0; // Observer cell is free
+                    }
+                    'o' | '□' | 'c' | 'n' | 'u' | 'x' => {
+                        // Free cells (various types from test formats)
+                        self.grid.cells[cell_id as usize] = 0;
+                    }
+                    '▲' => {
+                        // Interesting corner marker (from test data) - treat as free
+                        self.grid.cells[cell_id as usize] = 0;
+                    }
+                    _ => {
+                        // Unknown character - treat as free cell
+                        self.grid.cells[cell_id as usize] = 0;
+                    }
+                }
+            }
+        }
+
+        // Determine observer position and messy state
+        if observer_positions.is_empty() {
+            return Err("No observer position (s) found in grid".to_string());
+        }
+
+        // Sort positions to identify patterns
+        observer_positions.sort();
+
+        // Detect messy configuration
+        let (obs_x, obs_y, messy_x, messy_y) = if observer_positions.len() == 1 {
+            // Single cell observer
+            (observer_positions[0].0, observer_positions[0].1, false, false)
+        } else if observer_positions.len() == 2 {
+            let (x1, y1) = observer_positions[0];
+            let (x2, y2) = observer_positions[1];
+
+            if y1 == y2 && x2 == x1 + 1 {
+                // Horizontal adjacency: messy X
+                (x1, y1, true, false)
+            } else if x1 == x2 && y2 == y1 + 1 {
+                // Vertical adjacency: messy Y
+                (x1, y1, false, true)
+            } else {
+                return Err(format!("Observer positions ({}, {}) and ({}, {}) are not adjacent", x1, y1, x2, y2));
+            }
+        } else if observer_positions.len() == 4 {
+            // Should be a 2x2 block for messy X+Y
+            let (x1, y1) = observer_positions[0];
+            let expected = vec![
+                (x1, y1),
+                (x1 + 1, y1),
+                (x1, y1 + 1),
+                (x1 + 1, y1 + 1),
+            ];
+            let mut sorted_expected = expected.clone();
+            sorted_expected.sort();
+
+            if observer_positions == sorted_expected {
+                (x1, y1, true, true)
+            } else {
+                return Err(format!("Observer positions don't form a 2x2 block: {:?}", observer_positions));
+            }
+        } else {
+            return Err(format!("Invalid number of observer positions: {}", observer_positions.len()));
+        };
+
+        // Update observer state
+        self.observer_x = obs_x;
+        self.observer_y = obs_y;
+        self.messy_x = messy_x;
+        self.messy_y = messy_y;
+
+        Ok(())
+    }
+
     fn draw_corners(&self) {
         let corner_size = 6.0; // Size of corner indicator squares
 
@@ -354,7 +492,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y\nC: copy grid | Esc: close",
+            "Observer: ({}, {}){}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle obstacle | Right hold: move observer\nM: toggle messy X | N: toggle messy Y\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -378,6 +516,11 @@ async fn main() {
         // Copy grid to clipboard on C key
         if is_key_pressed(KeyCode::C) {
             state.copy_to_clipboard();
+        }
+
+        // Paste grid from clipboard on V key
+        if is_key_pressed(KeyCode::V) {
+            state.paste_from_clipboard();
         }
 
         // Toggle messy X on M key
