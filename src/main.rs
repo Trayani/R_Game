@@ -2,7 +2,7 @@ use arboard::Clipboard;
 use macroquad::prelude::*;
 use rustgame3::{Actor, Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
-use rustgame3::pathfinding::find_path;
+use rustgame3::pathfinding::{find_path, find_path_with_cache};
 use std::collections::HashSet;
 
 /// Visualization state
@@ -730,8 +730,8 @@ async fn main() {
                     // Calculate actor's current cell position
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
 
-                    // Find path using pathfinding
-                    if let Some(mut path) = find_path(
+                    // Find path using pathfinding WITH CACHED CORNERS
+                    if let Some(mut path) = find_path_with_cache(
                         &state.grid,
                         actor_cpos.cell_x,
                         actor_cpos.cell_y,
@@ -739,6 +739,7 @@ async fn main() {
                         dest_grid_y,
                         actor_cpos.messy_x,
                         actor_cpos.messy_y,
+                        Some(&state.all_corners),
                     ) {
                         // Skip the first waypoint if it's the actor's current cell
                         if path.len() >= 2 {
@@ -771,7 +772,7 @@ async fn main() {
                 if let Some(dest) = actor.destination {
                     let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
 
-                    if let Some(mut path) = find_path(
+                    if let Some(mut path) = find_path_with_cache(
                         &state.grid,
                         actor_cpos.cell_x,
                         actor_cpos.cell_y,
@@ -779,6 +780,7 @@ async fn main() {
                         dest.y,
                         actor_cpos.messy_x,
                         actor_cpos.messy_y,
+                        Some(&state.all_corners),
                     ) {
                         // Skip first waypoint if it's the current cell
                         if path.len() >= 2 {

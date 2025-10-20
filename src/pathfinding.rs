@@ -199,6 +199,19 @@ pub fn find_path(
     messy_x: bool,
     messy_y: bool,
 ) -> Option<Vec<Position>> {
+    find_path_with_cache(grid, start_x, start_y, dest_x, dest_y, messy_x, messy_y, None)
+}
+
+pub fn find_path_with_cache(
+    grid: &Grid,
+    start_x: i32,
+    start_y: i32,
+    dest_x: i32,
+    dest_y: i32,
+    messy_x: bool,
+    messy_y: bool,
+    cached_corners: Option<&Vec<Corner>>,
+) -> Option<Vec<Position>> {
     let start = Position::new(start_x, start_y);
     let dest = Position::new(dest_x, dest_y);
 
@@ -328,7 +341,11 @@ pub fn find_path(
     }
 
     // Step 3: Get interesting corners from start (partially hidden corners that lead to unexplored areas)
-    let all_corners = detect_all_corners(grid);
+    let all_corners = if let Some(cached) = cached_corners {
+        cached.clone()
+    } else {
+        detect_all_corners(grid)
+    };
     let mut interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, grid, start_x, start_y, messy_x);
 
     // Step 3b: ALIGNMENT PRINCIPLE - Add start position as corner if messy
