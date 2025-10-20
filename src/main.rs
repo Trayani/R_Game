@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Actor, Grid, raycast};
+use rustgame3::{Action, ActionLog, Actor, Grid, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache};
 use std::collections::HashSet;
@@ -20,6 +20,7 @@ struct VisState {
     cell_width: f32,
     cell_height: f32,
     actors: Vec<Actor>,
+    action_log: ActionLog,
 }
 
 impl VisState {
@@ -48,6 +49,7 @@ impl VisState {
             cell_width: 20.0,
             cell_height: 15.0,
             actors: Vec::new(),
+            action_log: ActionLog::new(),
         }
     }
 
@@ -62,6 +64,7 @@ impl VisState {
             if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Left) {
                 if self.grid.cells[cell_id as usize] != 1 {
                     self.grid.set_cell(grid_x, grid_y, 1);
+                    self.action_log.log(Action::SetBlocked { x: grid_x, y: grid_y });
                     self.update_visible();
                 }
             }
@@ -69,6 +72,7 @@ impl VisState {
             else if is_key_down(KeyCode::LeftShift) && is_mouse_button_down(MouseButton::Right) {
                 if self.grid.cells[cell_id as usize] != 0 {
                     self.grid.set_cell(grid_x, grid_y, 0);
+                    self.action_log.log(Action::SetFree { x: grid_x, y: grid_y });
                     self.update_visible();
                 }
             }
@@ -76,6 +80,7 @@ impl VisState {
             else if is_mouse_button_pressed(MouseButton::Left) {
                 let current = self.grid.cells[cell_id as usize];
                 self.grid.set_cell(grid_x, grid_y, if current == 1 { 0 } else { 1 });
+                self.action_log.log(Action::ToggleCell { x: grid_x, y: grid_y });
                 self.update_visible();
             }
             // Right button DOWN (without shift, continuous): move observer
@@ -99,6 +104,12 @@ impl VisState {
                     if (self.observer_x != target_x || self.observer_y != target_y) && !self.grid.is_blocked(target_x, target_y) {
                         self.observer_x = target_x;
                         self.observer_y = target_y;
+                        self.action_log.log(Action::MoveObserver {
+                            x: target_x,
+                            y: target_y,
+                            messy_x: self.messy_x,
+                            messy_y: self.messy_y,
+                        });
                         self.update_visible();
                     }
                 }
@@ -121,6 +132,7 @@ impl VisState {
             return;
         }
         self.messy_x = !self.messy_x;
+        self.action_log.log(Action::ToggleMessyX);
         self.update_visible();
     }
 
@@ -131,6 +143,7 @@ impl VisState {
             return;
         }
         self.messy_y = !self.messy_y;
+        self.action_log.log(Action::ToggleMessyY);
         self.update_visible();
     }
 
@@ -138,6 +151,7 @@ impl VisState {
         if x >= 0 && x < self.grid.cols && y >= 0 && y < self.grid.rows {
             self.destination_x = Some(x);
             self.destination_y = Some(y);
+            self.action_log.log(Action::SetObserverDestination { x, y });
 
             // Print path to terminal for text selection
             if let Some(path) = find_path(&self.grid, self.observer_x, self.observer_y, x, y, self.messy_x, self.messy_y) {
@@ -353,6 +367,12 @@ impl VisState {
 
         // Increment grid revision since we modified cells
         self.grid.revision += 1;
+
+        // Log the paste action
+        self.action_log.log(Action::PasteGrid {
+            rows: self.grid.rows,
+            cols: self.grid.cols,
+        });
 
         Ok(())
     }
@@ -713,6 +733,7 @@ async fn main() {
             let actor_size = state.cell_width;
             let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actors.push(actor);
+            state.action_log.log(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor spawned at ({:.1}, {:.1}). Total actors: {}", mouse_x, mouse_y, state.actors.len());
         }
 
@@ -755,6 +776,12 @@ async fn main() {
                         no_paths += 1;
                     }
                 }
+
+                state.action_log.log(Action::SetActorDestination {
+                    x: dest_grid_x,
+                    y: dest_grid_y,
+                    actor_count: state.actors.len(),
+                });
 
                 println!("Destination set to ({}, {}): {} actors have paths, {} blocked",
                     dest_grid_x, dest_grid_y, paths_set, no_paths);
@@ -820,6 +847,17 @@ async fn main() {
 
         // Close window on Escape
         if is_key_pressed(KeyCode::Escape) {
+            // Print summary and full log
+            println!("\n{}", state.action_log.summary());
+            state.action_log.print();
+
+            // Save to file
+            if let Err(e) = state.action_log.save_to_file("action_log.json") {
+                eprintln!("Failed to save action log: {}", e);
+            } else {
+                println!("Action log saved to action_log.json");
+            }
+
             break;
         }
 
