@@ -1047,10 +1047,10 @@ async fn main() {
             }
         }
 
-        // Update actor movement
+        // Update actor movement with NPV (Next Position Validation)
         let delta_time = get_frame_time();
         for actor in &mut state.actors {
-            actor.update(delta_time);
+            actor.update_with_npv(delta_time, &state.grid);
         }
 
         // Close window on Escape

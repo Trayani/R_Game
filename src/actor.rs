@@ -194,6 +194,102 @@ impl Actor {
         }
     }
 
+    /// Move the actor along its path with Next Position Validation (NPV)
+    /// NPV prevents actors from moving into blocked cells due to imprecise movement
+    /// Returns true if the actor reached the end of its path
+    pub fn update_with_npv(&mut self, delta_time: f32, grid: &Grid) -> bool {
+        if !self.has_path() {
+            return true;
+        }
+
+        // Get current waypoint in screen coordinates
+        if let Some((waypoint_x, waypoint_y)) = self.get_current_waypoint_screen_coords() {
+            // Calculate direction vector to current waypoint
+            let dx = waypoint_x - self.fpos_x;
+            let dy = waypoint_y - self.fpos_y;
+
+            // Calculate distance
+            let distance = (dx * dx + dy * dy).sqrt();
+
+            // Check if we've reached the current waypoint
+            let movement_this_frame = self.speed * delta_time;
+            if distance <= movement_this_frame {
+                // Snap to waypoint
+                self.fpos_x = waypoint_x;
+                self.fpos_y = waypoint_y;
+
+                // Move to next waypoint
+                self.current_waypoint += 1;
+
+                // Check if we've reached the end of the path
+                if self.current_waypoint >= self.path.len() {
+                    self.clear_path();
+                    return true;
+                }
+
+                // Continue moving towards next waypoint in the same frame
+                return self.update_with_npv(delta_time, grid);
+            }
+
+            // Normalize direction and calculate next position
+            let dir_x = dx / distance;
+            let dir_y = dy / distance;
+
+            let next_fpos_x = self.fpos_x + dir_x * movement_this_frame;
+            let next_fpos_y = self.fpos_y + dir_y * movement_this_frame;
+
+            // NPV: Validate that next position doesn't occupy any blocked cells
+            if self.is_position_valid(next_fpos_x, next_fpos_y, grid) {
+                // Position is valid - move to it
+                self.fpos_x = next_fpos_x;
+                self.fpos_y = next_fpos_y;
+                false
+            } else {
+                // Position is blocked - stop moving and clear path
+                // Actor will need to recalculate path
+                self.clear_path();
+                true
+            }
+        } else {
+            // No valid waypoint
+            true
+        }
+    }
+
+    /// Check if a position is valid (doesn't occupy any blocked cells)
+    /// Used for Next Position Validation (NPV)
+    fn is_position_valid(&self, fpos_x: f32, fpos_y: f32, grid: &Grid) -> bool {
+        let half_size = self.size / 2.0;
+
+        // Calculate corners of actor's square at the proposed position
+        let top_left_x = fpos_x - half_size;
+        let top_left_y = fpos_y - half_size;
+        let bottom_right_x = fpos_x + half_size;
+        let bottom_right_y = fpos_y + half_size;
+
+        // Get cell coordinates for all corners
+        let top_left_cell_x = (top_left_x / self.cell_width).floor() as i32;
+        let top_left_cell_y = (top_left_y / self.cell_height).floor() as i32;
+        let bottom_right_cell_x = (bottom_right_x / self.cell_width).floor() as i32;
+        let bottom_right_cell_y = (bottom_right_y / self.cell_height).floor() as i32;
+
+        // Check all cells that the actor would occupy
+        for cy in top_left_cell_y..=bottom_right_cell_y {
+            for cx in top_left_cell_x..=bottom_right_cell_x {
+                // Check bounds
+                if cx < 0 || cx >= grid.cols || cy < 0 || cy >= grid.rows {
+                    return false; // Out of bounds
+                }
+                // Check if cell is blocked
+                if grid.is_blocked(cx, cy) {
+                    return false; // Would occupy a blocked cell
+                }
+            }
+        }
+
+        true // All cells are free
+    }
+
     /// Get the final destination of the path (if any)
     pub fn get_path_destination(&self) -> Option<Position> {
         self.path.last().copied()

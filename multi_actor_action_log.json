@@ -1,162 +1,776 @@
 [
   {
-    "timestamp_ms": 2965,
+    "timestamp_ms": 3757,
     "action": {
       "SpawnActor": {
-        "x": 702.0,
-        "y": 246.0
+        "x": 752.0,
+        "y": 248.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 2965,
+    "timestamp_ms": 3757,
     "action": {
       "SpawnActor": {
-        "x": 702.0,
-        "y": 246.0
+        "x": 752.0,
+        "y": 248.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 3481,
+    "timestamp_ms": 4224,
     "action": {
       "SpawnActor": {
-        "x": 714.0,
-        "y": 215.0
-      }
-    },
-    "phase": "Start"
-  },
-  {
-    "timestamp_ms": 3481,
-    "action": {
-      "SpawnActor": {
-        "x": 714.0,
-        "y": 215.0
-      }
-    },
-    "phase": "Finish"
-  },
-  {
-    "timestamp_ms": 3981,
-    "action": {
-      "SpawnActor": {
-        "x": 713.0,
+        "x": 728.0,
         "y": 317.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 3981,
+    "timestamp_ms": 4224,
     "action": {
       "SpawnActor": {
-        "x": 713.0,
+        "x": 728.0,
         "y": 317.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 4598,
+    "timestamp_ms": 4574,
     "action": {
       "SpawnActor": {
-        "x": 675.0,
-        "y": 251.0
+        "x": 697.0,
+        "y": 263.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 4598,
+    "timestamp_ms": 4574,
     "action": {
       "SpawnActor": {
-        "x": 675.0,
-        "y": 251.0
+        "x": 697.0,
+        "y": 263.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 5198,
+    "timestamp_ms": 4840,
     "action": {
       "SpawnActor": {
-        "x": 735.0,
-        "y": 264.0
+        "x": 710.0,
+        "y": 217.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 5198,
+    "timestamp_ms": 4840,
     "action": {
       "SpawnActor": {
-        "x": 735.0,
-        "y": 264.0
+        "x": 710.0,
+        "y": 217.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 5582,
+    "timestamp_ms": 5007,
     "action": {
       "SpawnActor": {
-        "x": 759.0,
-        "y": 197.0
+        "x": 732.0,
+        "y": 168.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 5582,
+    "timestamp_ms": 5007,
     "action": {
       "SpawnActor": {
-        "x": 759.0,
-        "y": 197.0
+        "x": 732.0,
+        "y": 168.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 6665,
+    "timestamp_ms": 5240,
     "action": {
       "SpawnActor": {
-        "x": 705.0,
-        "y": 270.0
+        "x": 788.0,
+        "y": 247.0
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 6665,
+    "timestamp_ms": 5240,
     "action": {
       "SpawnActor": {
-        "x": 705.0,
-        "y": 270.0
+        "x": 788.0,
+        "y": 247.0
       }
     },
     "phase": "Finish"
   },
   {
-    "timestamp_ms": 7532,
+    "timestamp_ms": 5474,
+    "action": {
+      "SpawnActor": {
+        "x": 776.0,
+        "y": 320.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5474,
+    "action": {
+      "SpawnActor": {
+        "x": 776.0,
+        "y": 320.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 5657,
+    "action": {
+      "SpawnActor": {
+        "x": 769.0,
+        "y": 321.0
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 5657,
+    "action": {
+      "SpawnActor": {
+        "x": 769.0,
+        "y": 321.0
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 6307,
     "action": {
       "SetActorDestination": {
         "x": 27,
         "y": 18,
-        "actor_count": 7
+        "actor_count": 8
       }
     },
     "phase": "Start"
   },
   {
-    "timestamp_ms": 7563,
+    "timestamp_ms": 6341,
     "action": {
       "SetActorDestination": {
         "x": 27,
         "y": 18,
-        "actor_count": 7
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 10369,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 10454,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 14291,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 18,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 14299,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 18,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 15390,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 15399,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 16257,
+    "action": {
+      "SetActorDestination": {
+        "x": 37,
+        "y": 16,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 16266,
+    "action": {
+      "SetActorDestination": {
+        "x": 37,
+        "y": 16,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 17324,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 22,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 17333,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 22,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 18291,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 29,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 18299,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 29,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 19507,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 23,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 19517,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 23,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 21124,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 21158,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 22741,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 19,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 22755,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 19,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 23791,
+    "action": {
+      "SetActorDestination": {
+        "x": 33,
+        "y": 15,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 23865,
+    "action": {
+      "SetActorDestination": {
+        "x": 33,
+        "y": 15,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 28141,
+    "action": {
+      "SetActorDestination": {
+        "x": 38,
+        "y": 9,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 28149,
+    "action": {
+      "SetActorDestination": {
+        "x": 38,
+        "y": 9,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 28824,
+    "action": {
+      "SetActorDestination": {
+        "x": 37,
+        "y": 14,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 28833,
+    "action": {
+      "SetActorDestination": {
+        "x": 37,
+        "y": 14,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 29644,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 18,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 29680,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 18,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 32307,
+    "action": {
+      "SetActorDestination": {
+        "x": 33,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 32398,
+    "action": {
+      "SetActorDestination": {
+        "x": 33,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 33424,
+    "action": {
+      "SetActorDestination": {
+        "x": 32,
+        "y": 23,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 33482,
+    "action": {
+      "SetActorDestination": {
+        "x": 32,
+        "y": 23,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 37224,
+    "action": {
+      "SetActorDestination": {
+        "x": 32,
+        "y": 27,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 37233,
+    "action": {
+      "SetActorDestination": {
+        "x": 32,
+        "y": 27,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 38991,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 39019,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 24,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 47867,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 22,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 47951,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 22,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 49741,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 17,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 49754,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 17,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 53108,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 53116,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 54141,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 20,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 54174,
+    "action": {
+      "SetActorDestination": {
+        "x": 27,
+        "y": 20,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 54991,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 54999,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 56325,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 19,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 56333,
+    "action": {
+      "SetActorDestination": {
+        "x": 36,
+        "y": 19,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 57358,
+    "action": {
+      "SetActorDestination": {
+        "x": 26,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 57390,
+    "action": {
+      "SetActorDestination": {
+        "x": 26,
+        "y": 21,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 58725,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 15,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 58738,
+    "action": {
+      "SetActorDestination": {
+        "x": 34,
+        "y": 15,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 59625,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 17,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 59634,
+    "action": {
+      "SetActorDestination": {
+        "x": 35,
+        "y": 17,
+        "actor_count": 8
+      }
+    },
+    "phase": "Finish"
+  },
+  {
+    "timestamp_ms": 61458,
+    "action": {
+      "SetActorDestination": {
+        "x": 26,
+        "y": 15,
+        "actor_count": 8
+      }
+    },
+    "phase": "Start"
+  },
+  {
+    "timestamp_ms": 61490,
+    "action": {
+      "SetActorDestination": {
+        "x": 26,
+        "y": 15,
+        "actor_count": 8
       }
     },
     "phase": "Finish"
