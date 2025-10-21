@@ -1,1 +1,27 @@
-when multiple actors move into the same position during movement, notably w
+when multiple actors move into the same position during movement, notably when they converge to corner to pass an
+obstacle, they should never "merge" into the same position. We need to make them scatter a bit , se the
+movement feels natural.
+
+THis can be replicated based on action_log_crowd.json action log, where it is clear how actors converge.
+
+I want you to explore this idea:
+Each actor will have it's own radius value. This should be a relatively small float number, that can be configured.
+Multiple actors CAN occupy the same cell, but need to keep the distance of the radius sum among themselves.
+So, when actor A is steps into new float position
+1. identify all cells that will be occupied on the new position
+2. if no cell is already occupied => no problem, move to the position; end;
+3. otherwise, collect all actors with whom the cell will be shared ("nearbyActor" ... "NA").
+4. if NA.all  {
+    next_distance = $ euclidean distance between next_position and NA $
+    current_distnace =  $ euclidean distance between A and NA $
+    return next_distance > A.radius + NA.radius  || next_distance > current_distnace
+} => if true, the next position is "legal"; so move to the position; end;
+5. at this point, we know that the situation is not ideal and need to look for alternative route
+6. alternativePositions =  $ list of 6 alternative positions, calculated
+as +-60, -+120  and +-175 Degrees off the next_position from current_position  $
+(the point is that the distance to the destination must not increase)
+7. iterate alternativePositions, starting with lesser degrees, which are obviously better
+and perform the same validation as in [1. - 4.].
+Also validate that the position does not lead to a blocked cell!.
+The first alter pos that passes, will be the actual next position of the actor
+8. If no position passes, the actor has to wait until the road clears.

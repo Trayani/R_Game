@@ -12,8 +12,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/claude_tasks/pathfinding.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/claude_tasks/actor_movement_crowd.txt" beforeDir="false" afterPath="$PROJECT_DIR$/claude_tasks/actor_movement_crowd.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,6 +22,11 @@
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:dev" />
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="7d6b7d5d4fc7bfee24fa4256b21517f61de167fe" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -66,9 +71,9 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
-    "git-widget-placeholder": "corners",
+    "git-widget-placeholder": "corners2",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/jan/hobby/RustGame3/claude_tasks",
+    "last_opened_file_path": "/home/jan/hobby/RustGame3",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -82,9 +87,13 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/claude_tasks" />
       <recent name="$PROJECT_DIR$/test_data/corners" />
       <recent name="$PROJECT_DIR$/test_data/standard" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/claude_tasks" />
     </key>
   </component>
   <component name="RunAnythingCache">
@@ -129,7 +138,7 @@
       </method>
     </configuration>
     <configuration name="test" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
-      <option name="buildProfileId" value="dev" />
+      <option name="buildProfileId" value="test" />
       <option name="command" value="test" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <envs />
@@ -152,7 +161,7 @@
         <item itemvalue="Cargo.test" />
         <item itemvalue="Cargo.test" />
         <item itemvalue="Cargo.test" />
-        <item itemvalue="Cargo.Test ray" />
+        <item itemvalue="Cargo.test" />
       </list>
     </recent_temporary>
   </component>
@@ -205,7 +214,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="main" />
+                        <option value="corners2" />
                       </list>
                     </value>
                   </entry>
