@@ -1,0 +1,195 @@
+ Now I have a comprehensive understanding of the design document and the current implementation. Let me provide a critical evaluation:
+
+  Critical Evaluation of actor_movement_crowd.txt
+
+  I've analyzed your crowd movement design and identified several critical issues and areas for improvement. Here's my honest assessment:
+
+  ---
+  Major Design Flaws
+
+  1. Flawed Collision Detection Logic (Lines 14-18)
+
+  Your condition in step 4 has a logical error:
+
+  return next_distance > A.radius + NA.radius || next_distance > current_distance
+
+  Problem: The || (OR) operator is incorrect. This allows movement even when actors would collide, as long as they're getting closer together.
+
+  Example: If next_distance = 0.5, radius_sum = 1.0, but current_distance = 2.0, the condition passes because 0.5 < 2.0, even though the actors would overlap!
+
+  Fix: Should be && (AND):
+  next_distance >= A.radius + NA.radius && next_distance >= current_distance
+
+  This ensures both conditions must be true:
+  - Actors maintain minimum separation (next_distance >= radius_sum)
+  - Movement doesn't make things worse (next_distance >= current_distance)
+
+  ---
+  2. Inefficient Cell-Based Neighbor Detection (Lines 11-13)
+
+  Your approach:
+  "identify all cells that will be occupied on the new position... if cell is already occupied"
+
+  Problems:
+  - O(n) search through all actors for every move
+  - Misses actors in adjacent cells that are within radius
+  - Only checks actors sharing exact cells, not spatial proximity
+
+  Better approach: Use spatial hashing or grid-based spatial partitioning:
+  - Divide world into larger "spatial cells" (e.g., 3x3 game cells)
+  - Store actor lists per spatial cell
+  - Check only actors in current + adjacent spatial cells
+  - O(1) average case instead of O(n)
+
+  ---
+  3. Arbitrary and Insufficient Angle Selection (Lines 20-22)
+
+  Your alternative positions use fixed angles: ±60°, ±120°, ±175°
+
+  Problems:
+  - Why these specific angles? No justification provided
+  - Only 6 alternatives - very limited search space
+  - No consideration of obstacle geometry - might pick angles that point into walls
+  - Fixed order - always tries same angles, leading to predictable bunching
+
+  Better approach:
+  - Dynamic angle generation based on:
+    - Direction to nearby obstacles (raycasting-aware)
+    - Direction away from nearby actors (repulsion vector)
+    - Tangent angles to obstacles (sliding behavior)
+  - Adaptive search - try more angles if initial attempts fail
+  - Randomization - add small random perturbations to avoid symmetrical bunching
+
+  ---
+  4. Missing Critical Edge Cases
+
+  Undefined behaviors:
+  - What if actor is ALREADY too close? (current_distance < radius_sum)
+    - Your condition allows movement as long as next_distance > current_distance
+    - But actors could remain perpetually overlapped
+  - What if multiple actors pick the same alternative position?
+    - No coordination mechanism mentioned
+    - Could lead to oscillation or permanent blocking
+  - What happens when actor "has to wait"? (Line 8)
+    - How long does it wait?
+    - Does it re-evaluate every frame?
+    - Could lead to deadlocks with actors waiting for each other
+
+  ---
+  5. Performance Concerns
+
+  Per-frame costs for each actor:
+  1. Calculate next position
+  2. Find all cells occupied (up to 4 cells)
+  3. Search all actors in those cells (potentially O(n))
+  4. Calculate euclidean distance to each
+  5. If blocked, try 6 alternative positions (each repeating steps 1-4)
+
+  Worst case: O(actors * nearby_actors * 7_attempts) = O(n²) per frame
+
+  For 100 actors in a crowded area, this could be 10,000+ distance calculations per frame.
+
+  ---
+  Missing Design Elements
+
+  1. No Radius Specification
+
+  "Each actor will have its own radius value. This should be a relatively small float number"
+
+  Missing:
+  - What's a typical radius value? (0.1? 0.5? 5.0?)
+  - How does it relate to cell size?
+  - Should it be configurable per actor type, or global?
+  - What's the maximum allowed radius?
+
+  2. No Priority System
+
+  When actors conflict, who goes first?
+  - First-come-first-served?
+  - Random?
+  - Priority based on actor ID, speed, or distance to goal?
+
+  Without this, you'll get non-deterministic behavior where replay doesn't work.
+
+  3. No Temporal Coherence
+
+  Actors make completely independent decisions each frame. Better approach:
+  - Velocity smoothing - remember previous movement direction
+  - Commitment period - stick with chosen alternative for N frames
+  - Predictive avoidance - consider other actors' velocities, not just positions
+
+  4. No Force-Based Alternative
+
+  Your approach is discrete validation (yes/no for each position).
+
+  Consider continuous forces instead:
+  - Separation force: Push away from nearby actors
+  - Alignment force: Match speed with neighbors
+  - Cohesion force: Stay with group
+  - Goal force: Move toward destination
+
+  This is the Boids/Reynolds flocking model - proven, smooth, emergent behavior.
+
+  ---
+  Recommended Design Improvements
+
+  Option A: Fix Current Design (Minimal Changes)
+
+  1. Fix the collision condition (AND instead of OR)
+  2. Add spatial partitioning for neighbor detection
+  3. Improve angle selection:
+  - Calculate repulsion vector from nearby actors
+  - Generate 8-12 angles in an arc away from congestion
+  - Weight angles by distance to obstacles (using raycasting)
+  - Add small random variation
+  4. Define waiting behavior:
+  - If all positions fail, actor velocity *= 0.9 (slow down)
+  - After N frames of slowdown, try alternative paths
+  - After M frames, request new pathfinding
+
+  Option B: Hybrid Force-Based Approach
+
+  1. Keep pathfinding for long-range navigation
+  2. Use local force-based steering within radius R of other actors:
+  fn calculate_steering_force(&self, nearby_actors: &[Actor]) -> (f32, f32) {
+      let separation = calculate_separation_force(nearby_actors);
+      let goal = calculate_goal_force(self.path_direction);
+      let obstacle_avoidance = calculate_obstacle_force(grid, raycast);
+
+      combine_forces(separation * 2.0, goal * 1.0, obstacle_avoidance * 3.0)
+  }
+  3. Forces naturally handle crowds - no special cases needed
+
+  ---
+  Specific Line-by-Line Issues
+
+  Line 2: "se the movement feels natural"
+  - Typo: "se" → "so"
+
+  Line 10: "actor A is steps into new float position"
+  - Grammar: "is steps" → "steps"
+
+  Line 17: The formula is unclear:
+  next_distance = $ euclidean distance between next_position and NA $
+  Should specify: sqrt((next_x - NA.x)² + (next_y - NA.y)²)
+
+  Line 22: "the distance to the destination must not increase"
+  - This contradicts the alternative angles!
+  - ±120° and ±175° angles will almost always increase distance to destination
+  - Do you mean "shouldn't increase much"? Define threshold.
+
+  ---
+  Questions You Must Answer
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+←  ☐ Overlap logi  ☐ Blocking  ☐ Performance  ☐ Determinism  ✔ Submit  →
+
+Should actors be able to push through crowds if they're moving apart (current_distance < next_distance), even if they'd temporarily overlap?
+❯ 1. Yes, allow pushing through if separating
+     More dynamic movement, but actors can momentarily overlap. Uses your original OR condition.
+  2. No, strict separation always
+     Actors never overlap, but may get stuck more often. Uses AND condition.
+  3. Type something.
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel

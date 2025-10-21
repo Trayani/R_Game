@@ -1,5 +1,5 @@
 when multiple actors move into the same position during movement, notably when they converge to corner to pass an
-obstacle, they should never "merge" into the same position. We need to make them scatter a bit , se the
+obstacle, they should never "merge" into the same position. We need to make them scatter a bit , so the
 movement feels natural.
 
 THis can be replicated based on action_log_crowd.json action log, where it is clear how actors converge.
@@ -7,7 +7,7 @@ THis can be replicated based on action_log_crowd.json action log, where it is cl
 I want you to explore this idea:
 Each actor will have it's own radius value. This should be a relatively small float number, that can be configured.
 Multiple actors CAN occupy the same cell, but need to keep the distance of the radius sum among themselves.
-So, when actor A is steps into new float position
+So, when actor A steps into new float position
 1. identify all cells that will be occupied on the new position
 2. if no cell is already occupied => no problem, move to the position; end;
 3. otherwise, collect all actors with whom the cell will be shared ("nearbyActor" ... "NA").

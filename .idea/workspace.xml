@@ -12,7 +12,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/claude_tasks/actor_movement_crowd.txt" beforeDir="false" afterPath="$PROJECT_DIR$/claude_tasks/actor_movement_crowd.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -73,7 +73,7 @@
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "git-widget-placeholder": "corners2",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/jan/hobby/RustGame3",
+    "last_opened_file_path": "/home/jan/hobby/RustGame3/claude_tasks",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -87,8 +87,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/claude_tasks" />
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/test_data/corners" />
       <recent name="$PROJECT_DIR$/test_data/standard" />
     </key>
