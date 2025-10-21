@@ -1,9 +1,23 @@
 use crate::Grid;
 use crate::pathfinding::Position;
 
+/// Movement event for logging
+#[derive(Clone, Debug)]
+pub enum MovementEvent {
+    /// Actor started moving to a new waypoint
+    StartedMovingTo { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
+    /// Actor reached a waypoint and continues to next
+    ReachedWaypoint { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32, next_cell_x: i32, next_cell_y: i32, next_cell_id: i32 },
+    /// Actor reached final destination
+    ReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
+}
+
 /// Actor represents a dynamic element in the grid with precise floating-point positioning
 #[derive(Clone, Debug)]
 pub struct Actor {
+    /// Unique actor ID
+    pub id: usize,
+
     /// Size of the actor's square area (must be ≤ cell size)
     pub size: f32,
 
@@ -45,8 +59,9 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(fpos_x: f32, fpos_y: f32, size: f32, speed: f32, cell_width: f32, cell_height: f32) -> Self {
+    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, cell_width: f32, cell_height: f32) -> Self {
         Actor {
+            id,
             size,
             fpos_x,
             fpos_y,
@@ -196,10 +211,10 @@ impl Actor {
 
     /// Move the actor along its path with Next Position Validation (NPV)
     /// NPV prevents actors from moving into blocked cells due to imprecise movement
-    /// Returns true if the actor reached the end of its path
-    pub fn update_with_npv(&mut self, delta_time: f32, grid: &Grid) -> bool {
+    /// Returns (reached_end, optional_movement_event)
+    pub fn update_with_npv(&mut self, delta_time: f32, grid: &Grid) -> (bool, Option<MovementEvent>) {
         if !self.has_path() {
-            return true;
+            return (true, None);
         }
 
         // Get current waypoint in screen coordinates
@@ -218,17 +233,43 @@ impl Actor {
                 self.fpos_x = waypoint_x;
                 self.fpos_y = waypoint_y;
 
+                // Get current waypoint info for logging
+                let current_wp = &self.path[self.current_waypoint];
+                let current_cell_id = grid.get_id(current_wp.x, current_wp.y);
+
                 // Move to next waypoint
                 self.current_waypoint += 1;
 
                 // Check if we've reached the end of the path
                 if self.current_waypoint >= self.path.len() {
+                    // Reached final destination
+                    let event = MovementEvent::ReachedDestination {
+                        actor_id: self.id,
+                        cell_x: current_wp.x,
+                        cell_y: current_wp.y,
+                        cell_id: current_cell_id,
+                    };
                     self.clear_path();
-                    return true;
+                    return (true, Some(event));
                 }
 
+                // Get next waypoint info for logging
+                let next_wp = &self.path[self.current_waypoint];
+                let next_cell_id = grid.get_id(next_wp.x, next_wp.y);
+
+                let event = MovementEvent::ReachedWaypoint {
+                    actor_id: self.id,
+                    cell_x: current_wp.x,
+                    cell_y: current_wp.y,
+                    cell_id: current_cell_id,
+                    next_cell_x: next_wp.x,
+                    next_cell_y: next_wp.y,
+                    next_cell_id: next_cell_id,
+                };
+
                 // Continue moving towards next waypoint in the same frame
-                return self.update_with_npv(delta_time, grid);
+                let (reached, _) = self.update_with_npv(delta_time, grid);
+                return (reached, Some(event));
             }
 
             // Normalize direction and calculate next position
@@ -243,16 +284,16 @@ impl Actor {
                 // Position is valid - move to it
                 self.fpos_x = next_fpos_x;
                 self.fpos_y = next_fpos_y;
-                false
+                (false, None)
             } else {
                 // Position is blocked - stop moving and clear path
                 // Actor will need to recalculate path
                 self.clear_path();
-                true
+                (true, None)
             }
         } else {
             // No valid waypoint
-            true
+            (true, None)
         }
     }
 
@@ -319,6 +360,7 @@ mod tests {
 
         // Actor centered in cell (5, 5) - should be clean
         let actor = Actor::new(
+            0,  // actor ID
             5.0 * cell_width + cell_width / 2.0,  // Center of cell (5, 5)
             5.0 * cell_height + cell_height / 2.0,
             10.0,  // Size smaller than cell
@@ -342,6 +384,7 @@ mod tests {
 
         // Actor straddling cells (5, 5) and (6, 5) horizontally
         let actor = Actor::new(
+            0,  // actor ID
             5.0 * cell_width + cell_width,  // On the border
             5.0 * cell_height + cell_height / 2.0,
             10.0,
@@ -363,6 +406,7 @@ mod tests {
 
         // Actor straddling cells (5, 5) and (5, 6) vertically
         let actor = Actor::new(
+            0,  // actor ID
             5.0 * cell_width + cell_width / 2.0,
             5.0 * cell_height + cell_height,  // On the border
             10.0,
@@ -384,6 +428,7 @@ mod tests {
 
         // Actor straddling 4 cells
         let actor = Actor::new(
+            0,  // actor ID
             5.0 * cell_width + cell_width,
             5.0 * cell_height + cell_height,
             10.0,
@@ -404,7 +449,7 @@ mod tests {
         // Start actor at cell (0,0) center
         let start_x = 0.0 * cell_width + cell_width / 2.0;
         let start_y = 0.0 * cell_height + cell_height / 2.0;
-        let mut actor = Actor::new(start_x, start_y, 10.0, 100.0, cell_width, cell_height);
+        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, cell_width, cell_height);
 
         // Create a simple path: (1,0) -> (2,0) -> (2,1)
         let path = vec![

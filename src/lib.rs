@@ -8,6 +8,6 @@ pub mod ray;
 pub mod raycast;
 
 pub use action_log::{Action, ActionLog, ActionPhase, LoggedAction};
-pub use actor::{Actor, CellPosition};
+pub use actor::{Actor, CellPosition, MovementEvent};
 pub use grid::Grid;
 pub use raycast::raycast;

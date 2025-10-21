@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Grid, raycast};
+use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache};
 use std::collections::HashSet;
@@ -21,6 +21,7 @@ struct VisState {
     cell_height: f32,
     actors: Vec<Actor>,
     action_log: ActionLog,
+    next_actor_id: usize,
 }
 
 impl VisState {
@@ -66,6 +67,7 @@ impl VisState {
             cell_height: 15.0,
             actors: Vec::new(),
             action_log: ActionLog::new(),
+            next_actor_id: 0,
         }
     }
 
@@ -913,14 +915,15 @@ async fn main() {
         if is_key_pressed(KeyCode::O) {
             let (mouse_x, mouse_y) = mouse_position();
             state.action_log.log_start(Action::SpawnActor { x: mouse_x, y: mouse_y });
-            // Actor size matches cell width
             // Actor size must be smaller than cell to ensure it never spans multiple cells
             // This guarantees NPV works correctly - actor body never overlaps blocked cells
             let actor_size = state.cell_width.min(state.cell_height) * 0.9; // 90% of smallest cell dimension
-            let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
+            let actor_id = state.next_actor_id;
+            state.next_actor_id += 1;
+            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
-            println!("Actor spawned at ({:.1}, {:.1}). Total actors: {}", mouse_x, mouse_y, state.actors.len());
+            println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
         }
 
         // Set actor destination on P key (uses pathfinding) - applies to ALL actors
@@ -1052,7 +1055,61 @@ async fn main() {
         // Update actor movement with NPV (Next Position Validation)
         let delta_time = get_frame_time();
         for actor in &mut state.actors {
-            actor.update_with_npv(delta_time, &state.grid);
+            let (_reached, event) = actor.update_with_npv(delta_time, &state.grid);
+
+            // Log movement events
+            if let Some(movement_event) = event {
+                match movement_event {
+                    MovementEvent::StartedMovingTo { actor_id, cell_x, cell_y, cell_id } => {
+                        state.action_log.log_start(Action::ActorStartMovingToCell {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                        });
+                        state.action_log.log_finish(Action::ActorStartMovingToCell {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                        });
+                    }
+                    MovementEvent::ReachedWaypoint { actor_id, cell_x, cell_y, cell_id, next_cell_x, next_cell_y, next_cell_id } => {
+                        state.action_log.log_start(Action::ActorReachedWaypoint {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                            next_cell_x,
+                            next_cell_y,
+                            next_cell_id,
+                        });
+                        state.action_log.log_finish(Action::ActorReachedWaypoint {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                            next_cell_x,
+                            next_cell_y,
+                            next_cell_id,
+                        });
+                    }
+                    MovementEvent::ReachedDestination { actor_id, cell_x, cell_y, cell_id } => {
+                        state.action_log.log_start(Action::ActorReachedDestination {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                        });
+                        state.action_log.log_finish(Action::ActorReachedDestination {
+                            actor_id,
+                            cell_x,
+                            cell_y,
+                            cell_id,
+                        });
+                    }
+                }
+            }
         }
 
         // Close window on Escape
@@ -1062,10 +1119,10 @@ async fn main() {
             state.action_log.print_with_durations();
 
             // Save to file
-            if let Err(e) = state.action_log.save_to_file("multi_actor_action_log.json") {
+            if let Err(e) = state.action_log.save_to_file("action_log.json") {
                 eprintln!("Failed to save action log: {}", e);
             } else {
-                println!("Action log saved to multi_actor_action_log.json");
+                println!("Action log saved to action_log.json");
             }
 
             break;

@@ -31,6 +31,12 @@ pub enum Action {
     SetActorDestination { x: i32, y: i32, actor_count: usize },
     /// Paste grid from clipboard (rows, cols)
     PasteGrid { rows: i32, cols: i32 },
+    /// Actor starts moving to next waypoint (actor_id, cell_x, cell_y, cell_id)
+    ActorStartMovingToCell { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
+    /// Actor reached waypoint and proceeds to next (actor_id, cell_x, cell_y, cell_id, next_cell_x, next_cell_y, next_cell_id)
+    ActorReachedWaypoint { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32, next_cell_x: i32, next_cell_y: i32, next_cell_id: i32 },
+    /// Actor reached final destination (actor_id, cell_x, cell_y, cell_id)
+    ActorReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
 }
 
 /// Logged action with timestamp and phase
