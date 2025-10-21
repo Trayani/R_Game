@@ -916,7 +916,7 @@ async fn main() {
             // Actor size matches cell width
             // Actor size must be smaller than cell to ensure it never spans multiple cells
             // This guarantees NPV works correctly - actor body never overlaps blocked cells
-            let actor_size = state.cell_width.min(state.cell_height) * 0.8; // 80% of smallest cell dimension
+            let actor_size = state.cell_width.min(state.cell_height) * 0.9; // 90% of smallest cell dimension
             let actor = Actor::new(mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
