@@ -1,0 +1,25 @@
+
+
+
+when actor A moves to a new position in 1 frame, the new position has to be validated.
+
+new actor property ... collision radius : float
+- describes circular space, that should not be shared with other actors
+- placed at the actor center position
+- should relatively small: e.g. 30% of a cell's float size, but can be changed
+- Multiple actors CAN occupy the same cell, but need to keep the distance of the radius sum among themselves.
+
+So, when actor A steps into new float position
+1. identify all cells that will be occupied on the new position (can be 1x1 up to 4x4 depending on messy)
+2. if no cell is already occupied => no problem, move to the position; end;
+3.  // "nearbyActors"
+    NA:= ${  list of all actors with whom the cell will be shared  }
+4. if NA.all_is_true  {
+    next_distance = ${ euclidean distance between next_position and NA }
+    current_distance =  ${ euclidean distance between A and NA }$
+    radiusCheck =  next_distance > A.radius + NA.radius     // the best case
+    betterDistance = next_distance > current_distance       // movement is allowed as along as distance increases (even if radius is currently violated!)
+    return radiusCheck || betterDistance
+} => if true, the next position is "legal"; so move to the position; end;
+5. at this point, we know that the situation is not ideal. Make the actor stay and wait till the route clears.
+
