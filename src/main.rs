@@ -17,6 +17,7 @@ struct VisState {
     visible_cells: HashSet<i32>,
     all_corners: Vec<Corner>,
     interesting_corners: Vec<Corner>,
+    corners_grid_revision: u64,  // Track when corners were last calculated
     cell_width: f32,
     cell_height: f32,
     actors: Vec<Actor>,
@@ -51,6 +52,7 @@ impl VisState {
 
         let all_corners = detect_all_corners(&grid);
         let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y, false);
+        let corners_grid_revision = grid.get_revision();
 
         VisState {
             grid,
@@ -63,6 +65,7 @@ impl VisState {
             visible_cells,
             all_corners,
             interesting_corners,
+            corners_grid_revision,
             cell_width: 20.0,
             cell_height: 15.0,
             actors: Vec::new(),
@@ -131,7 +134,7 @@ impl VisState {
                         });
                         self.observer_x = target_x;
                         self.observer_y = target_y;
-                        self.update_visible_with_logging();
+                        self.update_visible();
                         self.action_log.log_finish(Action::MoveObserver {
                             x: target_x,
                             y: target_y,
@@ -147,35 +150,33 @@ impl VisState {
     fn update_visible(&mut self) {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
 
-        // Update corners (without logging - too frequent)
-        self.all_corners = detect_all_corners(&self.grid);
+        // Only recalculate corners if grid has changed (with logging to track when this happens)
+        let current_grid_revision = self.grid.get_revision();
+        if self.corners_grid_revision != current_grid_revision {
+            self.action_log.log_start(Action::CalculateCorners {
+                observer_x: self.observer_x,
+                observer_y: self.observer_y,
+                messy_x: self.messy_x,
+                messy_y: self.messy_y,
+                total_corners: 0,
+                interesting_corners: 0,
+            });
+
+            self.all_corners = detect_all_corners(&self.grid);
+            self.corners_grid_revision = current_grid_revision;
+
+            self.action_log.log_finish(Action::CalculateCorners {
+                observer_x: self.observer_x,
+                observer_y: self.observer_y,
+                messy_x: self.messy_x,
+                messy_y: self.messy_y,
+                total_corners: self.all_corners.len(),
+                interesting_corners: 0,  // Will be calculated below
+            });
+        }
+
+        // Always recalculate interesting corners (depends on visibility, which changes with observer position)
         self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y, false);
-    }
-
-    fn update_visible_with_logging(&mut self) {
-        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
-
-        // Update corners WITH logging (for explicit user actions)
-        self.action_log.log_start(Action::CalculateCorners {
-            observer_x: self.observer_x,
-            observer_y: self.observer_y,
-            messy_x: self.messy_x,
-            messy_y: self.messy_y,
-            total_corners: 0,
-            interesting_corners: 0,
-        });
-
-        self.all_corners = detect_all_corners(&self.grid);
-        self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y, false);
-
-        self.action_log.log_finish(Action::CalculateCorners {
-            observer_x: self.observer_x,
-            observer_y: self.observer_y,
-            messy_x: self.messy_x,
-            messy_y: self.messy_y,
-            total_corners: self.all_corners.len(),
-            interesting_corners: self.interesting_corners.len(),
-        });
     }
 
     fn toggle_messy_x(&mut self) {
@@ -186,7 +187,7 @@ impl VisState {
         }
         self.action_log.log_start(Action::ToggleMessyX);
         self.messy_x = !self.messy_x;
-        self.update_visible_with_logging();
+        self.update_visible();
         self.action_log.log_finish(Action::ToggleMessyX);
     }
 
@@ -198,7 +199,7 @@ impl VisState {
         }
         self.action_log.log_start(Action::ToggleMessyY);
         self.messy_y = !self.messy_y;
-        self.update_visible_with_logging();
+        self.update_visible();
         self.action_log.log_finish(Action::ToggleMessyY);
     }
 
