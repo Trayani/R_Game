@@ -13,8 +13,6 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/claude_tasks/multi_actor_action_log.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/claude_tasks/next_pos_validation.txt" beforeDir="false" afterPath="$PROJECT_DIR$/claude_tasks/next_pos_validation.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -181,7 +179,7 @@
       <workItem from="1760795193239" duration="517000" />
       <workItem from="1760795719021" duration="478000" />
       <workItem from="1760796207505" duration="54238000" />
-      <workItem from="1761107967090" duration="1572000" />
+      <workItem from="1761107967090" duration="3286000" />
     </task>
     <servers />
   </component>
@@ -216,7 +214,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="corners2" />
+                        <option value="corners3" />
                       </list>
                     </value>
                   </entry>

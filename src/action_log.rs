@@ -37,6 +37,12 @@ pub enum Action {
     ActorReachedWaypoint { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32, next_cell_x: i32, next_cell_y: i32, next_cell_id: i32 },
     /// Actor reached final destination (actor_id, cell_x, cell_y, cell_id)
     ActorReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
+    /// Corner calculation (observer_x, observer_y, messy_x, messy_y, total_corners, interesting_corners)
+    CalculateCorners { observer_x: i32, observer_y: i32, messy_x: bool, messy_y: bool, total_corners: usize, interesting_corners: usize },
+    /// Path calculation (from_x, from_y, to_x, to_y, messy_x, messy_y, path_length, success)
+    CalculatePath { from_x: i32, from_y: i32, to_x: i32, to_y: i32, messy_x: bool, messy_y: bool, path_length: usize, success: bool },
+    /// Actor stayed due to collision radius violation (actor_id, fpos_x, fpos_y, blocking_actor_id)
+    ActorStayedDueToCollision { actor_id: usize, fpos_x: f32, fpos_y: f32, blocking_actor_id: usize },
 }
 
 /// Logged action with timestamp and phase
@@ -83,6 +89,12 @@ impl ActionLog {
 
     /// Log the finish of an action
     pub fn log_finish(&mut self, action: Action) {
+        self.log(action, ActionPhase::Finish);
+    }
+
+    /// Log a single event (finish only, no duration tracking)
+    /// Use this for events that don't need start/finish pairs to reduce log size
+    pub fn log_event(&mut self, action: Action) {
         self.log(action, ActionPhase::Finish);
     }
 

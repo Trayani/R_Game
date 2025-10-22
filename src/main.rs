@@ -131,7 +131,7 @@ impl VisState {
                         });
                         self.observer_x = target_x;
                         self.observer_y = target_y;
-                        self.update_visible();
+                        self.update_visible_with_logging();
                         self.action_log.log_finish(Action::MoveObserver {
                             x: target_x,
                             y: target_y,
@@ -147,9 +147,35 @@ impl VisState {
     fn update_visible(&mut self) {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
 
-        // Update corners
+        // Update corners (without logging - too frequent)
         self.all_corners = detect_all_corners(&self.grid);
         self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y, false);
+    }
+
+    fn update_visible_with_logging(&mut self) {
+        self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
+
+        // Update corners WITH logging (for explicit user actions)
+        self.action_log.log_start(Action::CalculateCorners {
+            observer_x: self.observer_x,
+            observer_y: self.observer_y,
+            messy_x: self.messy_x,
+            messy_y: self.messy_y,
+            total_corners: 0,
+            interesting_corners: 0,
+        });
+
+        self.all_corners = detect_all_corners(&self.grid);
+        self.interesting_corners = filter_interesting_corners(&self.all_corners, &self.visible_cells, &self.grid, self.observer_x, self.observer_y, false);
+
+        self.action_log.log_finish(Action::CalculateCorners {
+            observer_x: self.observer_x,
+            observer_y: self.observer_y,
+            messy_x: self.messy_x,
+            messy_y: self.messy_y,
+            total_corners: self.all_corners.len(),
+            interesting_corners: self.interesting_corners.len(),
+        });
     }
 
     fn toggle_messy_x(&mut self) {
@@ -160,7 +186,7 @@ impl VisState {
         }
         self.action_log.log_start(Action::ToggleMessyX);
         self.messy_x = !self.messy_x;
-        self.update_visible();
+        self.update_visible_with_logging();
         self.action_log.log_finish(Action::ToggleMessyX);
     }
 
@@ -172,7 +198,7 @@ impl VisState {
         }
         self.action_log.log_start(Action::ToggleMessyY);
         self.messy_y = !self.messy_y;
-        self.update_visible();
+        self.update_visible_with_logging();
         self.action_log.log_finish(Action::ToggleMessyY);
     }
 
@@ -1158,13 +1184,7 @@ async fn main() {
             if let Some(movement_event) = event {
                 match movement_event {
                     MovementEvent::StartedMovingTo { actor_id, cell_x, cell_y, cell_id } => {
-                        state.action_log.log_start(Action::ActorStartMovingToCell {
-                            actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
-                        });
-                        state.action_log.log_finish(Action::ActorStartMovingToCell {
+                        state.action_log.log_event(Action::ActorStartMovingToCell {
                             actor_id,
                             cell_x,
                             cell_y,
@@ -1172,16 +1192,7 @@ async fn main() {
                         });
                     }
                     MovementEvent::ReachedWaypoint { actor_id, cell_x, cell_y, cell_id, next_cell_x, next_cell_y, next_cell_id } => {
-                        state.action_log.log_start(Action::ActorReachedWaypoint {
-                            actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
-                            next_cell_x,
-                            next_cell_y,
-                            next_cell_id,
-                        });
-                        state.action_log.log_finish(Action::ActorReachedWaypoint {
+                        state.action_log.log_event(Action::ActorReachedWaypoint {
                             actor_id,
                             cell_x,
                             cell_y,
@@ -1192,17 +1203,19 @@ async fn main() {
                         });
                     }
                     MovementEvent::ReachedDestination { actor_id, cell_x, cell_y, cell_id } => {
-                        state.action_log.log_start(Action::ActorReachedDestination {
+                        state.action_log.log_event(Action::ActorReachedDestination {
                             actor_id,
                             cell_x,
                             cell_y,
                             cell_id,
                         });
-                        state.action_log.log_finish(Action::ActorReachedDestination {
+                    }
+                    MovementEvent::StayedDueToCollision { actor_id, fpos_x, fpos_y, blocking_actor_id } => {
+                        state.action_log.log_event(Action::ActorStayedDueToCollision {
                             actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
+                            fpos_x,
+                            fpos_y,
+                            blocking_actor_id,
                         });
                     }
                 }
