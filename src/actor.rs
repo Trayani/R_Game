@@ -10,8 +10,6 @@ pub enum MovementEvent {
     ReachedWaypoint { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32, next_cell_x: i32, next_cell_y: i32, next_cell_id: i32 },
     /// Actor reached final destination
     ReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
-    /// Actor stayed in place due to collision with another actor
-    StayedDueToCollision { actor_id: usize, fpos_x: f32, fpos_y: f32, blocking_actor_id: usize },
 }
 
 /// Actor represents a dynamic element in the grid with precise floating-point positioning
@@ -300,31 +298,9 @@ impl Actor {
                 self.last_blocking_actor = None;
                 (false, None)
             } else {
-                // Position is blocked
-                if let Some(blocker_id) = blocking_actor_id {
-                    // Blocked by another actor - stay in place but keep path
-                    // Only log if this is a NEW collision (state changed)
-                    let should_log = self.last_blocking_actor != Some(blocker_id);
-                    self.last_blocking_actor = Some(blocker_id);
-
-                    if should_log {
-                        let event = MovementEvent::StayedDueToCollision {
-                            actor_id: self.id,
-                            fpos_x: self.fpos_x,
-                            fpos_y: self.fpos_y,
-                            blocking_actor_id: blocker_id,
-                        };
-                        (false, Some(event))
-                    } else {
-                        // Same collision as last frame - don't spam log
-                        (false, None)
-                    }
-                } else {
-                    // Blocked by grid cell - clear path for recalculation
-                    self.last_blocking_actor = None;
-                    self.clear_path();
-                    (true, None)
-                }
+                // Position is blocked - stay in place and clear path
+                self.clear_path();
+                (true, None)
             }
         } else {
             // No valid waypoint

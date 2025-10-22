@@ -121,30 +121,6 @@ impl CompactLogWriter {
                 self.write_i32(*cell_y);
                 self.write_i32(*cell_id);
             }
-            Action::CalculateCorners { observer_x, observer_y, messy_x, messy_y, total_corners, interesting_corners } => {
-                self.buffer.push(14 | phase_bit);
-                self.write_i32(*observer_x);
-                self.write_i32(*observer_y);
-                self.buffer.push((*messy_x as u8) | ((*messy_y as u8) << 1));
-                self.write_varint(*total_corners as u64);
-                self.write_varint(*interesting_corners as u64);
-            }
-            Action::CalculatePath { from_x, from_y, to_x, to_y, messy_x, messy_y, path_length, success } => {
-                self.buffer.push(15 | phase_bit);
-                self.write_i32(*from_x);
-                self.write_i32(*from_y);
-                self.write_i32(*to_x);
-                self.write_i32(*to_y);
-                self.buffer.push((*messy_x as u8) | ((*messy_y as u8) << 1) | ((*success as u8) << 2));
-                self.write_varint(*path_length as u64);
-            }
-            Action::ActorStayedDueToCollision { actor_id, fpos_x, fpos_y, blocking_actor_id } => {
-                self.buffer.push(16 | phase_bit);
-                self.write_varint(*actor_id as u64);
-                self.write_f32(*fpos_x);
-                self.write_f32(*fpos_y);
-                self.write_varint(*blocking_actor_id as u64);
-            }
         }
 
         Ok(())

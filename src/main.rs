@@ -150,29 +150,11 @@ impl VisState {
     fn update_visible(&mut self) {
         self.visible_cells = raycast(&self.grid, self.observer_x, self.observer_y, self.messy_x, self.messy_y);
 
-        // Only recalculate corners if grid has changed (with logging to track when this happens)
+        // Only recalculate corners if grid has changed
         let current_grid_revision = self.grid.get_revision();
         if self.corners_grid_revision != current_grid_revision {
-            self.action_log.log_start(Action::CalculateCorners {
-                observer_x: self.observer_x,
-                observer_y: self.observer_y,
-                messy_x: self.messy_x,
-                messy_y: self.messy_y,
-                total_corners: 0,
-                interesting_corners: 0,
-            });
-
             self.all_corners = detect_all_corners(&self.grid);
             self.corners_grid_revision = current_grid_revision;
-
-            self.action_log.log_finish(Action::CalculateCorners {
-                observer_x: self.observer_x,
-                observer_y: self.observer_y,
-                messy_x: self.messy_x,
-                messy_y: self.messy_y,
-                total_corners: self.all_corners.len(),
-                interesting_corners: 0,  // Will be calculated below
-            });
         }
 
         // Always recalculate interesting corners (depends on visibility, which changes with observer position)
@@ -1209,14 +1191,6 @@ async fn main() {
                             cell_x,
                             cell_y,
                             cell_id,
-                        });
-                    }
-                    MovementEvent::StayedDueToCollision { actor_id, fpos_x, fpos_y, blocking_actor_id } => {
-                        state.action_log.log_event(Action::ActorStayedDueToCollision {
-                            actor_id,
-                            fpos_x,
-                            fpos_y,
-                            blocking_actor_id,
                         });
                     }
                 }
