@@ -28,6 +28,9 @@ pub struct Actor {
     /// Speed: roughly the number of pixels the actor can travel per frame
     pub speed: f32,
 
+    /// Collision radius: circular space that should not be shared with other actors (in pixels)
+    pub collision_radius: f32,
+
     /// Pathfinding waypoints (in cell coordinates)
     pub path: Vec<Position>,
 
@@ -59,13 +62,14 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, cell_width: f32, cell_height: f32) -> Self {
+    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32) -> Self {
         Actor {
             id,
             size,
             fpos_x,
             fpos_y,
             speed,
+            collision_radius,
             path: Vec::new(),
             current_waypoint: 0,
             cell_width,
@@ -148,7 +152,7 @@ impl Actor {
     }
 
     /// Get the current waypoint in screen coordinates
-    fn get_current_waypoint_screen_coords(&self) -> Option<(f32, f32)> {
+    pub fn get_current_waypoint_screen_coords(&self) -> Option<(f32, f32)> {
         if self.current_waypoint < self.path.len() {
             let waypoint = &self.path[self.current_waypoint];
             let screen_x = waypoint.x as f32 * self.cell_width + self.cell_width / 2.0;
@@ -211,8 +215,9 @@ impl Actor {
 
     /// Move the actor along its path with Next Position Validation (NPV)
     /// NPV prevents actors from moving into blocked cells due to imprecise movement
+    /// Also performs collision radius checking with nearby actors
     /// Returns (reached_end, optional_movement_event)
-    pub fn update_with_npv(&mut self, delta_time: f32, grid: &Grid) -> (bool, Option<MovementEvent>) {
+    pub fn update_with_npv(&mut self, delta_time: f32, grid: &Grid, nearby_actors: &[&Actor]) -> (bool, Option<MovementEvent>) {
         if !self.has_path() {
             return (true, None);
         }
@@ -268,7 +273,7 @@ impl Actor {
                 };
 
                 // Continue moving towards next waypoint in the same frame
-                let (reached, _) = self.update_with_npv(delta_time, grid);
+                let (reached, _) = self.update_with_npv(delta_time, grid, nearby_actors);
                 return (reached, Some(event));
             }
 
@@ -280,7 +285,8 @@ impl Actor {
             let next_fpos_y = self.fpos_y + dir_y * movement_this_frame;
 
             // NPV: Validate that next position doesn't occupy any blocked cells
-            if self.is_position_valid(next_fpos_x, next_fpos_y, grid) {
+            // and maintains collision radius with nearby actors
+            if self.is_position_valid_with_collision(next_fpos_x, next_fpos_y, grid, nearby_actors) {
                 // Position is valid - move to it
                 self.fpos_x = next_fpos_x;
                 self.fpos_y = next_fpos_y;
@@ -295,6 +301,39 @@ impl Actor {
             // No valid waypoint
             (true, None)
         }
+    }
+
+    /// Get all cells occupied by the actor at a given position
+    /// Returns a vector of (cell_x, cell_y) tuples
+    /// Handles messy positions (can occupy 1x1 up to 4x4 cells)
+    pub fn get_occupied_cells(&self, fpos_x: f32, fpos_y: f32, grid: &Grid) -> Vec<(i32, i32)> {
+        let half_size = self.size / 2.0;
+
+        // Calculate corners of actor's square at the proposed position
+        let top_left_x = fpos_x - half_size;
+        let top_left_y = fpos_y - half_size;
+        let bottom_right_x = fpos_x + half_size;
+        let bottom_right_y = fpos_y + half_size;
+
+        // Get cell coordinates for all corners
+        let top_left_cell_x = (top_left_x / self.cell_width).floor() as i32;
+        let top_left_cell_y = (top_left_y / self.cell_height).floor() as i32;
+        let bottom_right_cell_x = (bottom_right_x / self.cell_width).floor() as i32;
+        let bottom_right_cell_y = (bottom_right_y / self.cell_height).floor() as i32;
+
+        let mut cells = Vec::new();
+
+        // Collect all cells in the range
+        for cy in top_left_cell_y..=bottom_right_cell_y {
+            for cx in top_left_cell_x..=bottom_right_cell_x {
+                // Only include cells within grid boundaries
+                if cx >= 0 && cx < grid.cols && cy >= 0 && cy < grid.rows {
+                    cells.push((cx, cy));
+                }
+            }
+        }
+
+        cells
     }
 
     /// Check if a position is valid (doesn't occupy any blocked cells)
@@ -331,6 +370,61 @@ impl Actor {
         true // All cells are free
     }
 
+    /// Check if a position is valid with collision radius checking
+    /// Used for Next Position Validation (NPV) with multi-actor collision avoidance
+    ///
+    /// Returns true if:
+    /// 1. Position doesn't occupy any blocked cells, AND
+    /// 2. Either no cells are shared with nearby actors, OR
+    /// 3. For each nearby actor: distance check passes (radius check OR better distance)
+    fn is_position_valid_with_collision(&self, fpos_x: f32, fpos_y: f32, grid: &Grid, nearby_actors: &[&Actor]) -> bool {
+        // Step 1: Check that next position doesn't occupy any blocked cells
+        let occupied_cells = self.get_occupied_cells(fpos_x, fpos_y, grid);
+
+        for (cx, cy) in &occupied_cells {
+            if grid.is_blocked(*cx, *cy) {
+                return false; // Would occupy a blocked cell
+            }
+        }
+
+        // Step 2: If no nearby actors, position is valid
+        if nearby_actors.is_empty() {
+            return true;
+        }
+
+        // Step 3: Check collision radius with each nearby actor
+        for nearby in nearby_actors {
+            // Skip self (shouldn't happen but safety check)
+            if nearby.id == self.id {
+                continue;
+            }
+
+            // Calculate distances
+            let next_dx = fpos_x - nearby.fpos_x;
+            let next_dy = fpos_y - nearby.fpos_y;
+            let next_distance = (next_dx * next_dx + next_dy * next_dy).sqrt();
+
+            let current_dx = self.fpos_x - nearby.fpos_x;
+            let current_dy = self.fpos_y - nearby.fpos_y;
+            let current_distance = (current_dx * current_dx + current_dy * current_dy).sqrt();
+
+            // Radius check: ideal case where actors maintain proper distance
+            let radius_check = next_distance > self.collision_radius + nearby.collision_radius;
+
+            // Better distance: movement is allowed as long as distance increases
+            // (even if radius is currently violated!)
+            let better_distance = next_distance > current_distance;
+
+            // If NEITHER condition is satisfied, movement is blocked
+            if !radius_check && !better_distance {
+                return false;
+            }
+        }
+
+        // Step 4: All checks passed
+        true
+    }
+
     /// Get the final destination of the path (if any)
     pub fn get_path_destination(&self) -> Option<Position> {
         self.path.last().copied()
@@ -365,6 +459,7 @@ mod tests {
             5.0 * cell_height + cell_height / 2.0,
             10.0,  // Size smaller than cell
             100.0,
+            6.0,  // collision_radius
             cell_width,
             cell_height,
         );
@@ -389,6 +484,7 @@ mod tests {
             5.0 * cell_height + cell_height / 2.0,
             10.0,
             100.0,
+            6.0,  // collision_radius
             cell_width,
             cell_height,
         );
@@ -411,6 +507,7 @@ mod tests {
             5.0 * cell_height + cell_height,  // On the border
             10.0,
             100.0,
+            6.0,  // collision_radius
             cell_width,
             cell_height,
         );
@@ -433,6 +530,7 @@ mod tests {
             5.0 * cell_height + cell_height,
             10.0,
             100.0,
+            6.0,  // collision_radius
             cell_width,
             cell_height,
         );
@@ -449,7 +547,7 @@ mod tests {
         // Start actor at cell (0,0) center
         let start_x = 0.0 * cell_width + cell_width / 2.0;
         let start_y = 0.0 * cell_height + cell_height / 2.0;
-        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, cell_width, cell_height);
+        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height);
 
         // Create a simple path: (1,0) -> (2,0) -> (2,1)
         let path = vec![

@@ -920,7 +920,8 @@ async fn main() {
             let actor_size = state.cell_width.min(state.cell_height) * 0.9; // 90% of smallest cell dimension
             let actor_id = state.next_actor_id;
             state.next_actor_id += 1;
-            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, state.cell_width, state.cell_height); // 120 pixels/second speed
+            let collision_radius = state.cell_width.min(state.cell_height) * 0.3; // 30% of cell size
+            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height); // 120 pixels/second speed
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
@@ -1052,10 +1053,106 @@ async fn main() {
             }
         }
 
-        // Update actor movement with NPV (Next Position Validation)
+        // Update actor movement with NPV (Next Position Validation) and collision checking
         let delta_time = get_frame_time();
-        for actor in &mut state.actors {
-            let (_reached, event) = actor.update_with_npv(delta_time, &state.grid);
+
+        // Collect nearby actors data for each actor (positions and radii only)
+        // This avoids borrowing issues by cloning only the data we need
+        #[derive(Clone)]
+        struct ActorCollisionData {
+            id: usize,
+            fpos_x: f32,
+            fpos_y: f32,
+            collision_radius: f32,
+            size: f32,
+            cell_width: f32,
+            cell_height: f32,
+        }
+
+        let actor_data: Vec<ActorCollisionData> = state.actors.iter().map(|a| ActorCollisionData {
+            id: a.id,
+            fpos_x: a.fpos_x,
+            fpos_y: a.fpos_y,
+            collision_radius: a.collision_radius,
+            size: a.size,
+            cell_width: a.cell_width,
+            cell_height: a.cell_height,
+        }).collect();
+
+        // Helper to get occupied cells from collision data
+        let get_cells = |data: &ActorCollisionData| -> Vec<(i32, i32)> {
+            let half_size = data.size / 2.0;
+            let top_left_x = data.fpos_x - half_size;
+            let top_left_y = data.fpos_y - half_size;
+            let bottom_right_x = data.fpos_x + half_size;
+            let bottom_right_y = data.fpos_y + half_size;
+
+            let top_left_cell_x = (top_left_x / data.cell_width).floor() as i32;
+            let top_left_cell_y = (top_left_y / data.cell_height).floor() as i32;
+            let bottom_right_cell_x = (bottom_right_x / data.cell_width).floor() as i32;
+            let bottom_right_cell_y = (bottom_right_y / data.cell_height).floor() as i32;
+
+            let mut cells = Vec::new();
+            for cy in top_left_cell_y..=bottom_right_cell_y {
+                for cx in top_left_cell_x..=bottom_right_cell_x {
+                    if cx >= 0 && cx < state.grid.cols && cy >= 0 && cy < state.grid.rows {
+                        cells.push((cx, cy));
+                    }
+                }
+            }
+            cells
+        };
+
+        // Build nearby actor indices for each actor
+        let mut actor_nearby_lists: Vec<Vec<usize>> = Vec::new();
+        for i in 0..state.actors.len() {
+            let actor = &state.actors[i];
+
+            // Calculate next position for this actor
+            if let Some((waypoint_x, waypoint_y)) = actor.get_current_waypoint_screen_coords() {
+                let dx = waypoint_x - actor.fpos_x;
+                let dy = waypoint_y - actor.fpos_y;
+                let distance = (dx * dx + dy * dy).sqrt();
+                let movement_this_frame = actor.speed * delta_time;
+
+                let (next_x, next_y) = if distance <= movement_this_frame {
+                    (waypoint_x, waypoint_y)
+                } else {
+                    let dir_x = dx / distance;
+                    let dir_y = dy / distance;
+                    (actor.fpos_x + dir_x * movement_this_frame,
+                     actor.fpos_y + dir_y * movement_this_frame)
+                };
+
+                let next_cells = actor.get_occupied_cells(next_x, next_y, &state.grid);
+
+                let mut nearby_indices = Vec::new();
+                for j in 0..actor_data.len() {
+                    if i == j { continue; }
+                    let other_cells = get_cells(&actor_data[j]);
+                    if next_cells.iter().any(|nc| other_cells.contains(nc)) {
+                        nearby_indices.push(j);
+                    }
+                }
+                actor_nearby_lists.push(nearby_indices);
+            } else {
+                actor_nearby_lists.push(Vec::new());
+            }
+        }
+
+        // Now update each actor with collision data of nearby actors
+        for i in 0..state.actors.len() {
+            // Create temporary Actor instances from collision data for nearby actors
+            let nearby_actors: Vec<Actor> = actor_nearby_lists[i]
+                .iter()
+                .map(|&idx| {
+                    let data = &actor_data[idx];
+                    Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height)
+                })
+                .collect();
+
+            let nearby_refs: Vec<&Actor> = nearby_actors.iter().collect();
+            let (_reached, event) = state.actors[i].update_with_npv(delta_time, &state.grid, &nearby_refs);
 
             // Log movement events
             if let Some(movement_event) = event {

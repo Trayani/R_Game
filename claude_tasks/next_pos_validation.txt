@@ -23,3 +23,6 @@ So, when actor A steps into new float position
 } => if true, the next position is "legal"; so move to the position; end;
 5. at this point, we know that the situation is not ideal. Make the actor stay and wait till the route clears.
 
+
+
+Relevant case can be simulated based on action log : action_log_for_next_pos_validation.json
