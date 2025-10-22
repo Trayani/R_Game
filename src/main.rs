@@ -1229,11 +1229,19 @@ async fn main() {
             println!("\n{}", state.action_log.summary());
             state.action_log.print_with_durations();
 
-            // Save to file
+            // Save to files (both JSON and compact binary)
             if let Err(e) = state.action_log.save_to_file("action_log.json") {
-                eprintln!("Failed to save action log: {}", e);
+                eprintln!("Failed to save JSON action log: {}", e);
             } else {
                 println!("Action log saved to action_log.json");
+            }
+
+            if let Err(e) = state.action_log.save_compact_to_file("action_log.bin") {
+                eprintln!("Failed to save compact action log: {}", e);
+            } else {
+                let (json_size, compact_size, compression_ratio) = state.action_log.get_compact_stats();
+                println!("Compact action log saved to action_log.bin ({} bytes vs {} bytes JSON, {:.1}% smaller)",
+                    compact_size, json_size, compression_ratio);
             }
 
             break;

@@ -1,5 +1,6 @@
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
+use crate::compact_log::CompactLogWriter;
 
 /// Action phase - whether the action is starting or finishing
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -60,6 +61,7 @@ pub struct LoggedAction {
 pub struct ActionLog {
     start_time: Instant,
     actions: Vec<LoggedAction>,
+    compact_log: CompactLogWriter,
 }
 
 impl ActionLog {
@@ -67,6 +69,7 @@ impl ActionLog {
         ActionLog {
             start_time: Instant::now(),
             actions: Vec::new(),
+            compact_log: CompactLogWriter::new(),
         }
     }
 
@@ -75,11 +78,15 @@ impl ActionLog {
         let elapsed = self.start_time.elapsed();
         let timestamp_ms = elapsed.as_millis() as u64;
 
-        self.actions.push(LoggedAction {
+        let logged_action = LoggedAction {
             timestamp_ms,
             action,
             phase,
-        });
+        };
+
+        // Write to both JSON and compact binary logs
+        self.actions.push(logged_action.clone());
+        let _ = self.compact_log.write_action(&logged_action);
     }
 
     /// Log the start of an action
@@ -108,6 +115,24 @@ impl ActionLog {
         let json = serde_json::to_string_pretty(&self.actions)?;
         std::fs::write(path, json)?;
         Ok(())
+    }
+
+    /// Save compact binary log to file
+    pub fn save_compact_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        self.compact_log.save_to_file(path)?;
+        Ok(())
+    }
+
+    /// Get compact log size statistics
+    pub fn get_compact_stats(&self) -> (usize, usize, f64) {
+        let json_size = serde_json::to_string(&self.actions).unwrap_or_default().len();
+        let compact_size = self.compact_log.get_bytes().len();
+        let compression_ratio = if json_size > 0 {
+            (json_size - compact_size) as f64 / json_size as f64 * 100.0
+        } else {
+            0.0
+        };
+        (json_size, compact_size, compression_ratio)
     }
 
     /// Print log to console
@@ -155,7 +180,7 @@ impl ActionLog {
         println!("=== End of Log ===\n");
     }
 
-    /// Get summary statistics
+    /// Get summary statistics (including compact log info)
     pub fn summary(&self) -> String {
         let mut blocked_count = 0;
         let mut free_count = 0;
@@ -187,11 +212,14 @@ impl ActionLog {
             0
         };
 
+        let (json_size, compact_size, compression_ratio) = self.get_compact_stats();
+
         format!(
             "Session Duration: {}ms\n\
              Total Events: {} ({} action pairs)\n\
              Grid Modifications: {} blocked, {} freed, {} toggled\n\
-             Actor Operations: {} spawned, {} destination commands ({} total actors commanded)",
+             Actor Operations: {} spawned, {} destination commands ({} total actors commanded)\n\
+             Log Sizes: JSON={} bytes, Compact={} bytes ({:.1}% reduction)",
             duration,
             self.actions.len(),
             self.actions.len() / 2,
@@ -200,7 +228,10 @@ impl ActionLog {
             toggle_count,
             actor_spawns,
             destination_sets,
-            total_actors_commanded
+            total_actors_commanded,
+            json_size,
+            compact_size,
+            compression_ratio
         )
     }
 }
