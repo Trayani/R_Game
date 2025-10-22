@@ -1229,11 +1229,13 @@ async fn main() {
             println!("\n{}", state.action_log.summary());
             state.action_log.print_with_durations();
 
-            // Save to files (both JSON and compact binary)
+            // Close the streaming JSON log
+            state.action_log.close_json_stream();
+            println!("Action log saved to action_log.json (streaming mode)");
+
+            // Save to files (compact binary only, JSON already streamed)
             if let Err(e) = state.action_log.save_to_file("action_log.json") {
-                eprintln!("Failed to save JSON action log: {}", e);
-            } else {
-                println!("Action log saved to action_log.json");
+                eprintln!("Failed to finalize JSON action log: {}", e);
             }
 
             if let Err(e) = state.action_log.save_compact_to_file("action_log.bin") {

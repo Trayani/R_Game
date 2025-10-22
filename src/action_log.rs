@@ -57,19 +57,34 @@ pub struct LoggedAction {
     pub phase: ActionPhase,
 }
 
-/// Action logger
+use std::fs::File;
+use std::io::Write;
+
+/// Action logger with streaming JSON output
 pub struct ActionLog {
     start_time: Instant,
     actions: Vec<LoggedAction>,
     compact_log: CompactLogWriter,
+    json_file: Option<File>,
+    first_entry: bool,
 }
 
 impl ActionLog {
     pub fn new() -> Self {
+        // Open JSON file for streaming writes
+        let json_file = File::create("action_log.json").ok();
+
+        // Write opening bracket
+        if let Some(ref file) = json_file {
+            let _ = writeln!(file as &File, "[");
+        }
+
         ActionLog {
             start_time: Instant::now(),
             actions: Vec::new(),
             compact_log: CompactLogWriter::new(),
+            json_file,
+            first_entry: true,
         }
     }
 
@@ -84,9 +99,26 @@ impl ActionLog {
             phase,
         };
 
-        // Write to both JSON and compact binary logs
+        // Write to in-memory buffer
         self.actions.push(logged_action.clone());
+
+        // Write to compact binary log
         let _ = self.compact_log.write_action(&logged_action);
+
+        // Stream to JSON file immediately (non-pretty-printed)
+        if let Some(ref mut file) = self.json_file {
+            // Add comma before entry if not first
+            if !self.first_entry {
+                let _ = writeln!(file, ",");
+            }
+            self.first_entry = false;
+
+            // Write JSON entry without pretty-printing
+            if let Ok(json) = serde_json::to_string(&logged_action) {
+                let _ = write!(file, "{}", json);
+                let _ = file.flush(); // Flush immediately
+            }
+        }
     }
 
     /// Log the start of an action
@@ -110,9 +142,23 @@ impl ActionLog {
         &self.actions
     }
 
-    /// Save log to JSON file
+    /// Close the streaming JSON file properly
+    pub fn close_json_stream(&mut self) {
+        if let Some(ref mut file) = self.json_file {
+            let _ = writeln!(file, "\n]");
+            let _ = file.flush();
+        }
+    }
+
+    /// Save log to JSON file (legacy method - now handled by streaming)
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let json = serde_json::to_string_pretty(&self.actions)?;
+        // The streaming log is already written to action_log.json
+        // This method is now a no-op if path is action_log.json
+        if path == "action_log.json" {
+            return Ok(());
+        }
+        // For other paths, write in-memory data
+        let json = serde_json::to_string(&self.actions)?;
         std::fs::write(path, json)?;
         Ok(())
     }
@@ -233,5 +279,11 @@ impl ActionLog {
             compact_size,
             compression_ratio
         )
+    }
+}
+
+impl Drop for ActionLog {
+    fn drop(&mut self) {
+        self.close_json_stream();
     }
 }
