@@ -204,7 +204,57 @@ pub fn find_best_neighbors(
     scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
 }
 
+/// Spread actors across different CELLS (not sub-cells)
+/// This is for final destinations - each actor gets a different cell
+/// Uses spiral pattern: center cell, then 8 neighbors, then next ring, etc.
+/// Returns a list of (cell_x, cell_y) positions
+pub fn spread_cell_destinations(
+    target_cell_x: i32,
+    target_cell_y: i32,
+    num_actors: usize,
+) -> Vec<(i32, i32)> {
+    let mut destinations = Vec::new();
+
+    // Start with the target cell itself
+    destinations.push((target_cell_x, target_cell_y));
+
+    if num_actors <= 1 {
+        return destinations;
+    }
+
+    // Spiral outward in rings around the target cell
+    let mut ring: i32 = 1;
+    while destinations.len() < num_actors {
+        // Add cells in the current ring
+        // Order: N, E, S, W, NE, SE, SW, NW (8 directions for ring 1)
+        // For larger rings, we need to add all cells around the perimeter
+
+        for dy in -ring..=ring {
+            for dx in -ring..=ring {
+                // Skip cells not on the perimeter (only include edge of ring)
+                if dy.abs() != ring && dx.abs() != ring {
+                    continue;
+                }
+
+                let cell_x = target_cell_x + dx;
+                let cell_y = target_cell_y + dy;
+
+                destinations.push((cell_x, cell_y));
+
+                if destinations.len() >= num_actors {
+                    return destinations;
+                }
+            }
+        }
+
+        ring += 1;
+    }
+
+    destinations
+}
+
 /// Find unique sub-cell destinations for multiple actors
+/// NOTE: This is for INTERMEDIATE movement only, not final destinations!
 /// Returns a list of sub-cell coordinates spread around the target position
 /// Uses a spiral pattern expanding from center to ensure good distribution
 pub fn spread_subcell_destinations(

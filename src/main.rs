@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager, spread_subcell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -1114,19 +1114,19 @@ async fn main() {
                 });
 
                 if state.subcell_movement_enabled {
-                    // Sub-cell movement mode - spread actors across unique sub-cells
-                    let destinations = spread_subcell_destinations(
+                    // Sub-cell movement mode - spread actors across different CELLS
+                    // Sub-cells are only for intermediate movement, not final destinations!
+                    let cell_destinations = spread_cell_destinations(
                         target_grid_x,
                         target_grid_y,
                         state.actors.len(),
-                        state.cell_width,
-                        state.cell_height,
                     );
-                    for (actor, dest_subcell) in state.actors.iter_mut().zip(destinations.iter()) {
-                        actor.set_specific_subcell_destination(*dest_subcell);
+                    for (actor, (dest_x, dest_y)) in state.actors.iter_mut().zip(cell_destinations.iter()) {
+                        let dest_pos = Position { x: *dest_x, y: *dest_y };
+                        actor.set_subcell_destination(dest_pos);
                     }
-                    println!("Sub-cell destinations set: ({}, {}) for {} actors (spread across {} sub-cells)",
-                        target_grid_x, target_grid_y, state.actors.len(), destinations.len());
+                    println!("Sub-cell destinations set: ({}, {}) for {} actors (spread across {} cells)",
+                        target_grid_x, target_grid_y, state.actors.len(), cell_destinations.len());
                 } else {
                     // Normal pathfinding mode
                     // First pass: calculate unique destinations for each actor
