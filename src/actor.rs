@@ -2,6 +2,11 @@ use crate::Grid;
 use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
 
+/// How many frames to commit to a movement direction before recalculating
+/// Higher = smoother diagonal movement, less reactive to changes
+/// Lower = more reactive, but more zigzagging
+const SUBCELL_DIRECTION_COMMIT_FRAMES: u32 = 10;
+
 /// Movement event for logging
 #[derive(Clone, Debug)]
 pub enum MovementEvent {
@@ -58,6 +63,10 @@ pub struct Actor {
     pub reserved_subcell: Option<SubCellCoord>,
     /// Final destination for sub-cell movement (cell-level, NOT sub-cell level)
     pub subcell_destination: Option<Position>,
+    /// Directional momentum: committed movement direction
+    pub subcell_movement_direction: Option<(f32, f32)>,
+    /// How many frames the current direction has been used
+    pub subcell_direction_frames: u32,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -95,6 +104,8 @@ impl Actor {
             current_subcell,
             reserved_subcell: None,
             subcell_destination: None,
+            subcell_movement_direction: None,
+            subcell_direction_frames: 0,
         }
     }
 
@@ -464,6 +475,9 @@ impl Actor {
     /// Set sub-cell destination for movement (cell-level)
     pub fn set_subcell_destination(&mut self, dest: Position) {
         self.subcell_destination = Some(dest);
+        // Reset directional momentum for new destination
+        self.subcell_movement_direction = None;
+        self.subcell_direction_frames = 0;
         // Initialize current sub-cell if not set
         if self.current_subcell.is_none() {
             self.current_subcell = Some(SubCellCoord::from_screen_pos(
@@ -591,9 +605,23 @@ impl Actor {
         }
 
         // We're centered - try to reserve next sub-cell
-        // Calculate direction to destination
-        let dir_x = dx_to_dest;
-        let dir_y = dy_to_dest;
+        // Use directional momentum: commit to a direction for multiple frames
+        // This prevents "drunk" wobbling on diagonal movement
+        let should_recalculate_direction = match self.subcell_movement_direction {
+            None => true,  // No direction established yet
+            Some(_) => self.subcell_direction_frames >= SUBCELL_DIRECTION_COMMIT_FRAMES,
+        };
+
+        let (dir_x, dir_y) = if should_recalculate_direction {
+            // Calculate new direction and commit to it
+            self.subcell_movement_direction = Some((dx_to_dest, dy_to_dest));
+            self.subcell_direction_frames = 0;
+            (dx_to_dest, dy_to_dest)
+        } else {
+            // Use committed direction
+            self.subcell_direction_frames += 1;
+            self.subcell_movement_direction.unwrap()
+        };
 
         // Calculate the destination sub-cell
         let dest_subcell = SubCellCoord::from_screen_pos(dest_screen_x, dest_screen_y, self.cell_width, self.cell_height);
@@ -614,14 +642,24 @@ impl Actor {
         );
 
         // Try to reserve one of the candidates
+        let mut reservation_succeeded = false;
         for candidate in &candidates {
             if reservation_manager.try_reserve(*candidate, self.id) {
                 self.reserved_subcell = Some(*candidate);
-                return false;
+                reservation_succeeded = true;
+                break;
             }
         }
 
-        // No neighbor could be reserved
+        // If we successfully reserved, we're done
+        if reservation_succeeded {
+            return false;
+        }
+
+        // No neighbor could be reserved - reset direction momentum to try different path
+        self.subcell_movement_direction = None;
+        self.subcell_direction_frames = 0;
+
         // Check if the destination sub-cell is one of our blocked candidates
         if candidates.contains(&dest_subcell) {
             // Destination sub-cell is blocked - stop here
