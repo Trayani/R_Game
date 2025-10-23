@@ -180,6 +180,12 @@ impl SubCellReservationManager {
         self.reservations.clear();
     }
 
+    /// Change the grid size and clear all reservations
+    pub fn set_grid_size(&mut self, grid_size: i32) {
+        self.grid_size = grid_size;
+        self.reservations.clear();
+    }
+
     /// Get total number of reservations (for debugging)
     pub fn reservation_count(&self) -> usize {
         self.reservations.len()

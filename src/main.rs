@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SaveState, SubCellReservationManager, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -27,6 +27,14 @@ impl SubCellMode {
             SubCellMode::None => "None",
             SubCellMode::Grid2x2 => "2x2",
             SubCellMode::Grid3x3 => "3x3",
+        }
+    }
+
+    fn grid_size(&self) -> i32 {
+        match self {
+            SubCellMode::None => 3, // Default to 3x3 when display is off
+            SubCellMode::Grid2x2 => 2,
+            SubCellMode::Grid3x3 => 3,
         }
     }
 }
@@ -256,7 +264,28 @@ impl VisState {
 
     fn toggle_subcell_mode(&mut self) {
         self.subcell_mode = self.subcell_mode.next();
-        println!("Sub-cell display mode: {}", self.subcell_mode.to_string());
+        let new_grid_size = self.subcell_mode.grid_size();
+
+        // Update reservation manager grid size (clears all reservations)
+        self.subcell_reservation_manager.set_grid_size(new_grid_size);
+
+        // Update all actors to use new grid size and re-orient their sub-cell positions
+        for actor in &mut self.actors {
+            actor.subcell_grid_size = new_grid_size;
+            // Re-calculate current sub-cell position with new grid size
+            actor.current_subcell = Some(SubCellCoord::from_screen_pos(
+                actor.fpos_x,
+                actor.fpos_y,
+                self.cell_width,
+                self.cell_height,
+                new_grid_size,
+            ));
+            // Clear reserved sub-cell (will be recalculated on next update)
+            actor.reserved_subcell = None;
+        }
+
+        println!("Sub-cell display mode: {} (grid size: {}x{})",
+                 self.subcell_mode.to_string(), new_grid_size, new_grid_size);
     }
 
     fn toggle_subcell_movement(&mut self) {
