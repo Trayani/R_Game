@@ -64,7 +64,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Cargo.Run rustgame3.executor": "Run",
+    "Cargo.Run rustgame3.executor": "Debug",
     "Cargo.Test ray.executor": "Debug",
     "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
@@ -73,7 +73,7 @@
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "git-widget-placeholder": "custom__flow",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/jan/hobby/bcp/RustGame3",
+    "last_opened_file_path": "/home/jan/hobby/bcp/RustGame3/claude_tasks",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -87,8 +87,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/analysis" />
       <recent name="$PROJECT_DIR$/claude_tasks" />
+      <recent name="$PROJECT_DIR$/analysis" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/test_data/corners" />
       <recent name="$PROJECT_DIR$/test_data/standard" />
@@ -182,7 +182,7 @@
       <workItem from="1760795719021" duration="478000" />
       <workItem from="1760796207505" duration="54238000" />
       <workItem from="1761107967090" duration="8763000" />
-      <workItem from="1761224653269" duration="865000" />
+      <workItem from="1761224653269" duration="4331000" />
     </task>
     <servers />
   </component>

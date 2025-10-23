@@ -1,0 +1,50 @@
+
+
+each sub-cell can be occupied by one actor exactly.
+To move another to sub-cell, the actor has to reserve it for himself!
+So in a transition phase, two sub-cells are reserved.
+Once the actor gets closer to the reserved cell, release the current cell and continue to center of the reserved cell
+
+```
+IF distance_to_reserved_cell <= distance_to_current_cell {
+    release(current_cell)
+    current_cell = reserved_cell
+    go_to_current_cell_center()
+}
+```
+
+When actor aligns to the sub-cell center, look for another sub-cell.
+From one sub-cell, it is possible to reserve one of 8 neighbouring cells (8 possible directions .. 2 vertical,2 horizontal and 4 diagonal)
+The best sub-cell is the one that best aligns with direction toward the destination.
+But if the sub-cell is reserved, check 4 other sub-cells that best align with the destination.
+
+```
+define cell_reservation_passed(cell) {
+    if (cell.is_reserved)
+        return false
+    reserved_cell = next_cell
+    cell.is_reserved = true
+    return true
+}
+
+IF current_center_reached && !destination_not_reached:
+    if (
+        cell_reservation_passed(next_cell)
+        ||   cell_reservation_passed(next_cell.clockwise_neighbour())
+        ||   cell_reservation_passed(next_cell.counter_clockwise_neighbour())
+        ||   cell_reservation_passed(next_cell.clockwise_neighbour().clockwise_neighbour())
+        ||   cell_reservation_passed(next_cell.counter_clockwise_neighbour().counter_clockwise_neighbour())
+    ) {
+        proceed_to_reserved_cell()
+    } else {
+        wait_for_clear_path()
+    }
+```
+
+
+
+
+
+
+
+
