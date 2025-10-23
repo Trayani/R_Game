@@ -52,6 +52,7 @@ struct VisState {
     subcell_mode: SubCellMode,
     subcell_movement_enabled: bool,
     subcell_reservation_manager: SubCellReservationManager,
+    show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
@@ -106,6 +107,7 @@ impl VisState {
             subcell_mode: SubCellMode::None,
             subcell_movement_enabled: false,
             subcell_reservation_manager: SubCellReservationManager::new(),
+            show_subcell_markers: true,  // Start with markers visible
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
         }
@@ -795,8 +797,8 @@ impl VisState {
             // Draw center point
             draw_circle(actor.fpos_x, actor.fpos_y, 3.0, MAGENTA);
 
-            // Draw sub-cell positions if in sub-cell movement mode
-            if self.subcell_movement_enabled {
+            // Draw sub-cell positions if in sub-cell movement mode AND markers enabled
+            if self.subcell_movement_enabled && self.show_subcell_markers {
                 // Draw current sub-cell (green)
                 if let Some(current_sc) = actor.current_subcell {
                     let (cx, cy) = current_sc.to_screen_center(self.cell_width, self.cell_height);
@@ -1060,7 +1062,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1113,6 +1115,12 @@ async fn main() {
         // Toggle sub-cell movement on S key
         if is_key_pressed(KeyCode::S) {
             state.toggle_subcell_movement();
+        }
+
+        // Toggle sub-cell markers (green/yellow circles) on B key
+        if is_key_pressed(KeyCode::B) {
+            state.show_subcell_markers = !state.show_subcell_markers;
+            println!("Sub-cell markers: {}", if state.show_subcell_markers { "ON" } else { "OFF" });
         }
 
         // Set destination on D key (to current mouse position)
