@@ -558,13 +558,9 @@ impl Actor {
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
 
-                // Snap to center of new current
-                let (new_center_x, new_center_y) = reserved.to_screen_center(self.cell_width, self.cell_height);
-                self.fpos_x = new_center_x;
-                self.fpos_y = new_center_y;
-
-                // Try to reserve next sub-cell immediately
-                return self.update_subcell(delta_time, reservation_manager);
+                // No snapping - let actor position flow smoothly
+                // Don't recurse - process next sub-cell reservation on next frame
+                return false;
             }
 
             // Move toward reserved sub-cell
