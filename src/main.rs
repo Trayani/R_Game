@@ -52,6 +52,9 @@ struct VisState {
     subcell_mode: SubCellMode,
     subcell_movement_enabled: bool,
     subcell_reservation_manager: SubCellReservationManager,
+    // Random subset destination feature
+    highlighted_actors: HashSet<usize>,
+    highlight_timer: f32,
 }
 
 impl VisState {
@@ -103,7 +106,30 @@ impl VisState {
             subcell_mode: SubCellMode::None,
             subcell_movement_enabled: false,
             subcell_reservation_manager: SubCellReservationManager::new(),
+            highlighted_actors: HashSet::new(),
+            highlight_timer: 0.0,
         }
+    }
+
+    /// Sort actors by distance to target position, return indices
+    /// Closest actors appear first in the returned vector
+    fn actors_sorted_by_distance(&self, target_x: f32, target_y: f32) -> Vec<usize> {
+        let mut actor_distances: Vec<(usize, f32)> = self.actors
+            .iter()
+            .enumerate()
+            .map(|(idx, actor)| {
+                let dx = actor.fpos_x - target_x;
+                let dy = actor.fpos_y - target_y;
+                let distance = (dx * dx + dy * dy).sqrt();
+                (idx, distance)
+            })
+            .collect();
+
+        // Sort by distance (ascending - closest first)
+        actor_distances.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+        // Return just the indices
+        actor_distances.iter().map(|(idx, _)| *idx).collect()
     }
 
     fn handle_mouse(&mut self, mouse_x: f32, mouse_y: f32) {
@@ -797,6 +823,19 @@ impl VisState {
                 }
             }
 
+            // Draw highlight ring if this actor is selected (random subset feature)
+            if self.highlight_timer > 0.0 && self.highlighted_actors.contains(&actor.id) {
+                let (left, top, right, bottom) = actor.get_bounds();
+                let center_x = (left + right) / 2.0;
+                let center_y = (top + bottom) / 2.0;
+                let radius = ((right - left) / 2.0).max((bottom - top) / 2.0) + 8.0;
+
+                // Draw pulsing orange/yellow highlight ring
+                let pulse = (self.highlight_timer * 3.0).sin() * 0.3 + 0.7; // Pulse between 0.4 and 1.0
+                let highlight_color = Color::from_rgba(255, 200, 0, (pulse * 255.0) as u8);
+                draw_circle_lines(center_x, center_y, radius, 3.0, highlight_color);
+            }
+
             // If actor has a path, draw the path and destination
             if actor.has_path() {
                 // Draw path waypoints
@@ -1021,7 +1060,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | O: spawn actor | P: set destination\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1192,6 +1231,105 @@ async fn main() {
             }
         }
 
+        // Set destination for RANDOM SUBSET (30%) on R key - closest actors get priority
+        if is_key_pressed(KeyCode::R) {
+            if !state.actors.is_empty() {
+                let (mouse_x, mouse_y) = mouse_position();
+                let target_grid_x = (mouse_x / state.cell_width) as i32;
+                let target_grid_y = (mouse_y / state.cell_height) as i32;
+
+                // Calculate 30% of actors (minimum 1)
+                let num_to_select = ((state.actors.len() * 30) / 100).max(1);
+
+                // Sort actors by distance to clicked position
+                let sorted_indices = state.actors_sorted_by_distance(mouse_x, mouse_y);
+
+                // Select closest 30% of actors
+                let selected_indices: Vec<usize> = sorted_indices.into_iter().take(num_to_select).collect();
+
+                // Log action
+                state.action_log.log_start(Action::SetActorDestination {
+                    x: target_grid_x,
+                    y: target_grid_y,
+                    actor_count: selected_indices.len(),
+                });
+
+                if state.subcell_movement_enabled {
+                    // Sub-cell movement mode - spread selected actors across different CELLS
+                    let cell_destinations = spread_cell_destinations(
+                        target_grid_x,
+                        target_grid_y,
+                        selected_indices.len(),
+                    );
+
+                    for (i, &actor_idx) in selected_indices.iter().enumerate() {
+                        if let Some((dest_x, dest_y)) = cell_destinations.get(i) {
+                            let dest_pos = Position { x: *dest_x, y: *dest_y };
+                            state.actors[actor_idx].set_subcell_destination(dest_pos);
+                        }
+                    }
+                } else {
+                    // Normal pathfinding mode
+                    let mut occupied_destinations = HashSet::new();
+                    let mut actor_destinations = Vec::new();
+
+                    for _ in &selected_indices {
+                        let dest = state.find_available_destination(
+                            target_grid_x,
+                            target_grid_y,
+                            &occupied_destinations,
+                        );
+                        occupied_destinations.insert(dest);
+                        actor_destinations.push(dest);
+                    }
+
+                    for (i, &actor_idx) in selected_indices.iter().enumerate() {
+                        if let Some(dest) = actor_destinations.get(i) {
+                            let actor = &mut state.actors[actor_idx];
+                            let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                            if let Some(mut path) = find_path_with_cache(
+                                &state.grid,
+                                actor_cpos.cell_x,
+                                actor_cpos.cell_y,
+                                dest.0,
+                                dest.1,
+                                actor_cpos.messy_x,
+                                actor_cpos.messy_y,
+                                Some(&state.all_corners),
+                            ) {
+                                if !path.is_empty() {
+                                    path.remove(0);
+                                }
+                                actor.set_path(path, state.grid.get_revision());
+                            }
+                        }
+                    }
+                }
+
+                // Set up visual highlight for selected actors
+                state.highlighted_actors.clear();
+                for &actor_idx in &selected_indices {
+                    state.highlighted_actors.insert(state.actors[actor_idx].id);
+                }
+                state.highlight_timer = 2.0; // Highlight for 2 seconds
+
+                // Collect actor IDs for console output
+                let actor_ids: Vec<usize> = selected_indices.iter()
+                    .map(|&idx| state.actors[idx].id)
+                    .collect();
+
+                println!("Random destination: {}/{} actors selected (IDs: {:?}) → cell ({}, {})",
+                    selected_indices.len(), state.actors.len(), actor_ids, target_grid_x, target_grid_y);
+
+                state.action_log.log_finish(Action::SetActorDestination {
+                    x: target_grid_x,
+                    y: target_grid_y,
+                    actor_count: selected_indices.len(),
+                });
+            }
+        }
+
         // Check if actors' paths need recalculation due to grid changes
         // OR if actor has a destination but no path (blocked, waiting for opening)
         for actor in &mut state.actors {
@@ -1245,6 +1383,14 @@ async fn main() {
 
         // Update actor movement with NPV (Next Position Validation) and collision checking
         let delta_time = get_frame_time();
+
+        // Update highlight timer for random subset feature
+        if state.highlight_timer > 0.0 {
+            state.highlight_timer -= delta_time;
+            if state.highlight_timer <= 0.0 {
+                state.highlighted_actors.clear();
+            }
+        }
 
         if state.subcell_movement_enabled {
             // Sub-cell movement mode - update all actors with sub-cell logic
