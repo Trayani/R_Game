@@ -44,7 +44,7 @@ display_mode = "none"
 # Possible values: true, false
 # Default: false
 # Toggle at runtime: S key
-movement_enabled = false
+movement_enabled = true
 
 # Show sub-cell debug markers
 # Green circles = current sub-cell, Yellow circles = reserved sub-cell

@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SubCellReservationManager, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SaveState, SubCellReservationManager, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -1071,7 +1071,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1107,6 +1107,46 @@ async fn main() {
         // Paste grid from clipboard on V key
         if is_key_pressed(KeyCode::V) {
             state.paste_from_clipboard();
+        }
+
+        // Save state on F5 key
+        if is_key_pressed(KeyCode::F5) {
+            let save_state = SaveState::from_grid_and_actors(&state.grid, &state.actors, state.cell_width, state.cell_height);
+            match save_state.save_to_file("save_state.json") {
+                Ok(_) => println!("State saved to save_state.json ({} actors, {} blocked cells)",
+                    state.actors.len(), save_state.blocked_cells.len()),
+                Err(e) => eprintln!("Failed to save state: {}", e),
+            }
+        }
+
+        // Load state on F9 key
+        if is_key_pressed(KeyCode::F9) {
+            match SaveState::load_from_file("save_state.json") {
+                Ok(save_state) => {
+                    // Clear current movement state
+                    state.subcell_reservation_manager.clear();
+
+                    // Restore grid
+                    state.grid = save_state.restore_grid();
+
+                    // Restore actors (without movement state)
+                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height);
+
+                    // Update next_actor_id to avoid ID conflicts
+                    state.next_actor_id = state.actors.iter().map(|a| a.id).max().unwrap_or(0) + 1;
+
+                    // Recalculate corners
+                    state.all_corners = detect_all_corners(&state.grid);
+                    state.corners_grid_revision = state.grid.get_revision();
+                    let visible_cells = raycast(&state.grid, state.observer_x, state.observer_y, state.messy_x, state.messy_y);
+                    state.interesting_corners = filter_interesting_corners(&state.all_corners, &visible_cells, &state.grid, state.observer_x, state.observer_y, false);
+                    state.visible_cells = visible_cells;
+
+                    println!("State loaded from save_state.json ({} actors, grid {}x{})",
+                        state.actors.len(), save_state.grid_cols, save_state.grid_rows);
+                }
+                Err(e) => eprintln!("Failed to load state: {}", e),
+            }
         }
 
         // Toggle messy X on M key

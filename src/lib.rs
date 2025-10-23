@@ -8,6 +8,7 @@ pub mod grid;
 pub mod pathfinding;
 pub mod ray;
 pub mod raycast;
+pub mod save_state;
 pub mod subcell;
 
 pub use action_log::{Action, ActionLog, ActionPhase, LoggedAction};
@@ -16,4 +17,5 @@ pub use compact_log::{CompactLogWriter, CompactLogStats};
 pub use config::Config;
 pub use grid::Grid;
 pub use raycast::raycast;
+pub use save_state::SaveState;
 pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, spread_subcell_destinations, spread_cell_destinations};
