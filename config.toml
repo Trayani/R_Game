@@ -33,10 +33,11 @@ messy_y = false
 # Controls BOTH the visual grid overlay AND the navigation grid size
 # Possible values:
 #   "none"  - No sub-cell grid displayed (navigation uses 3x3 by default)
+#   "1x1"   - Show 1x1 sub-cell grid (cell == sub-cell) + 1x1 navigation
 #   "2x2"   - Show 2x2 sub-cell grid (4 sub-cells per cell) + 2x2 navigation
 #   "3x3"   - Show 3x3 sub-cell grid (9 sub-cells per cell) + 3x3 navigation
 # Default: "none"
-# Toggle at runtime: G key
+# Toggle at runtime: G key (cycles None → 1x1 → 2x2 → 3x3 → None)
 display_mode = "none"
 
 # Sub-cell movement system

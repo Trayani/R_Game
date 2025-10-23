@@ -9,6 +9,7 @@ use std::collections::HashSet;
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum SubCellMode {
     None,
+    Grid1x1,
     Grid2x2,
     Grid3x3,
 }
@@ -16,7 +17,8 @@ enum SubCellMode {
 impl SubCellMode {
     fn next(&self) -> Self {
         match self {
-            SubCellMode::None => SubCellMode::Grid2x2,
+            SubCellMode::None => SubCellMode::Grid1x1,
+            SubCellMode::Grid1x1 => SubCellMode::Grid2x2,
             SubCellMode::Grid2x2 => SubCellMode::Grid3x3,
             SubCellMode::Grid3x3 => SubCellMode::None,
         }
@@ -25,6 +27,7 @@ impl SubCellMode {
     fn to_string(&self) -> &'static str {
         match self {
             SubCellMode::None => "None",
+            SubCellMode::Grid1x1 => "1x1",
             SubCellMode::Grid2x2 => "2x2",
             SubCellMode::Grid3x3 => "3x3",
         }
@@ -33,6 +36,7 @@ impl SubCellMode {
     fn grid_size(&self) -> i32 {
         match self {
             SubCellMode::None => 3, // Default to 3x3 when display is off
+            SubCellMode::Grid1x1 => 1,
             SubCellMode::Grid2x2 => 2,
             SubCellMode::Grid3x3 => 3,
         }
@@ -99,6 +103,7 @@ impl VisState {
 
         // Parse sub-cell display mode from config
         let (subcell_mode, subcell_grid_size) = match config.subcell.display_mode.to_lowercase().as_str() {
+            "1x1" | "1" => (SubCellMode::Grid1x1, 1),
             "2x2" | "2" => (SubCellMode::Grid2x2, 2),
             "3x3" | "3" => (SubCellMode::Grid3x3, 3),
             _ => (SubCellMode::None, 3), // Default to 3x3 for grid size even if display is off
@@ -708,6 +713,7 @@ impl VisState {
 
         let subdivisions = match self.subcell_mode {
             SubCellMode::None => return,
+            SubCellMode::Grid1x1 => 1,
             SubCellMode::Grid2x2 => 2,
             SubCellMode::Grid3x3 => 3,
         };
