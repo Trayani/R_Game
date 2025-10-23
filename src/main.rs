@@ -90,10 +90,10 @@ impl VisState {
         let corners_grid_revision = grid.get_revision();
 
         // Parse sub-cell display mode from config
-        let subcell_mode = match config.subcell.display_mode.to_lowercase().as_str() {
-            "2x2" | "2" => SubCellMode::Grid2x2,
-            "3x3" | "3" => SubCellMode::Grid3x3,
-            _ => SubCellMode::None,
+        let (subcell_mode, subcell_grid_size) = match config.subcell.display_mode.to_lowercase().as_str() {
+            "2x2" | "2" => (SubCellMode::Grid2x2, 2),
+            "3x3" | "3" => (SubCellMode::Grid3x3, 3),
+            _ => (SubCellMode::None, 3), // Default to 3x3 for grid size even if display is off
         };
 
         VisState {
@@ -115,7 +115,7 @@ impl VisState {
             next_actor_id: 0,
             subcell_mode,
             subcell_movement_enabled: config.subcell.movement_enabled,
-            subcell_reservation_manager: SubCellReservationManager::new(),
+            subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
@@ -1130,7 +1130,8 @@ async fn main() {
                     state.grid = save_state.restore_grid();
 
                     // Restore actors (without movement state)
-                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height);
+                    let subcell_grid_size = state.subcell_reservation_manager.grid_size();
+                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size);
 
                     // Update next_actor_id to avoid ID conflicts
                     state.next_actor_id = state.actors.iter().map(|a| a.id).max().unwrap_or(0) + 1;
@@ -1193,7 +1194,8 @@ async fn main() {
             let actor_id = state.next_actor_id;
             state.next_actor_id += 1;
             let collision_radius = state.cell_width.min(state.cell_height) * 0.3; // 30% of cell size
-            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height); // 120 pixels/second speed
+            let subcell_grid_size = state.subcell_reservation_manager.grid_size();
+            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height, subcell_grid_size); // 120 pixels/second speed
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
@@ -1547,11 +1549,12 @@ async fn main() {
             // Now update each actor with collision data of nearby actors
             for i in 0..state.actors.len() {
                 // Create temporary Actor instances from collision data for nearby actors
+                let subcell_grid_size = state.subcell_reservation_manager.grid_size();
                 let nearby_actors: Vec<Actor> = actor_nearby_lists[i]
                     .iter()
                     .map(|&idx| {
                         let data = &actor_data[idx];
-                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height)
+                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size)
                     })
                     .collect();
 

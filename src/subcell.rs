@@ -1,25 +1,27 @@
 use std::collections::HashMap;
 
-/// Sub-cell coordinate - identifies a specific 3x3 sub-cell within a grid cell
+/// Sub-cell coordinate - identifies a specific sub-cell within a grid cell (2x2 or 3x3)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SubCellCoord {
     /// Grid cell X coordinate
     pub cell_x: i32,
     /// Grid cell Y coordinate
     pub cell_y: i32,
-    /// Sub-cell X index within the cell (0, 1, or 2 for 3x3)
+    /// Sub-cell X index within the cell (0-1 for 2x2, 0-2 for 3x3)
     pub sub_x: i32,
-    /// Sub-cell Y index within the cell (0, 1, or 2 for 3x3)
+    /// Sub-cell Y index within the cell (0-1 for 2x2, 0-2 for 3x3)
     pub sub_y: i32,
+    /// Grid size (2 for 2x2, 3 for 3x3)
+    pub grid_size: i32,
 }
 
 impl SubCellCoord {
-    pub fn new(cell_x: i32, cell_y: i32, sub_x: i32, sub_y: i32) -> Self {
-        SubCellCoord { cell_x, cell_y, sub_x, sub_y }
+    pub fn new(cell_x: i32, cell_y: i32, sub_x: i32, sub_y: i32, grid_size: i32) -> Self {
+        SubCellCoord { cell_x, cell_y, sub_x, sub_y, grid_size }
     }
 
     /// Convert screen position to sub-cell coordinate
-    pub fn from_screen_pos(screen_x: f32, screen_y: f32, cell_width: f32, cell_height: f32) -> Self {
+    pub fn from_screen_pos(screen_x: f32, screen_y: f32, cell_width: f32, cell_height: f32, grid_size: i32) -> Self {
         // Determine which cell
         let cell_x = (screen_x / cell_width).floor() as i32;
         let cell_y = (screen_y / cell_height).floor() as i32;
@@ -28,17 +30,18 @@ impl SubCellCoord {
         let cell_local_x = (screen_x / cell_width) - cell_x as f32;
         let cell_local_y = (screen_y / cell_height) - cell_y as f32;
 
-        // Convert to sub-cell index (0, 1, or 2 for 3x3)
-        let sub_x = (cell_local_x * 3.0).floor() as i32;
-        let sub_y = (cell_local_y * 3.0).floor() as i32;
+        // Convert to sub-cell index (0-1 for 2x2, 0-2 for 3x3)
+        let sub_x = (cell_local_x * grid_size as f32).floor() as i32;
+        let sub_y = (cell_local_y * grid_size as f32).floor() as i32;
 
-        SubCellCoord::new(cell_x, cell_y, sub_x.clamp(0, 2), sub_y.clamp(0, 2))
+        let max_index = grid_size - 1;
+        SubCellCoord::new(cell_x, cell_y, sub_x.clamp(0, max_index), sub_y.clamp(0, max_index), grid_size)
     }
 
     /// Get screen position of sub-cell center
     pub fn to_screen_center(&self, cell_width: f32, cell_height: f32) -> (f32, f32) {
-        let sub_cell_width = cell_width / 3.0;
-        let sub_cell_height = cell_height / 3.0;
+        let sub_cell_width = cell_width / self.grid_size as f32;
+        let sub_cell_height = cell_height / self.grid_size as f32;
 
         let screen_x = self.cell_x as f32 * cell_width + (self.sub_x as f32 + 0.5) * sub_cell_width;
         let screen_y = self.cell_y as f32 * cell_height + (self.sub_y as f32 + 0.5) * sub_cell_height;
@@ -50,6 +53,7 @@ impl SubCellCoord {
     pub fn get_neighbors(&self) -> [SubCellCoord; 8] {
         let mut neighbors = [*self; 8];
         let mut idx = 0;
+        let max_index = self.grid_size - 1;
 
         for dy in -1..=1 {
             for dx in -1..=1 {
@@ -63,22 +67,22 @@ impl SubCellCoord {
 
                 // Handle cell boundary crossing
                 let (new_cell_x, new_sub_x) = if target_sub_x < 0 {
-                    (self.cell_x - 1, 2)
-                } else if target_sub_x > 2 {
+                    (self.cell_x - 1, max_index)
+                } else if target_sub_x > max_index {
                     (self.cell_x + 1, 0)
                 } else {
                     (self.cell_x, target_sub_x)
                 };
 
                 let (new_cell_y, new_sub_y) = if target_sub_y < 0 {
-                    (self.cell_y - 1, 2)
-                } else if target_sub_y > 2 {
+                    (self.cell_y - 1, max_index)
+                } else if target_sub_y > max_index {
                     (self.cell_y + 1, 0)
                 } else {
                     (self.cell_y, target_sub_y)
                 };
 
-                neighbors[idx] = SubCellCoord::new(new_cell_x, new_cell_y, new_sub_x, new_sub_y);
+                neighbors[idx] = SubCellCoord::new(new_cell_x, new_cell_y, new_sub_x, new_sub_y, self.grid_size);
                 idx += 1;
             }
         }
@@ -124,13 +128,20 @@ impl SubCellCoord {
 pub struct SubCellReservationManager {
     /// Map from sub-cell coordinate to actor ID that reserved it
     reservations: HashMap<SubCellCoord, usize>,
+    /// Grid size (2 for 2x2, 3 for 3x3)
+    grid_size: i32,
 }
 
 impl SubCellReservationManager {
-    pub fn new() -> Self {
+    pub fn new(grid_size: i32) -> Self {
         SubCellReservationManager {
             reservations: HashMap::new(),
+            grid_size,
         }
+    }
+
+    pub fn grid_size(&self) -> i32 {
+        self.grid_size
     }
 
     /// Try to reserve a sub-cell for an actor
@@ -263,24 +274,27 @@ pub fn spread_subcell_destinations(
     num_actors: usize,
     cell_width: f32,
     cell_height: f32,
+    grid_size: i32,
 ) -> Vec<SubCellCoord> {
     let mut destinations = Vec::new();
+    let max_index = grid_size - 1;
+    let center_index = grid_size / 2;
 
     // Start with center sub-cell of target cell
-    let center_subcell = SubCellCoord::new(target_cell_x, target_cell_y, 1, 1);
+    let center_subcell = SubCellCoord::new(target_cell_x, target_cell_y, center_index, center_index, grid_size);
     destinations.push(center_subcell);
 
     if num_actors <= 1 {
         return destinations;
     }
 
-    // Add remaining 8 sub-cells in target cell
-    for dy in 0..=2 {
-        for dx in 0..=2 {
-            if dx == 1 && dy == 1 {
+    // Add remaining sub-cells in target cell
+    for dy in 0..grid_size {
+        for dx in 0..grid_size {
+            if dx == center_index && dy == center_index {
                 continue; // Skip center (already added)
             }
-            destinations.push(SubCellCoord::new(target_cell_x, target_cell_y, dx, dy));
+            destinations.push(SubCellCoord::new(target_cell_x, target_cell_y, dx, dy, grid_size));
             if destinations.len() >= num_actors {
                 return destinations;
             }
@@ -304,14 +318,15 @@ pub fn spread_subcell_destinations(
         let neighbor_cell_x = target_cell_x + cell_dx;
         let neighbor_cell_y = target_cell_y + cell_dy;
 
-        // Add all 9 sub-cells of this neighbor cell
-        for sub_dy in 0..=2 {
-            for sub_dx in 0..=2 {
+        // Add all sub-cells of this neighbor cell
+        for sub_dy in 0..grid_size {
+            for sub_dx in 0..grid_size {
                 destinations.push(SubCellCoord::new(
                     neighbor_cell_x,
                     neighbor_cell_y,
                     sub_dx,
                     sub_dy,
+                    grid_size,
                 ));
                 if destinations.len() >= num_actors {
                     return destinations;
@@ -332,15 +347,16 @@ mod tests {
         let cell_width = 30.0;
         let cell_height = 30.0;
 
-        // Center of cell (0, 0), sub-cell (1, 1)
-        let subcell = SubCellCoord::from_screen_pos(15.0, 15.0, cell_width, cell_height);
+        // Center of cell (0, 0), sub-cell (1, 1) for 3x3 grid
+        let subcell = SubCellCoord::from_screen_pos(15.0, 15.0, cell_width, cell_height, 3);
         assert_eq!(subcell.cell_x, 0);
         assert_eq!(subcell.cell_y, 0);
         assert_eq!(subcell.sub_x, 1);
         assert_eq!(subcell.sub_y, 1);
+        assert_eq!(subcell.grid_size, 3);
 
-        // Top-left corner of cell (0, 0), sub-cell (0, 0)
-        let subcell = SubCellCoord::from_screen_pos(2.0, 2.0, cell_width, cell_height);
+        // Top-left corner of cell (0, 0), sub-cell (0, 0) for 3x3 grid
+        let subcell = SubCellCoord::from_screen_pos(2.0, 2.0, cell_width, cell_height, 3);
         assert_eq!(subcell.cell_x, 0);
         assert_eq!(subcell.cell_y, 0);
         assert_eq!(subcell.sub_x, 0);
@@ -352,18 +368,18 @@ mod tests {
         let cell_width = 30.0;
         let cell_height = 30.0;
 
-        let subcell = SubCellCoord::new(0, 0, 1, 1);
+        let subcell = SubCellCoord::new(0, 0, 1, 1, 3);
         let (x, y) = subcell.to_screen_center(cell_width, cell_height);
 
-        // Center of middle sub-cell should be at (15, 15)
+        // Center of middle sub-cell should be at (15, 15) for 3x3 grid
         assert!((x - 15.0).abs() < 0.1);
         assert!((y - 15.0).abs() < 0.1);
     }
 
     #[test]
     fn test_reservation_manager() {
-        let mut manager = SubCellReservationManager::new();
-        let subcell = SubCellCoord::new(0, 0, 1, 1);
+        let mut manager = SubCellReservationManager::new(3);
+        let subcell = SubCellCoord::new(0, 0, 1, 1, 3);
 
         // Reserve for actor 0
         assert!(manager.try_reserve(subcell, 0));

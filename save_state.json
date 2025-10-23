@@ -1,0 +1,244 @@
+{
+  "grid_revision": 0,
+  "grid_cols": 40,
+  "grid_rows": 40,
+  "blocked_cells": [
+    350,
+    390,
+    430,
+    431,
+    470,
+    471,
+    510,
+    511,
+    550,
+    551,
+    590,
+    591,
+    630,
+    631,
+    670,
+    671,
+    710,
+    711,
+    750,
+    751,
+    790,
+    791,
+    792,
+    830,
+    831,
+    832,
+    870,
+    871,
+    872,
+    910,
+    911,
+    950,
+    951,
+    990,
+    991,
+    1030,
+    1031,
+    1070,
+    1071,
+    1110,
+    1111,
+    1150,
+    1151,
+    1190,
+    1191,
+    1230,
+    1231,
+    1270,
+    1271,
+    1310,
+    1311
+  ],
+  "actors": [
+    {
+      "id": 0,
+      "fpos_x": 272.0,
+      "fpos_y": 360.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 1,
+      "fpos_x": 307.0,
+      "fpos_y": 399.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 2,
+      "fpos_x": 329.0,
+      "fpos_y": 364.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 3,
+      "fpos_x": 210.0,
+      "fpos_y": 289.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 4,
+      "fpos_x": 287.0,
+      "fpos_y": 299.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 5,
+      "fpos_x": 282.0,
+      "fpos_y": 400.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 6,
+      "fpos_x": 352.0,
+      "fpos_y": 366.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 7,
+      "fpos_x": 257.0,
+      "fpos_y": 364.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 8,
+      "fpos_x": 189.0,
+      "fpos_y": 394.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 9,
+      "fpos_x": 267.0,
+      "fpos_y": 366.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 10,
+      "fpos_x": 287.0,
+      "fpos_y": 332.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 11,
+      "fpos_x": 321.0,
+      "fpos_y": 333.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 12,
+      "fpos_x": 241.0,
+      "fpos_y": 330.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 13,
+      "fpos_x": 243.0,
+      "fpos_y": 352.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 14,
+      "fpos_x": 291.0,
+      "fpos_y": 361.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 15,
+      "fpos_x": 301.0,
+      "fpos_y": 358.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 16,
+      "fpos_x": 290.0,
+      "fpos_y": 398.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 17,
+      "fpos_x": 234.0,
+      "fpos_y": 389.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 18,
+      "fpos_x": 202.0,
+      "fpos_y": 357.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 19,
+      "fpos_x": 188.0,
+      "fpos_y": 343.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 20,
+      "fpos_x": 192.0,
+      "fpos_y": 326.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 21,
+      "fpos_x": 203.0,
+      "fpos_y": 321.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    },
+    {
+      "id": 22,
+      "fpos_x": 230.0,
+      "fpos_y": 308.0,
+      "size": 13.5,
+      "speed": 120.0,
+      "collision_radius": 4.5
+    }
+  ]
+}
