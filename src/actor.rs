@@ -1,5 +1,6 @@
 use crate::Grid;
 use crate::pathfinding::Position;
+use crate::subcell::SubCellCoord;
 
 /// Movement event for logging
 #[derive(Clone, Debug)]
@@ -49,6 +50,14 @@ pub struct Actor {
 
     /// Last frame's collision state - ID of actor that blocked us (for deduplication)
     pub last_blocking_actor: Option<usize>,
+
+    // Sub-cell movement state
+    /// Current sub-cell position
+    pub current_subcell: Option<SubCellCoord>,
+    /// Reserved sub-cell that actor is moving toward
+    pub reserved_subcell: Option<SubCellCoord>,
+    /// Final destination for sub-cell movement
+    pub subcell_destination: Option<Position>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -66,6 +75,9 @@ pub struct CellPosition {
 impl Actor {
     /// Create a new actor at the given floating-point position
     pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32) -> Self {
+        // Initialize sub-cell position
+        let current_subcell = Some(SubCellCoord::from_screen_pos(fpos_x, fpos_y, cell_width, cell_height));
+
         Actor {
             id,
             size,
@@ -80,6 +92,9 @@ impl Actor {
             path_grid_revision: 0,
             destination: None,
             last_blocking_actor: None,
+            current_subcell,
+            reserved_subcell: None,
+            subcell_destination: None,
         }
     }
 
@@ -444,6 +459,160 @@ impl Actor {
         let bottom = self.fpos_y + half_size;
 
         (left, top, right, bottom)
+    }
+
+    /// Set sub-cell destination for movement
+    pub fn set_subcell_destination(&mut self, dest: Position) {
+        self.subcell_destination = Some(dest);
+        // Initialize current sub-cell if not set
+        if self.current_subcell.is_none() {
+            self.current_subcell = Some(SubCellCoord::from_screen_pos(
+                self.fpos_x,
+                self.fpos_y,
+                self.cell_width,
+                self.cell_height,
+            ));
+        }
+    }
+
+    /// Update sub-cell movement
+    /// Returns true if destination reached, false otherwise
+    ///
+    /// This implements the sub-cell movement algorithm:
+    /// 1. Move toward reserved sub-cell
+    /// 2. When closer to reserved than current, switch current to reserved
+    /// 3. When centered on current, try to reserve next sub-cell toward destination
+    /// 4. Use fallback neighbors if preferred sub-cell is occupied
+    pub fn update_subcell(
+        &mut self,
+        delta_time: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+    ) -> bool {
+        // Check if we have a destination
+        let dest = match self.subcell_destination {
+            Some(d) => d,
+            None => return true, // No destination, we're done
+        };
+
+        // Ensure we have current sub-cell
+        let current = match self.current_subcell {
+            Some(c) => c,
+            None => {
+                // Initialize from current position
+                let c = SubCellCoord::from_screen_pos(
+                    self.fpos_x,
+                    self.fpos_y,
+                    self.cell_width,
+                    self.cell_height,
+                );
+                self.current_subcell = Some(c);
+                c
+            }
+        };
+
+        // Get destination screen position
+        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+
+        // Check if we've reached the destination
+        let dx_to_dest = dest_screen_x - self.fpos_x;
+        let dy_to_dest = dest_screen_y - self.fpos_y;
+        let dist_to_dest = (dx_to_dest * dx_to_dest + dy_to_dest * dy_to_dest).sqrt();
+
+        // Reached destination if we're very close
+        if dist_to_dest < 2.0 {
+            // Release current sub-cell
+            reservation_manager.release(current, self.id);
+            if let Some(reserved) = self.reserved_subcell {
+                reservation_manager.release(reserved, self.id);
+            }
+            self.subcell_destination = None;
+            self.reserved_subcell = None;
+            return true;
+        }
+
+        // If we have a reserved sub-cell, move toward it
+        if let Some(reserved) = self.reserved_subcell {
+            let (reserved_x, reserved_y) = reserved.to_screen_center(self.cell_width, self.cell_height);
+            let (current_x, current_y) = current.to_screen_center(self.cell_width, self.cell_height);
+
+            // Calculate distances
+            let dx_to_reserved = reserved_x - self.fpos_x;
+            let dy_to_reserved = reserved_y - self.fpos_y;
+            let dist_to_reserved = (dx_to_reserved * dx_to_reserved + dy_to_reserved * dy_to_reserved).sqrt();
+
+            let dx_to_current = current_x - self.fpos_x;
+            let dy_to_current = current_y - self.fpos_y;
+            let dist_to_current = (dx_to_current * dx_to_current + dy_to_current * dy_to_current).sqrt();
+
+            // If closer to reserved than current, switch
+            if dist_to_reserved <= dist_to_current {
+                // Release old current sub-cell
+                reservation_manager.release(current, self.id);
+                // Update current to reserved
+                self.current_subcell = Some(reserved);
+                self.reserved_subcell = None;
+
+                // Snap to center of new current
+                let (new_center_x, new_center_y) = reserved.to_screen_center(self.cell_width, self.cell_height);
+                self.fpos_x = new_center_x;
+                self.fpos_y = new_center_y;
+
+                // Try to reserve next sub-cell immediately
+                return self.update_subcell(delta_time, reservation_manager);
+            }
+
+            // Move toward reserved sub-cell
+            let movement = self.speed * delta_time;
+            if dist_to_reserved > 0.001 {
+                self.fpos_x += (dx_to_reserved / dist_to_reserved) * movement;
+                self.fpos_y += (dy_to_reserved / dist_to_reserved) * movement;
+            }
+
+            return false;
+        }
+
+        // No reserved sub-cell - we're centered on current
+        // Try to reserve next sub-cell toward destination
+        let (current_center_x, current_center_y) = current.to_screen_center(self.cell_width, self.cell_height);
+        let center_dx = current_center_x - self.fpos_x;
+        let center_dy = current_center_y - self.fpos_y;
+        let dist_to_center = (center_dx * center_dx + center_dy * center_dy).sqrt();
+
+        // If not centered yet, move toward center
+        if dist_to_center > 1.0 {
+            let movement = self.speed * delta_time;
+            if dist_to_center > 0.001 {
+                self.fpos_x += (center_dx / dist_to_center) * movement;
+                self.fpos_y += (center_dy / dist_to_center) * movement;
+            }
+            return false;
+        }
+
+        // We're centered - try to reserve next sub-cell
+        // Calculate direction to destination
+        let dir_x = dx_to_dest;
+        let dir_y = dy_to_dest;
+
+        // Get candidate neighbors in priority order
+        let candidates = crate::subcell::find_best_neighbors(
+            &current,
+            dir_x,
+            dir_y,
+            self.cell_width,
+            self.cell_height,
+        );
+
+        // Try to reserve one of the candidates
+        for candidate in candidates {
+            if reservation_manager.try_reserve(candidate, self.id) {
+                self.reserved_subcell = Some(candidate);
+                return false;
+            }
+        }
+
+        // No neighbor could be reserved - wait
+        false
     }
 }
 

@@ -42,7 +42,7 @@ IF current_center_reached && !destination_not_reached:
 ```
 
 
-
+Be sure to completelly ignore collisions and blocked cell! this is a prototype!!
 
 
 

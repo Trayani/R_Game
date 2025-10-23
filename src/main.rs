@@ -1,8 +1,8 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast};
+use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
-use rustgame3::pathfinding::{find_path, find_path_with_cache};
+use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
 
 /// Sub-cell display mode
@@ -50,6 +50,8 @@ struct VisState {
     action_log: ActionLog,
     next_actor_id: usize,
     subcell_mode: SubCellMode,
+    subcell_movement_enabled: bool,
+    subcell_reservation_manager: SubCellReservationManager,
 }
 
 impl VisState {
@@ -99,6 +101,8 @@ impl VisState {
             action_log: ActionLog::new(),
             next_actor_id: 0,
             subcell_mode: SubCellMode::None,
+            subcell_movement_enabled: false,
+            subcell_reservation_manager: SubCellReservationManager::new(),
         }
     }
 
@@ -216,6 +220,32 @@ impl VisState {
     fn toggle_subcell_mode(&mut self) {
         self.subcell_mode = self.subcell_mode.next();
         println!("Sub-cell display mode: {}", self.subcell_mode.to_string());
+    }
+
+    fn toggle_subcell_movement(&mut self) {
+        self.subcell_movement_enabled = !self.subcell_movement_enabled;
+
+        if self.subcell_movement_enabled {
+            // Enable sub-cell movement mode
+            println!("Sub-cell movement: ENABLED");
+            // Clear any existing paths and switch to sub-cell destinations
+            for actor in &mut self.actors {
+                if let Some(dest) = actor.destination {
+                    actor.set_subcell_destination(dest);
+                    actor.clear_path();
+                }
+            }
+        } else {
+            // Disable sub-cell movement mode
+            println!("Sub-cell movement: DISABLED");
+            // Clear sub-cell reservations
+            self.subcell_reservation_manager.clear();
+            // Clear sub-cell destinations from actors
+            for actor in &mut self.actors {
+                actor.subcell_destination = None;
+                actor.reserved_subcell = None;
+            }
+        }
     }
 
     fn set_destination(&mut self, x: i32, y: i32) {
@@ -739,6 +769,34 @@ impl VisState {
             // Draw center point
             draw_circle(actor.fpos_x, actor.fpos_y, 3.0, MAGENTA);
 
+            // Draw sub-cell positions if in sub-cell movement mode
+            if self.subcell_movement_enabled {
+                // Draw current sub-cell (green)
+                if let Some(current_sc) = actor.current_subcell {
+                    let (cx, cy) = current_sc.to_screen_center(self.cell_width, self.cell_height);
+                    draw_circle(cx, cy, 4.0, GREEN);
+                    draw_circle_lines(cx, cy, 6.0, 1.5, GREEN);
+                }
+
+                // Draw reserved sub-cell (yellow)
+                if let Some(reserved_sc) = actor.reserved_subcell {
+                    let (rx, ry) = reserved_sc.to_screen_center(self.cell_width, self.cell_height);
+                    draw_circle(rx, ry, 4.0, YELLOW);
+                    draw_circle_lines(rx, ry, 6.0, 1.5, YELLOW);
+
+                    // Draw line from actor to reserved sub-cell
+                    draw_line(actor.fpos_x, actor.fpos_y, rx, ry, 1.5, YELLOW);
+                }
+
+                // Draw destination
+                if let Some(dest) = actor.subcell_destination {
+                    let dest_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+                    let dest_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+                    draw_circle(dest_x, dest_y, 6.0, ORANGE);
+                    draw_circle_lines(dest_x, dest_y, 8.0, 2.0, ORANGE);
+                }
+            }
+
             // If actor has a path, draw the path and destination
             if actor.has_path() {
                 // Draw path waypoints
@@ -956,15 +1014,21 @@ impl VisState {
         };
 
         let subcell_status = format!(" | SubCell: {}", self.subcell_mode.to_string());
+        let subcell_movement_status = if self.subcell_movement_enabled {
+            format!(" | SubCell Movement: ON (reservations: {})", self.subcell_reservation_manager.reservation_count())
+        } else {
+            " | SubCell Movement: OFF".to_string()
+        };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | O: spawn actor (multiple allowed) | P: set destination for all actors\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | O: spawn actor | P: set destination\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
             dest_status,
             actor_status,
             subcell_status,
+            subcell_movement_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len()
@@ -1007,6 +1071,11 @@ async fn main() {
             state.toggle_subcell_mode();
         }
 
+        // Toggle sub-cell movement on S key
+        if is_key_pressed(KeyCode::S) {
+            state.toggle_subcell_movement();
+        }
+
         // Set destination on D key (to current mouse position)
         if is_key_pressed(KeyCode::D) {
             let (mouse_x, mouse_y) = mouse_position();
@@ -1031,7 +1100,7 @@ async fn main() {
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
         }
 
-        // Set actor destination on P key (uses pathfinding) - applies to ALL actors
+        // Set actor destination on P key (uses pathfinding or sub-cell movement) - applies to ALL actors
         if is_key_pressed(KeyCode::P) {
             if !state.actors.is_empty() {
                 let (mouse_x, mouse_y) = mouse_position();
@@ -1044,55 +1113,69 @@ async fn main() {
                     actor_count: state.actors.len(),
                 });
 
-                // First pass: calculate unique destinations for each actor
-                let mut occupied_destinations = HashSet::new();
-                let mut actor_destinations = Vec::new();
-
-                for _actor in &state.actors {
-                    // Find unique destination for this actor using spiral search
-                    let dest = state.find_available_destination(
-                        target_grid_x,
-                        target_grid_y,
-                        &occupied_destinations,
-                    );
-
-                    // Mark this destination as occupied for next actor
-                    occupied_destinations.insert(dest);
-                    actor_destinations.push(dest);
-                }
-
-                // Second pass: assign destinations and calculate paths
-                let mut paths_set = 0;
-                let mut no_paths = 0;
-
-                for (actor, dest) in state.actors.iter_mut().zip(actor_destinations.iter()) {
-                    // Calculate actor's current cell position
-                    let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
-
-                    // Find path using pathfinding WITH CACHED CORNERS
-                    if let Some(mut path) = find_path_with_cache(
-                        &state.grid,
-                        actor_cpos.cell_x,
-                        actor_cpos.cell_y,
-                        dest.0,
-                        dest.1,
-                        actor_cpos.messy_x,
-                        actor_cpos.messy_y,
-                        Some(&state.all_corners),
-                    ) {
-                        // Skip the first waypoint if it's the actor's current cell
-                        if path.len() >= 2 {
-                            let first_waypoint = &path[0];
-                            if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
-                                path.remove(0);
-                            }
-                        }
-
-                        actor.set_path(path, state.grid.get_revision());
-                        paths_set += 1;
-                    } else {
-                        no_paths += 1;
+                if state.subcell_movement_enabled {
+                    // Sub-cell movement mode - all actors go to same destination (no spiral)
+                    let dest_pos = Position { x: target_grid_x, y: target_grid_y };
+                    for actor in &mut state.actors {
+                        actor.set_subcell_destination(dest_pos);
                     }
+                    println!("Sub-cell destination set: ({}, {}) for {} actors",
+                        target_grid_x, target_grid_y, state.actors.len());
+                } else {
+                    // Normal pathfinding mode
+                    // First pass: calculate unique destinations for each actor
+                    let mut occupied_destinations = HashSet::new();
+                    let mut actor_destinations = Vec::new();
+
+                    for _actor in &state.actors {
+                        // Find unique destination for this actor using spiral search
+                        let dest = state.find_available_destination(
+                            target_grid_x,
+                            target_grid_y,
+                            &occupied_destinations,
+                        );
+
+                        // Mark this destination as occupied for next actor
+                        occupied_destinations.insert(dest);
+                        actor_destinations.push(dest);
+                    }
+
+                    // Second pass: assign destinations and calculate paths
+                    let mut paths_set = 0;
+                    let mut no_paths = 0;
+
+                    for (actor, dest) in state.actors.iter_mut().zip(actor_destinations.iter()) {
+                        // Calculate actor's current cell position
+                        let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                        // Find path using pathfinding WITH CACHED CORNERS
+                        if let Some(mut path) = find_path_with_cache(
+                            &state.grid,
+                            actor_cpos.cell_x,
+                            actor_cpos.cell_y,
+                            dest.0,
+                            dest.1,
+                            actor_cpos.messy_x,
+                            actor_cpos.messy_y,
+                            Some(&state.all_corners),
+                        ) {
+                            // Skip the first waypoint if it's the actor's current cell
+                            if path.len() >= 2 {
+                                let first_waypoint = &path[0];
+                                if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
+                                    path.remove(0);
+                                }
+                            }
+
+                            actor.set_path(path, state.grid.get_revision());
+                            paths_set += 1;
+                        } else {
+                            no_paths += 1;
+                        }
+                    }
+
+                    println!("Destination target ({}, {}): {} actors have unique paths, {} blocked",
+                        target_grid_x, target_grid_y, paths_set, no_paths);
                 }
 
                 state.action_log.log_finish(Action::SetActorDestination {
@@ -1100,9 +1183,6 @@ async fn main() {
                     y: target_grid_y,
                     actor_count: state.actors.len(),
                 });
-
-                println!("Destination target ({}, {}): {} actors have unique paths, {} blocked",
-                    target_grid_x, target_grid_y, paths_set, no_paths);
             }
         }
 
@@ -1160,133 +1240,142 @@ async fn main() {
         // Update actor movement with NPV (Next Position Validation) and collision checking
         let delta_time = get_frame_time();
 
-        // Collect nearby actors data for each actor (positions and radii only)
-        // This avoids borrowing issues by cloning only the data we need
-        #[derive(Clone)]
-        struct ActorCollisionData {
-            id: usize,
-            fpos_x: f32,
-            fpos_y: f32,
-            collision_radius: f32,
-            size: f32,
-            cell_width: f32,
-            cell_height: f32,
-        }
+        if state.subcell_movement_enabled {
+            // Sub-cell movement mode - update all actors with sub-cell logic
+            for i in 0..state.actors.len() {
+                let _reached = state.actors[i].update_subcell(delta_time, &mut state.subcell_reservation_manager);
+                // Note: ignoring reached status for now - no event logging in sub-cell mode
+            }
+        } else {
+            // Normal pathfinding mode with NPV and collision checking
+            // Collect nearby actors data for each actor (positions and radii only)
+            // This avoids borrowing issues by cloning only the data we need
+            #[derive(Clone)]
+            struct ActorCollisionData {
+                id: usize,
+                fpos_x: f32,
+                fpos_y: f32,
+                collision_radius: f32,
+                size: f32,
+                cell_width: f32,
+                cell_height: f32,
+            }
 
-        let actor_data: Vec<ActorCollisionData> = state.actors.iter().map(|a| ActorCollisionData {
-            id: a.id,
-            fpos_x: a.fpos_x,
-            fpos_y: a.fpos_y,
-            collision_radius: a.collision_radius,
-            size: a.size,
-            cell_width: a.cell_width,
-            cell_height: a.cell_height,
-        }).collect();
+            let actor_data: Vec<ActorCollisionData> = state.actors.iter().map(|a| ActorCollisionData {
+                id: a.id,
+                fpos_x: a.fpos_x,
+                fpos_y: a.fpos_y,
+                collision_radius: a.collision_radius,
+                size: a.size,
+                cell_width: a.cell_width,
+                cell_height: a.cell_height,
+            }).collect();
 
-        // Helper to get occupied cells from collision data
-        let get_cells = |data: &ActorCollisionData| -> Vec<(i32, i32)> {
-            let half_size = data.size / 2.0;
-            let top_left_x = data.fpos_x - half_size;
-            let top_left_y = data.fpos_y - half_size;
-            let bottom_right_x = data.fpos_x + half_size;
-            let bottom_right_y = data.fpos_y + half_size;
+            // Helper to get occupied cells from collision data
+            let get_cells = |data: &ActorCollisionData| -> Vec<(i32, i32)> {
+                let half_size = data.size / 2.0;
+                let top_left_x = data.fpos_x - half_size;
+                let top_left_y = data.fpos_y - half_size;
+                let bottom_right_x = data.fpos_x + half_size;
+                let bottom_right_y = data.fpos_y + half_size;
 
-            let top_left_cell_x = (top_left_x / data.cell_width).floor() as i32;
-            let top_left_cell_y = (top_left_y / data.cell_height).floor() as i32;
-            let bottom_right_cell_x = (bottom_right_x / data.cell_width).floor() as i32;
-            let bottom_right_cell_y = (bottom_right_y / data.cell_height).floor() as i32;
+                let top_left_cell_x = (top_left_x / data.cell_width).floor() as i32;
+                let top_left_cell_y = (top_left_y / data.cell_height).floor() as i32;
+                let bottom_right_cell_x = (bottom_right_x / data.cell_width).floor() as i32;
+                let bottom_right_cell_y = (bottom_right_y / data.cell_height).floor() as i32;
 
-            let mut cells = Vec::new();
-            for cy in top_left_cell_y..=bottom_right_cell_y {
-                for cx in top_left_cell_x..=bottom_right_cell_x {
-                    if cx >= 0 && cx < state.grid.cols && cy >= 0 && cy < state.grid.rows {
-                        cells.push((cx, cy));
+                let mut cells = Vec::new();
+                for cy in top_left_cell_y..=bottom_right_cell_y {
+                    for cx in top_left_cell_x..=bottom_right_cell_x {
+                        if cx >= 0 && cx < state.grid.cols && cy >= 0 && cy < state.grid.rows {
+                            cells.push((cx, cy));
+                        }
                     }
                 }
-            }
-            cells
-        };
+                cells
+            };
 
-        // Build nearby actor indices for each actor
-        let mut actor_nearby_lists: Vec<Vec<usize>> = Vec::new();
-        for i in 0..state.actors.len() {
-            let actor = &state.actors[i];
+            // Build nearby actor indices for each actor
+            let mut actor_nearby_lists: Vec<Vec<usize>> = Vec::new();
+            for i in 0..state.actors.len() {
+                let actor = &state.actors[i];
 
-            // Calculate next position for this actor
-            if let Some((waypoint_x, waypoint_y)) = actor.get_current_waypoint_screen_coords() {
-                let dx = waypoint_x - actor.fpos_x;
-                let dy = waypoint_y - actor.fpos_y;
-                let distance = (dx * dx + dy * dy).sqrt();
-                let movement_this_frame = actor.speed * delta_time;
+                // Calculate next position for this actor
+                if let Some((waypoint_x, waypoint_y)) = actor.get_current_waypoint_screen_coords() {
+                    let dx = waypoint_x - actor.fpos_x;
+                    let dy = waypoint_y - actor.fpos_y;
+                    let distance = (dx * dx + dy * dy).sqrt();
+                    let movement_this_frame = actor.speed * delta_time;
 
-                let (next_x, next_y) = if distance <= movement_this_frame {
-                    (waypoint_x, waypoint_y)
+                    let (next_x, next_y) = if distance <= movement_this_frame {
+                        (waypoint_x, waypoint_y)
+                    } else {
+                        let dir_x = dx / distance;
+                        let dir_y = dy / distance;
+                        (actor.fpos_x + dir_x * movement_this_frame,
+                         actor.fpos_y + dir_y * movement_this_frame)
+                    };
+
+                    let next_cells = actor.get_occupied_cells(next_x, next_y, &state.grid);
+
+                    let mut nearby_indices = Vec::new();
+                    for j in 0..actor_data.len() {
+                        if i == j { continue; }
+                        let other_cells = get_cells(&actor_data[j]);
+                        if next_cells.iter().any(|nc| other_cells.contains(nc)) {
+                            nearby_indices.push(j);
+                        }
+                    }
+                    actor_nearby_lists.push(nearby_indices);
                 } else {
-                    let dir_x = dx / distance;
-                    let dir_y = dy / distance;
-                    (actor.fpos_x + dir_x * movement_this_frame,
-                     actor.fpos_y + dir_y * movement_this_frame)
-                };
-
-                let next_cells = actor.get_occupied_cells(next_x, next_y, &state.grid);
-
-                let mut nearby_indices = Vec::new();
-                for j in 0..actor_data.len() {
-                    if i == j { continue; }
-                    let other_cells = get_cells(&actor_data[j]);
-                    if next_cells.iter().any(|nc| other_cells.contains(nc)) {
-                        nearby_indices.push(j);
-                    }
+                    actor_nearby_lists.push(Vec::new());
                 }
-                actor_nearby_lists.push(nearby_indices);
-            } else {
-                actor_nearby_lists.push(Vec::new());
             }
-        }
 
-        // Now update each actor with collision data of nearby actors
-        for i in 0..state.actors.len() {
-            // Create temporary Actor instances from collision data for nearby actors
-            let nearby_actors: Vec<Actor> = actor_nearby_lists[i]
-                .iter()
-                .map(|&idx| {
-                    let data = &actor_data[idx];
-                    Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height)
-                })
-                .collect();
+            // Now update each actor with collision data of nearby actors
+            for i in 0..state.actors.len() {
+                // Create temporary Actor instances from collision data for nearby actors
+                let nearby_actors: Vec<Actor> = actor_nearby_lists[i]
+                    .iter()
+                    .map(|&idx| {
+                        let data = &actor_data[idx];
+                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height)
+                    })
+                    .collect();
 
-            let nearby_refs: Vec<&Actor> = nearby_actors.iter().collect();
-            let (_reached, event) = state.actors[i].update_with_npv(delta_time, &state.grid, &nearby_refs);
+                let nearby_refs: Vec<&Actor> = nearby_actors.iter().collect();
+                let (_reached, event) = state.actors[i].update_with_npv(delta_time, &state.grid, &nearby_refs);
 
-            // Log movement events
-            if let Some(movement_event) = event {
-                match movement_event {
-                    MovementEvent::StartedMovingTo { actor_id, cell_x, cell_y, cell_id } => {
-                        state.action_log.log_event(Action::ActorStartMovingToCell {
-                            actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
-                        });
-                    }
-                    MovementEvent::ReachedWaypoint { actor_id, cell_x, cell_y, cell_id, next_cell_x, next_cell_y, next_cell_id } => {
-                        state.action_log.log_event(Action::ActorReachedWaypoint {
-                            actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
-                            next_cell_x,
-                            next_cell_y,
-                            next_cell_id,
-                        });
-                    }
-                    MovementEvent::ReachedDestination { actor_id, cell_x, cell_y, cell_id } => {
-                        state.action_log.log_event(Action::ActorReachedDestination {
-                            actor_id,
-                            cell_x,
-                            cell_y,
-                            cell_id,
-                        });
+                // Log movement events
+                if let Some(movement_event) = event {
+                    match movement_event {
+                        MovementEvent::StartedMovingTo { actor_id, cell_x, cell_y, cell_id } => {
+                            state.action_log.log_event(Action::ActorStartMovingToCell {
+                                actor_id,
+                                cell_x,
+                                cell_y,
+                                cell_id,
+                            });
+                        }
+                        MovementEvent::ReachedWaypoint { actor_id, cell_x, cell_y, cell_id, next_cell_x, next_cell_y, next_cell_id } => {
+                            state.action_log.log_event(Action::ActorReachedWaypoint {
+                                actor_id,
+                                cell_x,
+                                cell_y,
+                                cell_id,
+                                next_cell_x,
+                                next_cell_y,
+                                next_cell_id,
+                            });
+                        }
+                        MovementEvent::ReachedDestination { actor_id, cell_x, cell_y, cell_id } => {
+                            state.action_log.log_event(Action::ActorReachedDestination {
+                                actor_id,
+                                cell_x,
+                                cell_y,
+                                cell_id,
+                            });
+                        }
                     }
                 }
             }
