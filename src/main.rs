@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SubCellReservationManager, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -59,16 +59,17 @@ struct VisState {
 }
 
 impl VisState {
-    fn new() -> Self {
-        // Create initial grid with default dimensions
-        let mut grid = Grid::new(40, 40);
-        let mut observer_x = 20;
-        let mut observer_y = 20;
-        let mut messy_x = false;
-        let mut messy_y = false;
+    fn new(config: &Config) -> Self {
+        // Create initial grid with configured dimensions
+        let mut grid = Grid::new(config.grid.cols, config.grid.rows);
+        let mut observer_x = config.observer.x;
+        let mut observer_y = config.observer.y;
+        let mut messy_x = config.observer.messy_x;
+        let mut messy_y = config.observer.messy_y;
 
-        // Try to load default grid layout from file
-        if let Ok(default_layout) = std::fs::read_to_string("claude_tasks/default_grid_layout.txt") {
+        // Try to load default grid layout from configured file path
+        if !config.default_grid_file.path.is_empty() {
+            if let Ok(default_layout) = std::fs::read_to_string(&config.default_grid_file.path) {
             // Parse the default layout
             if let Ok((parsed_grid, obs_x, obs_y, m_x, m_y)) = Self::parse_grid_layout(&default_layout) {
                 grid = parsed_grid;
@@ -77,7 +78,8 @@ impl VisState {
                 messy_x = m_x;
                 messy_y = m_y;
             } else {
-                eprintln!("Warning: Failed to parse default_grid_layout.txt, using empty grid");
+                    eprintln!("Warning: Failed to parse {}, using empty grid", config.default_grid_file.path);
+                }
             }
         }
 
@@ -86,6 +88,13 @@ impl VisState {
         let all_corners = detect_all_corners(&grid);
         let interesting_corners = filter_interesting_corners(&all_corners, &visible_cells, &grid, observer_x, observer_y, false);
         let corners_grid_revision = grid.get_revision();
+
+        // Parse sub-cell display mode from config
+        let subcell_mode = match config.subcell.display_mode.to_lowercase().as_str() {
+            "2x2" | "2" => SubCellMode::Grid2x2,
+            "3x3" | "3" => SubCellMode::Grid3x3,
+            _ => SubCellMode::None,
+        };
 
         VisState {
             grid,
@@ -99,15 +108,15 @@ impl VisState {
             all_corners,
             interesting_corners,
             corners_grid_revision,
-            cell_width: 20.0,
-            cell_height: 15.0,
+            cell_width: config.grid.cell_width,
+            cell_height: config.grid.cell_height,
             actors: Vec::new(),
             action_log: ActionLog::new(),
             next_actor_id: 0,
-            subcell_mode: SubCellMode::None,
-            subcell_movement_enabled: false,
+            subcell_mode,
+            subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(),
-            show_subcell_markers: false,  // Start with markers hidden (toggle with B key)
+            show_subcell_markers: config.subcell.show_markers,
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
         }
@@ -1080,7 +1089,10 @@ impl VisState {
 
 #[macroquad::main("RustGame3 - Raycasting")]
 async fn main() {
-    let mut state = VisState::new();
+    // Load configuration from config.toml (or use defaults)
+    let config = Config::load();
+
+    let mut state = VisState::new(&config);
 
     loop {
         // Handle input continuously

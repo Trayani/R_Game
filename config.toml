@@ -1,0 +1,106 @@
+# RustGame3 GUI Configuration
+# This file controls the starting settings for the visual demo
+# All settings can be changed at runtime using keyboard shortcuts
+
+[grid]
+# Grid dimensions (number of cells)
+# Default: 40x40
+cols = 40
+rows = 40
+
+# Cell size in pixels
+# Default: 20.0 width, 15.0 height
+cell_width = 20.0
+cell_height = 15.0
+
+[observer]
+# Starting observer position (grid coordinates)
+# Must be within grid bounds: 0 <= x < cols, 0 <= y < rows
+# Default: center of grid (20, 20 for 40x40 grid)
+x = 20
+y = 20
+
+# Messy position state
+# messy_x: true = observer occupies 2 horizontal cells (x, x+1)
+# messy_y: true = observer occupies 2 vertical cells (y, y+1)
+# Possible values: true, false
+# Default: both false
+messy_x = false
+messy_y = false
+
+[subcell]
+# Sub-cell display mode
+# Controls the visual grid overlay showing sub-cell divisions
+# Possible values:
+#   "none"  - No sub-cell grid displayed
+#   "2x2"   - Show 2x2 sub-cell grid (4 sub-cells per cell)
+#   "3x3"   - Show 3x3 sub-cell grid (9 sub-cells per cell)
+# Default: "none"
+# Toggle at runtime: G key
+display_mode = "none"
+
+# Sub-cell movement system
+# When enabled, actors use fine-grained sub-cell pathfinding with collision avoidance
+# Possible values: true, false
+# Default: false
+# Toggle at runtime: S key
+movement_enabled = false
+
+# Show sub-cell debug markers
+# Green circles = current sub-cell, Yellow circles = reserved sub-cell
+# Possible values: true, false
+# Default: false (hidden for cleaner view)
+# Toggle at runtime: B key
+show_markers = false
+
+[actors]
+# Default actor speed in pixels per second
+# Higher = faster movement
+# Default: 120.0
+default_speed = 120.0
+
+# Actor size as percentage of cell size
+# Value between 0.0 and 1.0
+# Default: 0.9 (90% of smallest cell dimension)
+size_ratio = 0.9
+
+# Collision radius as percentage of cell size
+# Value between 0.0 and 1.0
+# Default: 0.3 (30% of smallest cell dimension)
+collision_radius_ratio = 0.3
+
+[visual]
+# Window title
+# Default: "RustGame3 - Grid Raycasting Demo"
+window_title = "RustGame3 - Grid Raycasting Demo"
+
+# Background color (RGB values 0-255)
+# Default: dark gray (30, 30, 30)
+background_r = 30
+background_g = 30
+background_b = 30
+
+# Show corner indicators
+# White squares = interesting corners, Yellow squares = non-interesting corners
+# Possible values: true, false
+# Default: true
+show_corners = true
+
+[default_grid_file]
+# Path to default grid layout file
+# If file exists, it will be loaded on startup
+# Format: same as copy/paste (■ for blocked, s for observer, etc.)
+# Set to empty string "" to start with empty grid
+# Default: "claude_tasks/default_grid_layout.txt"
+path = "claude_tasks/default_grid_layout.txt"
+
+[logging]
+# Enable action logging to JSON file
+# Logs all actions (spawn actor, set destination, etc.)
+# Possible values: true, false
+# Default: true
+enable_action_log = true
+
+# Action log file path
+# Default: "action_log.json"
+action_log_path = "action_log.json"
