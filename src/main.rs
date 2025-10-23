@@ -5,6 +5,32 @@ use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner,
 use rustgame3::pathfinding::{find_path, find_path_with_cache};
 use std::collections::HashSet;
 
+/// Sub-cell display mode
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum SubCellMode {
+    None,
+    Grid2x2,
+    Grid3x3,
+}
+
+impl SubCellMode {
+    fn next(&self) -> Self {
+        match self {
+            SubCellMode::None => SubCellMode::Grid2x2,
+            SubCellMode::Grid2x2 => SubCellMode::Grid3x3,
+            SubCellMode::Grid3x3 => SubCellMode::None,
+        }
+    }
+
+    fn to_string(&self) -> &'static str {
+        match self {
+            SubCellMode::None => "None",
+            SubCellMode::Grid2x2 => "2x2",
+            SubCellMode::Grid3x3 => "3x3",
+        }
+    }
+}
+
 /// Visualization state
 struct VisState {
     grid: Grid,
@@ -23,6 +49,7 @@ struct VisState {
     actors: Vec<Actor>,
     action_log: ActionLog,
     next_actor_id: usize,
+    subcell_mode: SubCellMode,
 }
 
 impl VisState {
@@ -71,6 +98,7 @@ impl VisState {
             actors: Vec::new(),
             action_log: ActionLog::new(),
             next_actor_id: 0,
+            subcell_mode: SubCellMode::None,
         }
     }
 
@@ -183,6 +211,11 @@ impl VisState {
         self.messy_y = !self.messy_y;
         self.update_visible();
         self.action_log.log_finish(Action::ToggleMessyY);
+    }
+
+    fn toggle_subcell_mode(&mut self) {
+        self.subcell_mode = self.subcell_mode.next();
+        println!("Sub-cell display mode: {}", self.subcell_mode.to_string());
     }
 
     fn set_destination(&mut self, x: i32, y: i32) {
@@ -571,6 +604,57 @@ impl VisState {
         (target_x, target_y)
     }
 
+    fn draw_subcells(&self) {
+        // Don't draw sub-cells if mode is None
+        if self.subcell_mode == SubCellMode::None {
+            return;
+        }
+
+        let subdivisions = match self.subcell_mode {
+            SubCellMode::None => return,
+            SubCellMode::Grid2x2 => 2,
+            SubCellMode::Grid3x3 => 3,
+        };
+
+        // Semi-transparent white color for sub-cell lines
+        let line_color = Color::from_rgba(255, 255, 255, 80);
+        let line_thickness = 1.0;
+
+        // Draw sub-cell lines for each cell
+        for y in 0..self.grid.rows {
+            for x in 0..self.grid.cols {
+                let px = x as f32 * self.cell_width;
+                let py = y as f32 * self.cell_height;
+
+                // Draw vertical lines within the cell
+                for i in 1..subdivisions {
+                    let offset_x = px + (i as f32 * self.cell_width / subdivisions as f32);
+                    draw_line(
+                        offset_x,
+                        py,
+                        offset_x,
+                        py + self.cell_height - 1.0,
+                        line_thickness,
+                        line_color,
+                    );
+                }
+
+                // Draw horizontal lines within the cell
+                for i in 1..subdivisions {
+                    let offset_y = py + (i as f32 * self.cell_height / subdivisions as f32);
+                    draw_line(
+                        px,
+                        offset_y,
+                        px + self.cell_width - 1.0,
+                        offset_y,
+                        line_thickness,
+                        line_color,
+                    );
+                }
+            }
+        }
+    }
+
     fn draw_corners(&self) {
         let corner_size = 6.0; // Size of corner indicator squares
 
@@ -729,6 +813,9 @@ impl VisState {
             }
         }
 
+        // Draw sub-cell grids
+        self.draw_subcells();
+
         // Draw corner indicators
         self.draw_corners();
 
@@ -868,13 +955,16 @@ impl VisState {
             String::new()
         };
 
+        let subcell_status = format!(" | SubCell: {}", self.subcell_mode.to_string());
+
         let info = format!(
-            "Observer: ({}, {}){}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination\nM: toggle messy X | N: toggle messy Y | O: spawn actor (multiple allowed) | P: set destination for all actors\nC: copy grid | V: paste grid | Esc: close",
+            "Observer: ({}, {}){}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | O: spawn actor (multiple allowed) | P: set destination for all actors\nC: copy grid | V: paste grid | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
             dest_status,
             actor_status,
+            subcell_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len()
@@ -910,6 +1000,11 @@ async fn main() {
         // Toggle messy Y on N key
         if is_key_pressed(KeyCode::N) {
             state.toggle_messy_y();
+        }
+
+        // Toggle sub-cell display mode on G key
+        if is_key_pressed(KeyCode::G) {
+            state.toggle_subcell_mode();
         }
 
         // Set destination on D key (to current mouse position)
