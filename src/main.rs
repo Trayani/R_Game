@@ -107,7 +107,7 @@ impl VisState {
             subcell_mode: SubCellMode::None,
             subcell_movement_enabled: false,
             subcell_reservation_manager: SubCellReservationManager::new(),
-            show_subcell_markers: true,  // Start with markers visible
+            show_subcell_markers: false,  // Start with markers hidden (toggle with B key)
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
         }
