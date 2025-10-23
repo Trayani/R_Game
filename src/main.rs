@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager};
+use rustgame3::{Action, ActionLog, Actor, Grid, MovementEvent, raycast, SubCellReservationManager, spread_subcell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -1114,13 +1114,19 @@ async fn main() {
                 });
 
                 if state.subcell_movement_enabled {
-                    // Sub-cell movement mode - all actors go to same destination (no spiral)
-                    let dest_pos = Position { x: target_grid_x, y: target_grid_y };
-                    for actor in &mut state.actors {
-                        actor.set_subcell_destination(dest_pos);
+                    // Sub-cell movement mode - spread actors across unique sub-cells
+                    let destinations = spread_subcell_destinations(
+                        target_grid_x,
+                        target_grid_y,
+                        state.actors.len(),
+                        state.cell_width,
+                        state.cell_height,
+                    );
+                    for (actor, dest_subcell) in state.actors.iter_mut().zip(destinations.iter()) {
+                        actor.set_specific_subcell_destination(*dest_subcell);
                     }
-                    println!("Sub-cell destination set: ({}, {}) for {} actors",
-                        target_grid_x, target_grid_y, state.actors.len());
+                    println!("Sub-cell destinations set: ({}, {}) for {} actors (spread across {} sub-cells)",
+                        target_grid_x, target_grid_y, state.actors.len(), destinations.len());
                 } else {
                     // Normal pathfinding mode
                     // First pass: calculate unique destinations for each actor

@@ -14,4 +14,4 @@ pub use actor::{Actor, CellPosition, MovementEvent};
 pub use compact_log::{CompactLogWriter, CompactLogStats};
 pub use grid::Grid;
 pub use raycast::raycast;
-pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors};
+pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, spread_subcell_destinations};

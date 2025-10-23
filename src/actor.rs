@@ -56,8 +56,10 @@ pub struct Actor {
     pub current_subcell: Option<SubCellCoord>,
     /// Reserved sub-cell that actor is moving toward
     pub reserved_subcell: Option<SubCellCoord>,
-    /// Final destination for sub-cell movement
+    /// Final destination for sub-cell movement (cell-level)
     pub subcell_destination: Option<Position>,
+    /// Target sub-cell within destination (if specified for precise positioning)
+    pub target_subcell: Option<SubCellCoord>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -95,6 +97,7 @@ impl Actor {
             current_subcell,
             reserved_subcell: None,
             subcell_destination: None,
+            target_subcell: None,
         }
     }
 
@@ -461,9 +464,30 @@ impl Actor {
         (left, top, right, bottom)
     }
 
-    /// Set sub-cell destination for movement
+    /// Set sub-cell destination for movement (cell-level)
     pub fn set_subcell_destination(&mut self, dest: Position) {
         self.subcell_destination = Some(dest);
+        // Initialize current sub-cell if not set
+        if self.current_subcell.is_none() {
+            self.current_subcell = Some(SubCellCoord::from_screen_pos(
+                self.fpos_x,
+                self.fpos_y,
+                self.cell_width,
+                self.cell_height,
+            ));
+        }
+    }
+
+    /// Set specific sub-cell destination for movement
+    /// This allows precise positioning within a cell (useful for spreading actors)
+    pub fn set_specific_subcell_destination(&mut self, dest_subcell: SubCellCoord) {
+        // Store both cell-level and sub-cell-level destinations
+        self.subcell_destination = Some(Position {
+            x: dest_subcell.cell_x,
+            y: dest_subcell.cell_y,
+        });
+        self.target_subcell = Some(dest_subcell);
+
         // Initialize current sub-cell if not set
         if self.current_subcell.is_none() {
             self.current_subcell = Some(SubCellCoord::from_screen_pos(
@@ -511,8 +535,15 @@ impl Actor {
         };
 
         // Get destination screen position
-        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
-        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+        // If target_subcell is set, use its center; otherwise use cell center
+        let (dest_screen_x, dest_screen_y) = if let Some(target_sc) = self.target_subcell {
+            target_sc.to_screen_center(self.cell_width, self.cell_height)
+        } else {
+            (
+                dest.x as f32 * self.cell_width + self.cell_width / 2.0,
+                dest.y as f32 * self.cell_height + self.cell_height / 2.0,
+            )
+        };
 
         // Check if we've reached the destination
         let dx_to_dest = dest_screen_x - self.fpos_x;

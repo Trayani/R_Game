@@ -204,6 +204,75 @@ pub fn find_best_neighbors(
     scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
 }
 
+/// Find unique sub-cell destinations for multiple actors
+/// Returns a list of sub-cell coordinates spread around the target position
+/// Uses a spiral pattern expanding from center to ensure good distribution
+pub fn spread_subcell_destinations(
+    target_cell_x: i32,
+    target_cell_y: i32,
+    num_actors: usize,
+    cell_width: f32,
+    cell_height: f32,
+) -> Vec<SubCellCoord> {
+    let mut destinations = Vec::new();
+
+    // Start with center sub-cell of target cell
+    let center_subcell = SubCellCoord::new(target_cell_x, target_cell_y, 1, 1);
+    destinations.push(center_subcell);
+
+    if num_actors <= 1 {
+        return destinations;
+    }
+
+    // Add remaining 8 sub-cells in target cell
+    for dy in 0..=2 {
+        for dx in 0..=2 {
+            if dx == 1 && dy == 1 {
+                continue; // Skip center (already added)
+            }
+            destinations.push(SubCellCoord::new(target_cell_x, target_cell_y, dx, dy));
+            if destinations.len() >= num_actors {
+                return destinations;
+            }
+        }
+    }
+
+    // If we need more, spiral outward to neighboring cells
+    // Order: N, E, S, W, NE, SE, SW, NW
+    let neighbor_offsets = [
+        (0, -1),  // N
+        (1, 0),   // E
+        (0, 1),   // S
+        (-1, 0),  // W
+        (1, -1),  // NE
+        (1, 1),   // SE
+        (-1, 1),  // SW
+        (-1, -1), // NW
+    ];
+
+    for (cell_dx, cell_dy) in neighbor_offsets.iter() {
+        let neighbor_cell_x = target_cell_x + cell_dx;
+        let neighbor_cell_y = target_cell_y + cell_dy;
+
+        // Add all 9 sub-cells of this neighbor cell
+        for sub_dy in 0..=2 {
+            for sub_dx in 0..=2 {
+                destinations.push(SubCellCoord::new(
+                    neighbor_cell_x,
+                    neighbor_cell_y,
+                    sub_dx,
+                    sub_dy,
+                ));
+                if destinations.len() >= num_actors {
+                    return destinations;
+                }
+            }
+        }
+    }
+
+    destinations
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
