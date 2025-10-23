@@ -547,8 +547,10 @@ impl Actor {
 
             // If closer to reserved than current, switch
             if dist_to_reserved <= dist_to_current {
-                // Release old current sub-cell
-                reservation_manager.release(current, self.id);
+                // Only release old current sub-cell if it's different from reserved
+                if current != reserved {
+                    reservation_manager.release(current, self.id);
+                }
                 // Update current to reserved
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
@@ -594,6 +596,15 @@ impl Actor {
         let dir_x = dx_to_dest;
         let dir_y = dy_to_dest;
 
+        // Calculate the destination sub-cell
+        let dest_subcell = SubCellCoord::from_screen_pos(dest_screen_x, dest_screen_y, self.cell_width, self.cell_height);
+
+        // Check if we're already at the destination sub-cell
+        if current == dest_subcell {
+            // We're at destination sub-cell - stop here
+            return true;
+        }
+
         // Get candidate neighbors in priority order
         let candidates = crate::subcell::find_best_neighbors(
             &current,
@@ -604,14 +615,21 @@ impl Actor {
         );
 
         // Try to reserve one of the candidates
-        for candidate in candidates {
-            if reservation_manager.try_reserve(candidate, self.id) {
-                self.reserved_subcell = Some(candidate);
+        for candidate in &candidates {
+            if reservation_manager.try_reserve(*candidate, self.id) {
+                self.reserved_subcell = Some(*candidate);
                 return false;
             }
         }
 
-        // No neighbor could be reserved - wait
+        // No neighbor could be reserved
+        // Check if the destination sub-cell is one of our blocked candidates
+        if candidates.contains(&dest_subcell) {
+            // Destination sub-cell is blocked - stop here
+            return true;
+        }
+
+        // Wait for a path to open up
         false
     }
 }
