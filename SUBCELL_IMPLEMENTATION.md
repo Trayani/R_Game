@@ -144,6 +144,45 @@ Result: Reserve both (1, 0) and (1, 1), or both (0, 1) and (1, 1)
 
 **Toggle:** Press **Q** to cycle between Square and Diagonal modes
 
+#### 4c. Early Reservation Mode
+
+When enabled, actors immediately attempt to reserve the next sub-cell after switching from reserved to current, without waiting to center on the current cell.
+
+**Normal Behavior (Early Reservation OFF):**
+1. Actor moves toward reserved sub-cell
+2. When closer to reserved than current: switch current = reserved
+3. Actor continues moving toward **center** of new current cell
+4. When within 1.0 pixel of center: attempt to reserve next cell
+5. Move toward newly reserved cell
+
+**Early Reservation Behavior (Early Reservation ON):**
+1. Actor moves toward reserved sub-cell
+2. When closer to reserved than current: switch current = reserved
+3. **Immediately attempt to reserve next cell** (skip centering)
+4. If reservation succeeds: move directly toward new reserved cell
+5. If reservation fails: continue toward center of current (fallback to normal)
+
+**Benefits:**
+- Faster, more fluid movement (no pause at cell centers)
+- Reduced overall travel time to destination
+- More responsive navigation in open areas
+
+**Trade-offs:**
+- May appear less "deliberate" or controlled
+- Actors move through cells without settling
+- Can make congestion harder to observe visually
+
+**Example:**
+```
+Normal mode:
+  Current (5,5) → Reserved (5,6) → [CENTER on (5,6)] → Reserve (5,7) → Move
+
+Early mode:
+  Current (5,5) → Reserved (5,6) → [IMMEDIATE Reserve (5,7)] → Move
+```
+
+**Toggle:** Press **E** to enable/disable early reservation (default: OFF)
+
 ### 5. Movement Algorithm
 
 Implemented in `Actor::update_subcell()`:
@@ -164,11 +203,12 @@ Implemented in `Actor::update_subcell()`:
    - When closer to reserved than current:
      - Switch: `current_subcell = reserved_subcell`
      - Release current (if different from reserved)
-     - **Release all extra reserved cells** (from square reservation)
+     - **Release all extra reserved cells** (from square/diagonal reservation)
      - Clear `reserved_subcell` and `extra_reserved_subcells`
-     - Continue to centering phase
+     - **If early reservation enabled:** Immediately attempt next reservation (skip centering)
+     - **If early reservation disabled:** Continue to centering phase
 
-3. **Centering on Current Sub-Cell**
+3. **Centering on Current Sub-Cell** (skipped if early reservation enabled and next reservation succeeds)
    - Actor has `current_subcell` only
    - Moves toward center of current sub-cell (with offset)
    - When within 1.0 pixel of center: proceed to reservation phase
@@ -238,6 +278,7 @@ Returns `Some((best, [3 additional cells]))` if square can be formed.
 | **G** | Cycle sub-cell display: None → 1×1 → 2×2 → 3×3 |
 | **T** | Cycle sub-cell offset: None → X → Y → XY |
 | **Q** | Toggle reservation mode: Square ↔ Diagonal |
+| **E** | Toggle early reservation ON/OFF |
 | **B** | Toggle sub-cell markers (visual indicators) |
 | **O** | Spawn actor at mouse position |
 | **D** | Set destination for selected actor |
@@ -272,6 +313,8 @@ Console output on toggle:
 Sub-cell markers: ON
 Reservation Mode: Square
 Reservation Mode: Diagonal
+Early Reservation: ON
+Early Reservation: OFF
 SubCell Offset: X
 ```
 
@@ -327,8 +370,9 @@ if subcell_movement_enabled {
         actor.update_subcell(
             delta_time,
             &mut reservation_manager,
-            enable_square,    // True for Square mode
-            enable_diagonal,  // True for Diagonal mode
+            enable_square,              // True for Square mode
+            enable_diagonal,            // True for Diagonal mode
+            early_reservation_enabled,  // True to skip centering
         );
     }
 } else {
@@ -597,6 +641,7 @@ As specified, the prototype **ignores blocked cells**. Actors will navigate thro
 - Grid size: **2×2** (press G to cycle to 2×2)
 - Offset: **None** initially, experiment with **X**, **Y**, **XY**
 - Reservation mode: **Square** (default), try **Diagonal** for tighter navigation
+- Early reservation: **OFF** (default), try **ON** for faster movement
 - Markers: **ON** for debugging, **OFF** for cleaner visuals
 
 **Why 2×2?**
@@ -622,8 +667,9 @@ As specified, the prototype **ignores blocked cells**. Actors will navigate thro
 2. **Multiple Actors**: First-come-first-served reservation
 3. **Square Reservation**: Visual confirmation of 4-cell blocks (1 yellow + 3 black)
 4. **Diagonal Reservation**: Visual confirmation of diagonal + anchor (1 yellow + 1 black)
-5. **Offset Modes**: Different grid alignments produce different behavior
-6. **Mode Switching**: Clean transitions between Square and Diagonal modes (Q key)
+5. **Early Reservation**: Observe faster, more fluid movement (no centering pauses)
+6. **Offset Modes**: Different grid alignments produce different behavior
+7. **Mode Switching**: Clean transitions between Square and Diagonal modes (Q key), early reservation (E key)
 
 ## Performance Characteristics
 
@@ -730,6 +776,7 @@ The sub-cell movement system provides fine-grained actor control through a reser
 - **Dual Reservation Strategies**:
   - **Square Mode**: Reserve 2×2 blocks for smoother, more spacious movement
   - **Diagonal Mode**: Reserve diagonal + anchor for tighter, more conservative navigation
+- **Early Reservation**: Optional mode for faster, more fluid movement (skip centering)
 - **Atomic Operations**: All-or-nothing reservations prevent deadlocks
 - **Single-Cell at Rest**: Actors free up space when reaching destinations
 

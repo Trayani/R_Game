@@ -14,10 +14,6 @@
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/actor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/actor.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/save_state.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/save_state.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/subcell.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/subcell.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -545,6 +545,101 @@ impl Actor {
         }
     }
 
+    /// Try to reserve next sub-cell toward destination
+    /// Returns true if reservation succeeded, false if all candidates blocked
+    fn try_reserve_next_subcell(
+        &mut self,
+        current: &SubCellCoord,
+        dir_x: f32,
+        dir_y: f32,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_square_reservation: bool,
+        enable_diagonal_constraint: bool,
+    ) -> bool {
+        // Calculate the destination sub-cell
+        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+            dest_screen_x,
+            dest_screen_y,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        // Check if we're already at the destination sub-cell
+        if *current == dest_subcell {
+            return false; // Already at destination
+        }
+
+        // STEP 1: Try to reserve a 2x2 square in the primary direction (if enabled)
+        if enable_square_reservation {
+            if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
+                current,
+                dir_x,
+                dir_y,
+                self.cell_width,
+                self.cell_height,
+            ) {
+                // Try to reserve all four cells atomically
+                let mut all_cells = vec![best];
+                all_cells.extend_from_slice(&additional_cells);
+
+                if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
+                    // Successfully reserved square - move to best cell
+                    self.reserved_subcell = Some(best);
+                    // Track the additional 3 cells
+                    self.extra_reserved_subcells = additional_cells.to_vec();
+                    return true;
+                }
+            }
+        }
+
+        // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
+        // Get candidate neighbors in priority order
+        let candidates = crate::subcell::find_best_neighbors(
+            current,
+            dir_x,
+            dir_y,
+            self.cell_width,
+            self.cell_height,
+        );
+
+        // Try to reserve one of the candidates
+        for candidate in &candidates {
+            // Check if this is a diagonal move
+            let is_diagonal = Self::is_diagonal_move(current, candidate);
+
+            if enable_diagonal_constraint && is_diagonal {
+                // Diagonal mode: must also reserve H or V anchor
+                // Try to find and reserve an anchor cell (horizontal or vertical from current)
+                if let Some(anchor) = Self::find_anchor_cell(current, candidate) {
+                    // Try to reserve both anchor and diagonal atomically
+                    if reservation_manager.try_reserve_multiple(&[anchor, *candidate], self.id) {
+                        self.reserved_subcell = Some(*candidate);
+                        // Track the anchor as extra reservation
+                        self.extra_reserved_subcells = vec![anchor];
+                        return true;
+                    }
+                }
+                // If we can't reserve with anchor, skip this diagonal candidate
+                continue;
+            } else {
+                // Non-diagonal or diagonal constraint disabled: single reservation
+                if reservation_manager.try_reserve(*candidate, self.id) {
+                    self.reserved_subcell = Some(*candidate);
+                    // Clear extra reserved cells (single-cell only)
+                    self.extra_reserved_subcells.clear();
+                    return true;
+                }
+            }
+        }
+
+        // No neighbor could be reserved
+        false
+    }
 
     /// Update sub-cell movement
     /// Returns true if destination reached, false otherwise
@@ -552,7 +647,7 @@ impl Actor {
     /// This implements the sub-cell movement algorithm:
     /// 1. Move toward reserved sub-cell
     /// 2. When closer to reserved than current, switch current to reserved
-    /// 3. When centered on current, try to reserve next sub-cell toward destination
+    /// 3. When centered on current (or immediately if early_reservation), try to reserve next sub-cell toward destination
     /// 4. Use fallback neighbors if preferred sub-cell is occupied
     ///
     /// # Parameters
@@ -560,12 +655,14 @@ impl Actor {
     /// - `reservation_manager`: Manager for sub-cell reservations
     /// - `enable_square_reservation`: If true, try to reserve 2x2 square
     /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
+    /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     pub fn update_subcell(
         &mut self,
         delta_time: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
+        enable_early_reservation: bool,
     ) -> bool {
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -682,8 +779,42 @@ impl Actor {
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
 
-                // No snapping - let actor position flow smoothly
-                // Don't recurse - process next sub-cell reservation on next frame
+                // If early reservation enabled, immediately try to reserve next cell
+                // This allows actor to continue moving without centering first
+                if enable_early_reservation {
+                    // Fall through to reservation logic below (don't return yet)
+                    // Update current reference for reservation attempt
+                    let current = reserved;
+
+                    // Check if we're already at destination sub-cell
+                    let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_grid_size,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    if current == dest_subcell {
+                        return true;
+                    }
+
+                    // Attempt reservation (code duplicated from centering section below)
+                    // This is intentional to allow immediate reservation without centering
+                    self.try_reserve_next_subcell(
+                        &current,
+                        dx_to_dest,
+                        dy_to_dest,
+                        dest_screen_x,
+                        dest_screen_y,
+                        reservation_manager,
+                        enable_square_reservation,
+                        enable_diagonal_constraint,
+                    );
+                }
+
                 return false;
             }
 
@@ -724,94 +855,19 @@ impl Actor {
         let dir_x = dx_to_dest;
         let dir_y = dy_to_dest;
 
-        // Calculate the destination sub-cell
-        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
-            dest_screen_x,
-            dest_screen_y,
-            self.cell_width,
-            self.cell_height,
-            self.subcell_grid_size,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
-
-        // Check if we're already at the destination sub-cell
-        if current == dest_subcell {
-            // We're at destination sub-cell - stop here
-            return true;
-        }
-
-        // STEP 1: Try to reserve a 2x2 square in the primary direction (if enabled)
-        if enable_square_reservation {
-            if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
-                &current,
-                dir_x,
-                dir_y,
-                self.cell_width,
-                self.cell_height,
-            ) {
-                // Try to reserve all four cells atomically
-                let mut all_cells = vec![best];
-                all_cells.extend_from_slice(&additional_cells);
-
-                if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
-                    // Successfully reserved square - move to best cell
-                    self.reserved_subcell = Some(best);
-                    // Track the additional 3 cells
-                    self.extra_reserved_subcells = additional_cells.to_vec();
-                    return false;
-                }
-            }
-        }
-
-        // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
-        // Get candidate neighbors in priority order
-        let candidates = crate::subcell::find_best_neighbors(
+        // Try to reserve next sub-cell using helper method
+        self.try_reserve_next_subcell(
             &current,
             dir_x,
             dir_y,
-            self.cell_width,
-            self.cell_height,
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            enable_square_reservation,
+            enable_diagonal_constraint,
         );
 
-        // Try to reserve one of the candidates
-        for candidate in &candidates {
-            // Check if this is a diagonal move
-            let is_diagonal = Self::is_diagonal_move(&current, candidate);
-
-            if enable_diagonal_constraint && is_diagonal {
-                // Diagonal mode: must also reserve H or V anchor
-                // Try to find and reserve an anchor cell (horizontal or vertical from current)
-                if let Some(anchor) = Self::find_anchor_cell(&current, candidate) {
-                    // Try to reserve both anchor and diagonal atomically
-                    if reservation_manager.try_reserve_multiple(&[anchor, *candidate], self.id) {
-                        self.reserved_subcell = Some(*candidate);
-                        // Track the anchor as extra reservation
-                        self.extra_reserved_subcells = vec![anchor];
-                        return false;
-                    }
-                }
-                // If we can't reserve with anchor, skip this diagonal candidate
-                continue;
-            } else {
-                // Non-diagonal or diagonal constraint disabled: single reservation
-                if reservation_manager.try_reserve(*candidate, self.id) {
-                    self.reserved_subcell = Some(*candidate);
-                    // Clear extra reserved cells (single-cell only)
-                    self.extra_reserved_subcells.clear();
-                    return false;
-                }
-            }
-        }
-
-        // No neighbor could be reserved
-        // Check if the destination sub-cell is one of our blocked candidates
-        if candidates.contains(&dest_subcell) {
-            // Destination sub-cell is blocked - stop here
-            return true;
-        }
-
-        // Wait for a path to open up
+        // Wait for a path to open up or continue moving
         false
     }
 }
