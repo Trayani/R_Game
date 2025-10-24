@@ -35,6 +35,7 @@ cargo test
 - **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
 - **S key**: Toggle sub-cell movement mode
 - **Q key**: Cycle sub-cell reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Basic3 → Basic3AntiCross → Square)
+- **X key**: Toggle Basic3 fallback behavior (wait when blocked vs. allow backward moves when blocked)
 - **Esc key**: Close window
 
 ### Grid Format for Copy/Paste
@@ -113,26 +114,39 @@ Result: Actors cross through each other's paths
 **Key Advantage Over Diagonal Mode**: AntiCross does NOT reserve extra horizontal/vertical cells, so those paths remain available for other actors. It only blocks when an actual crossing pattern is detected.
 
 ### Basic3 Mode ⭐ NEW
-Limits candidate directions to exactly 3 neighbors (best-aligned + 2 alternatives at ±45°).
+Limits candidate directions to exactly 3 neighbors AND enforces monotonic distance decrease.
 
-**The Problem**: Default pathfinding considers 5 candidate neighbors (best + 4 alternatives), which can lead to:
-- Less predictable pathfinding behavior
-- Actors trying many alternative directions when the direct path is blocked
-- More complex collision scenarios with many options
+**The Primary Feature**: Actors in Basic3 mode **never increase their Euclidean distance to destination**. This ensures actors always make progress toward their goal.
 
-**The Solution**: Restrict candidate selection to only 3 neighbors:
-1. **Best neighbor**: The sub-cell most aligned with the destination direction
-2. **Alternative 1**: Neighbor rotated +45° from best direction
-3. **Alternative 2**: Neighbor rotated -45° from best direction
+**The Problems Solved**:
+1. Default pathfinding can allow moves that increase distance in X or Y coordinates
+2. Angular alignment (dot product) doesn't guarantee coordinate-wise progress
+3. Actors may take circuitous routes when direct paths are available
 
-**Benefits**:
-- More deterministic pathfinding (fewer choices = more predictable behavior)
-- Actors make cleaner turning decisions (±45° only)
-- Reduces collision checking overhead (fewer candidates to evaluate)
+**The Solution**:
+1. Restrict candidate selection to only 3 neighbors (best + ±45° alternatives)
+2. **Filter candidates to only those that decrease Euclidean distance to destination**
+3. Use moderate strictness: small coordinate increases allowed IF overall distance decreases
 
-**Example**: Actor moving northeast (direction ~45°):
-- **Default mode**: Considers N, NE, E, SE, NW (5 candidates)
-- **Basic3 mode**: Considers only NE, N, E (3 candidates - best + ±45°)
+**Monotonic Distance Guarantee**:
+```
+For any move from position P to candidate C:
+  distance(C, destination) ≤ distance(P, destination)
+```
+
+This allows navigating around small obstacles while preventing backtracking.
+
+**Example**: Actor at (0, 0) moving to (10, 10):
+- **Allowed**: Move to (1, 1) - distance decreases from 14.14 to 12.73 ✓
+- **Allowed**: Move to (2, 0) - distance decreases from 14.14 to 14.00 ✓ (slight progress)
+- **Blocked**: Move to (1, -1) - distance increases from 14.14 to 15.56 ❌
+
+**X Key Toggle - Blocked Behavior**:
+When all candidates would increase distance (actor is blocked):
+- **X key OFF (default)**: Actor waits in place until path opens
+- **X key ON**: Actor falls back to best candidate anyway (allows temporary backward movement)
+
+Press **X** to toggle this behavior. Default is OFF (wait when blocked).
 
 ### Basic3AntiCross Mode
 Combines Basic3's 3-candidate limitation with AntiCross's counter-diagonal crossing prevention.

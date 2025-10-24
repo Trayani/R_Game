@@ -162,6 +162,7 @@ struct VisState {
     reservation_mode: ReservationMode,  // Square or Diagonal reservation strategy
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
     filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
+    basic3_fallback_enabled: bool,  // If true, Basic3 modes fall back to best move when all filtered
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
@@ -239,6 +240,7 @@ impl VisState {
             reservation_mode: ReservationMode::Square,  // Square by default
             early_reservation_enabled: false,  // Disabled by default
             filter_backward_moves: true,  // Enabled by default
+            basic3_fallback_enabled: false,  // Disabled by default (wait when blocked)
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
             tracking_mode: TrackingMode::Disabled,  // Disabled by default
@@ -1391,6 +1393,12 @@ async fn main() {
             println!("Filter Backward Moves: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
         }
 
+        // Toggle Basic3 fallback on X key
+        if is_key_pressed(KeyCode::X) {
+            state.basic3_fallback_enabled = !state.basic3_fallback_enabled;
+            println!("Basic3 Fallback: {}", if state.basic3_fallback_enabled { "ON (allow backward when blocked)" } else { "OFF (wait when blocked)" });
+        }
+
         // Toggle sub-cell offset on T key (cycle through None, X, Y, XY)
         if is_key_pressed(KeyCode::T) {
             state.subcell_offset = state.subcell_offset.next();
@@ -1749,6 +1757,7 @@ async fn main() {
                     enable_basic3_anti_cross,
                     state.early_reservation_enabled,
                     state.filter_backward_moves,
+                    state.basic3_fallback_enabled,
                     track_movement,
                 );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode

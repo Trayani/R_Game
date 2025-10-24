@@ -507,6 +507,38 @@ pub fn find_best_neighbors(
     scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
 }
 
+/// Filter candidates to only those that decrease Euclidean distance to destination
+/// This ensures monotonic approach: overall distance never increases
+/// Allows small coordinate increases if total distance still decreases
+fn filter_monotonic_approach(
+    current: &SubCellCoord,
+    candidates: Vec<SubCellCoord>,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+) -> Vec<SubCellCoord> {
+    // Calculate current distance to destination
+    let (curr_x, curr_y) = current.to_screen_center(cell_width, cell_height);
+    let curr_dx = dest_screen_x - curr_x;
+    let curr_dy = dest_screen_y - curr_y;
+    let current_distance = (curr_dx * curr_dx + curr_dy * curr_dy).sqrt();
+
+    // Filter candidates that would increase distance
+    candidates
+        .into_iter()
+        .filter(|candidate| {
+            let (cand_x, cand_y) = candidate.to_screen_center(cell_width, cell_height);
+            let cand_dx = dest_screen_x - cand_x;
+            let cand_dy = dest_screen_y - cand_y;
+            let candidate_distance = (cand_dx * cand_dx + cand_dy * cand_dy).sqrt();
+
+            // Only keep candidates that decrease or maintain distance
+            candidate_distance <= current_distance
+        })
+        .collect()
+}
+
 /// Find the best 3 neighbors (strictly limited to ±45° alternatives)
 /// Returns exactly 3 candidates (or fewer if filtered):
 /// 1. Best aligned neighbor
@@ -515,6 +547,8 @@ pub fn find_best_neighbors(
 ///
 /// This provides more deterministic pathfinding with fewer alternatives.
 /// If filter_backward is true, candidates with negative scores are filtered out.
+/// If use_monotonic_filter is true, ensures Euclidean distance to destination never increases.
+/// If allow_fallback is true and all candidates are filtered, returns best candidate anyway.
 pub fn find_best_3_neighbors(
     current: &SubCellCoord,
     target_dir_x: f32,
@@ -522,6 +556,10 @@ pub fn find_best_3_neighbors(
     cell_width: f32,
     cell_height: f32,
     filter_backward: bool,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    use_monotonic_filter: bool,
+    allow_fallback: bool,
 ) -> Vec<SubCellCoord> {
     let neighbors = current.get_neighbors();
 
@@ -539,8 +577,22 @@ pub fn find_best_3_neighbors(
         scored_neighbors.retain(|(_, score)| *score >= 0.0);
     }
 
-    // Return only top 3 candidates (or fewer if filtered)
-    scored_neighbors.iter().take(3).map(|(coord, _)| *coord).collect()
+    // Take only top 3 candidates
+    let candidates: Vec<SubCellCoord> = scored_neighbors.iter().take(3).map(|(coord, _)| *coord).collect();
+
+    // Apply monotonic distance filter if requested (for Basic3 modes)
+    if use_monotonic_filter {
+        let filtered = filter_monotonic_approach(current, candidates.clone(), dest_screen_x, dest_screen_y, cell_width, cell_height);
+
+        // If all filtered out and fallback allowed, return best candidate
+        if filtered.is_empty() && allow_fallback && !candidates.is_empty() {
+            vec![candidates[0]]
+        } else {
+            filtered
+        }
+    } else {
+        candidates
+    }
 }
 
 /// Spread actors across different CELLS (not sub-cells)

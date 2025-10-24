@@ -565,6 +565,7 @@ impl Actor {
         enable_basic3: bool,
         enable_basic3_anti_cross: bool,
         filter_backward: bool,
+        basic3_fallback_enabled: bool,
         track_movement: bool,
     ) -> bool {
         // Calculate the destination sub-cell
@@ -613,7 +614,7 @@ impl Actor {
         // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
         // Get candidate neighbors in priority order
         let candidates = if enable_basic3 || enable_basic3_anti_cross {
-            // Use limited 3-candidate search
+            // Use limited 3-candidate search with monotonic distance filtering
             crate::subcell::find_best_3_neighbors(
                 current,
                 dir_x,
@@ -621,6 +622,10 @@ impl Actor {
                 self.cell_width,
                 self.cell_height,
                 filter_backward,
+                dest_screen_x,
+                dest_screen_y,
+                true,  // Always use monotonic filter for Basic3 modes
+                basic3_fallback_enabled,  // Allow fallback based on toggle
             )
         } else {
             // Use standard 5-candidate search
@@ -716,6 +721,7 @@ impl Actor {
     /// - `enable_basic3_anti_cross`: If true, combine Basic3 with anti-cross checking
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     /// - `filter_backward`: If true, filter out candidates that move away from destination
+    /// - `basic3_fallback_enabled`: If true, Basic3 modes fall back to best move when all filtered
     /// - `track_movement`: If true, record position at key events (reserve, release, reach center)
     pub fn update_subcell(
         &mut self,
@@ -729,6 +735,7 @@ impl Actor {
         enable_basic3_anti_cross: bool,
         enable_early_reservation: bool,
         filter_backward: bool,
+        basic3_fallback_enabled: bool,
         track_movement: bool,
     ) -> bool {
         // Check if we have a destination
@@ -894,6 +901,7 @@ impl Actor {
                         enable_basic3,
                         enable_basic3_anti_cross,
                         filter_backward,
+                        basic3_fallback_enabled,
                         track_movement,
                     );
                 }
@@ -953,6 +961,7 @@ impl Actor {
             enable_basic3,
             enable_basic3_anti_cross,
             filter_backward,
+            basic3_fallback_enabled,
             track_movement,
         );
 
