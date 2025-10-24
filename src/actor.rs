@@ -558,6 +558,7 @@ impl Actor {
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
+        filter_backward: bool,
     ) -> bool {
         // Calculate the destination sub-cell
         let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
@@ -606,6 +607,7 @@ impl Actor {
             dir_y,
             self.cell_width,
             self.cell_height,
+            filter_backward,
         );
 
         // Try to reserve one of the candidates
@@ -663,6 +665,7 @@ impl Actor {
     /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
     /// - `enable_no_diagonal`: If true, skip all diagonal moves entirely
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
+    /// - `filter_backward`: If true, filter out candidates that move away from destination
     pub fn update_subcell(
         &mut self,
         delta_time: f32,
@@ -671,6 +674,7 @@ impl Actor {
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
         enable_early_reservation: bool,
+        filter_backward: bool,
     ) -> bool {
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -821,6 +825,7 @@ impl Actor {
                         enable_square_reservation,
                         enable_diagonal_constraint,
                         enable_no_diagonal,
+                        filter_backward,
                     );
                 }
 
@@ -875,6 +880,7 @@ impl Actor {
             enable_square_reservation,
             enable_diagonal_constraint,
             enable_no_diagonal,
+            filter_backward,
         );
 
         // Wait for a path to open up or continue moving

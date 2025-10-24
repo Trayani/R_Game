@@ -130,6 +130,7 @@ struct VisState {
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
     reservation_mode: ReservationMode,  // Square or Diagonal reservation strategy
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
+    filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
@@ -198,6 +199,7 @@ impl VisState {
             show_subcell_markers: config.subcell.show_markers,
             reservation_mode: ReservationMode::Square,  // Square by default
             early_reservation_enabled: false,  // Disabled by default
+            filter_backward_moves: true,  // Enabled by default
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
         }
@@ -1186,7 +1188,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal) | E: toggle early reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal) | E: toggle early reservation | F: toggle backward filter | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1302,6 +1304,12 @@ async fn main() {
         if is_key_pressed(KeyCode::E) {
             state.early_reservation_enabled = !state.early_reservation_enabled;
             println!("Early Reservation: {}", if state.early_reservation_enabled { "ON" } else { "OFF" });
+        }
+
+        // Toggle backward move filter on F key
+        if is_key_pressed(KeyCode::F) {
+            state.filter_backward_moves = !state.filter_backward_moves;
+            println!("Filter Backward Moves: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
         }
 
         // Toggle sub-cell offset on T key (cycle through None, X, Y, XY)
@@ -1620,6 +1628,7 @@ async fn main() {
                     enable_diagonal,
                     enable_no_diagonal,
                     state.early_reservation_enabled,
+                    state.filter_backward_moves,
                 );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
             }

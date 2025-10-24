@@ -413,12 +413,16 @@ fn apply_offset(base: SubCellCoord, cell_dx: i32, cell_dy: i32, sub_dx: i32, sub
 /// 3. Counter-clockwise neighbor
 /// 4. 2x clockwise
 /// 5. 2x counter-clockwise
+///
+/// If filter_backward is true, candidates with negative scores (moving away from destination)
+/// are filtered out, ensuring actors never increase their distance to the destination.
 pub fn find_best_neighbors(
     current: &SubCellCoord,
     target_dir_x: f32,
     target_dir_y: f32,
     cell_width: f32,
     cell_height: f32,
+    filter_backward: bool,
 ) -> Vec<SubCellCoord> {
     let neighbors = current.get_neighbors();
 
@@ -431,7 +435,12 @@ pub fn find_best_neighbors(
     // Sort by score (highest first)
     scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-    // Return top 5 candidates
+    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
+    if filter_backward {
+        scored_neighbors.retain(|(_, score)| *score >= 0.0);
+    }
+
+    // Return top 5 candidates (or fewer if filtered)
     scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
 }
 

@@ -257,7 +257,7 @@ Implemented in `Actor::update_subcell()`:
 
 ### 6. Candidate Selection
 
-The `find_best_neighbors()` function returns 5 candidates in priority order:
+The `find_best_neighbors()` function returns up to 5 candidates in priority order:
 
 ```
 Given current direction → target:
@@ -270,6 +270,45 @@ Given current direction → target:
 ```
 
 This provides intelligent fallback when the preferred sub-cell is occupied.
+
+#### 6a. Backward Move Filtering (Default: ON)
+
+The `filter_backward` parameter ensures actors never move away from their destination. When enabled:
+
+**Principle:** "Any movement must decrease the distance to the destination. Otherwise don't move at all."
+
+**Implementation:**
+- Candidates with negative alignment scores (dot product < 0.0) are filtered out
+- Dot product < 0.0 means the candidate direction is more than 90° away from destination
+- Result: Actors may receive fewer than 5 candidates if many are backward-moving
+
+**Example:**
+```
+Destination at 70°, normalized to nearest neighbor at 90°
+
+Without filtering:
+  Candidates: [90°, 45°, 135°, 0°, 180°]
+  Scores:     [1.0, 0.71, 0.71, 0.34, -0.34]
+  Result: All 5 returned, including 180° (moves away)
+
+With filtering (default):
+  Candidates: [90°, 45°, 135°, 0°]
+  Scores:     [1.0, 0.71, 0.71, 0.34]
+  Result: Only 4 returned, 180° filtered (score < 0.0)
+```
+
+**Benefits:**
+- Prevents actors from ever increasing distance to destination
+- Actors wait rather than making backward moves when all forward paths blocked
+- Ensures monotonic progress toward destination (no detours)
+- Especially important with greedy best-first navigation
+
+**Trade-offs:**
+- Actors may wait longer in congested areas (no backward escape routes)
+- Can cause temporary "traffic jams" when forward movement is blocked
+- Disabling filter allows more "wiggle room" for congestion resolution
+
+**Toggle:** Press **F** to enable/disable (default: ON)
 
 ### 7. Square Formation
 
@@ -306,6 +345,7 @@ Returns `Some((best, [3 additional cells]))` if square can be formed.
 | **T** | Cycle sub-cell offset: None → X → Y → XY |
 | **Q** | Cycle reservation mode: Square → Diagonal → NoDiagonal |
 | **E** | Toggle early reservation ON/OFF |
+| **F** | Toggle backward move filter ON/OFF |
 | **B** | Toggle sub-cell markers (visual indicators) |
 | **O** | Spawn actor at mouse position |
 | **D** | Set destination for selected actor |
@@ -344,6 +384,8 @@ Reservation Mode: Diagonal
 Reservation Mode: NoDiagonal
 Early Reservation: ON
 Early Reservation: OFF
+Filter Backward Moves: ON
+Filter Backward Moves: OFF
 SubCell Offset: X
 ```
 
@@ -673,6 +715,7 @@ As specified, the prototype **ignores blocked cells**. Actors will navigate thro
 - Offset: **None** initially, experiment with **X**, **Y**, **XY**
 - Reservation mode: **Square** (default), try **Diagonal** for tighter navigation, **NoDiagonal** for cardinal-only movement
 - Early reservation: **OFF** (default), try **ON** for faster movement
+- Backward filter: **ON** (default), ensures actors never move away from destination
 - Markers: **ON** for debugging, **OFF** for cleaner visuals
 
 **Why 2×2?**
@@ -810,6 +853,7 @@ The sub-cell movement system provides fine-grained actor control through a reser
   - **Diagonal Mode**: Reserve diagonal + anchor for tighter, more conservative navigation
   - **NoDiagonal Mode**: Horizontal/vertical moves only, no diagonal shortcuts
 - **Early Reservation**: Optional mode for faster, more fluid movement (skip centering)
+- **Backward Move Filtering**: Ensures actors never increase distance to destination (default: ON)
 - **Atomic Operations**: All-or-nothing reservations prevent deadlocks
 - **Single-Cell at Rest**: Actors free up space when reaching destinations
 
