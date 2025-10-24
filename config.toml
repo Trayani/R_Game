@@ -58,7 +58,7 @@ show_markers = false
 # Default actor speed in pixels per second
 # Higher = faster movement
 # Default: 120.0
-default_speed = 200.0
+default_speed = 50.0
 
 # Actor size as percentage of cell size
 # Value between 0.0 and 1.0

@@ -1319,10 +1319,10 @@ async fn main() {
                     // Restore grid
                     state.grid = save_state.restore_grid();
 
-                    // Restore actors (without movement state)
+                    // Restore actors with configured speed (not saved speed)
                     let subcell_grid_size = state.subcell_reservation_manager.grid_size();
                     let (offset_x, offset_y) = state.subcell_offset.get_offsets();
-                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
+                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y, state.actor_speed);
 
                     // Update next_actor_id to avoid ID conflicts
                     state.next_actor_id = state.actors.iter().map(|a| a.id).max().unwrap_or(0) + 1;

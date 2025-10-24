@@ -99,7 +99,7 @@ impl SaveState {
     }
 
     /// Restore actors from save state
-    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32) -> Vec<Actor> {
+    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, configured_speed: f32) -> Vec<Actor> {
         self.actors
             .iter()
             .map(|data| Actor::new(
@@ -107,7 +107,7 @@ impl SaveState {
                 data.fpos_x,
                 data.fpos_y,
                 data.size,
-                data.speed,
+                configured_speed,  // Use configured speed instead of saved speed
                 data.collision_radius,
                 cell_width,
                 cell_height,
