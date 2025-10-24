@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Sub-cell coordinate - identifies a specific sub-cell within a grid cell (2x2 or 3x3)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -161,6 +161,28 @@ impl SubCellReservationManager {
         true
     }
 
+    /// Try to reserve multiple sub-cells atomically for an actor
+    /// Returns true if ALL cells could be reserved, false otherwise
+    /// If reservation fails, no cells are reserved (atomic operation)
+    pub fn try_reserve_multiple(&mut self, subcells: &[SubCellCoord], actor_id: usize) -> bool {
+        // First check if all cells are available or already reserved by this actor
+        for subcell in subcells {
+            if let Some(&reserved_by) = self.reservations.get(subcell) {
+                if reserved_by != actor_id {
+                    // Cell is reserved by another actor - fail
+                    return false;
+                }
+            }
+        }
+
+        // All cells are available - reserve them all
+        for subcell in subcells {
+            self.reservations.insert(*subcell, actor_id);
+        }
+
+        true
+    }
+
     /// Release a sub-cell reservation
     pub fn release(&mut self, subcell: SubCellCoord, actor_id: usize) {
         if let Some(&reserved_by) = self.reservations.get(&subcell) {
@@ -190,6 +212,160 @@ impl SubCellReservationManager {
     pub fn reservation_count(&self) -> usize {
         self.reservations.len()
     }
+}
+
+/// Find four sub-cells in a square configuration toward the primary direction
+/// Returns Some((best_neighbor, [3 additional cells])) if a valid square can be formed,
+/// or None if the primary direction is unclear or no valid square exists
+///
+/// The square is formed by:
+/// 1. Finding the best aligned neighbor (the primary move)
+/// 2. Creating a 2x2 block by extending perpendicular to the movement direction
+///
+/// Example for horizontal movement (moving right):
+/// ```text
+/// C = current, B = best
+/// C B
+/// X Y
+/// ```
+/// The square includes B (best), and cells X, Y that form a 2x2 block
+pub fn find_square_reservation(
+    current: &SubCellCoord,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+) -> Option<(SubCellCoord, [SubCellCoord; 3])> {
+    // Determine primary direction (which component is larger)
+    let abs_x = target_dir_x.abs();
+    let abs_y = target_dir_y.abs();
+
+    // Need significant directional movement
+    if abs_x < 0.1 && abs_y < 0.1 {
+        return None;
+    }
+
+    let neighbors = current.get_neighbors();
+
+    // Calculate alignment scores for all neighbors
+    let mut scored_neighbors: Vec<(SubCellCoord, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height)))
+        .collect();
+
+    // Sort by score (highest first)
+    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // Get the best aligned neighbor
+    let best = scored_neighbors[0].0;
+
+    // Determine perpendicular direction to form a 2x2 square
+    // The square extends in the perpendicular direction from both current and best
+    let (perp_cell_dx, perp_cell_dy, perp_sub_dx, perp_sub_dy) = if abs_x > abs_y {
+        // Primary direction is horizontal
+        // Square extends perpendicular (vertically)
+        let sign = if target_dir_y >= 0.0 { 1 } else { -1 };
+        (0, sign, 0, 0)
+    } else {
+        // Primary direction is vertical
+        // Square extends perpendicular (horizontally)
+        let sign = if target_dir_x >= 0.0 { 1 } else { -1 };
+        (sign, 0, 0, 0)
+    };
+
+    // Build the square:
+    // Cell 0 (best): already have it
+    // Cell 1: perpendicular from current
+    // Cell 2: perpendicular from best
+    // This forms: [current, cell1] in one row, [best, cell2] in another row (or columns if vertical)
+    let mut square = [best; 3];
+
+    // Actually, let's think about this differently:
+    // We want a 2x2 square with best as one corner
+    // The square should extend in the direction of movement
+
+    // Let's use a simpler approach: get the best neighbor's neighbors
+    // and find those that form a square configuration
+    let best_neighbors = best.get_neighbors();
+
+    // Find neighbors of best that are also neighbors of current (these form a square)
+    let current_neighbor_set: std::collections::HashSet<_> = neighbors.iter().copied().collect();
+
+    let mut adjacent_to_both: Vec<SubCellCoord> = best_neighbors
+        .iter()
+        .filter(|n| current_neighbor_set.contains(n))
+        .copied()
+        .collect();
+
+    if adjacent_to_both.len() < 2 {
+        // Can't form a proper square
+        return None;
+    }
+
+    // Sort by alignment to perpendicular direction
+    adjacent_to_both.sort_by(|a, b| {
+        let a_score = current.alignment_score(a,
+            perp_cell_dx as f32 + perp_sub_dx as f32 * 0.5,
+            perp_cell_dy as f32 + perp_sub_dy as f32 * 0.5,
+            cell_width, cell_height);
+        let b_score = current.alignment_score(b,
+            perp_cell_dx as f32 + perp_sub_dx as f32 * 0.5,
+            perp_cell_dy as f32 + perp_sub_dy as f32 * 0.5,
+            cell_width, cell_height);
+        b_score.partial_cmp(&a_score).unwrap()
+    });
+
+    // Take the best perpendicular neighbor
+    let perp_from_current = adjacent_to_both[0];
+
+    // The fourth corner is the remaining cell
+    // It should be adjacent to both best and perp_from_current
+    let perp_from_current_neighbors = perp_from_current.get_neighbors();
+    let best_neighbor_set: std::collections::HashSet<_> = best_neighbors.iter().copied().collect();
+
+    let fourth_corner = perp_from_current_neighbors
+        .iter()
+        .find(|n| best_neighbor_set.contains(n) && **n != *current)
+        .copied();
+
+    match fourth_corner {
+        Some(corner) => {
+            square[0] = perp_from_current;
+            square[1] = corner;
+            square[2] = best;  // Redundant but clear
+            Some((best, square))
+        },
+        None => None,
+    }
+}
+
+/// Helper function to apply cell and sub-cell offsets
+fn apply_offset(base: SubCellCoord, cell_dx: i32, cell_dy: i32, sub_dx: i32, sub_dy: i32, grid_size: i32) -> SubCellCoord {
+    let max_index = grid_size - 1;
+
+    let mut new_cell_x = base.cell_x + cell_dx;
+    let mut new_cell_y = base.cell_y + cell_dy;
+    let mut new_sub_x = base.sub_x + sub_dx;
+    let mut new_sub_y = base.sub_y + sub_dy;
+
+    // Handle sub-cell boundary crossing
+    if new_sub_x < 0 {
+        new_cell_x -= 1;
+        new_sub_x = max_index;
+    } else if new_sub_x > max_index {
+        new_cell_x += 1;
+        new_sub_x = 0;
+    }
+
+    if new_sub_y < 0 {
+        new_cell_y -= 1;
+        new_sub_y = max_index;
+    } else if new_sub_y > max_index {
+        new_cell_y += 1;
+        new_sub_y = 0;
+    }
+
+    SubCellCoord::new(new_cell_x, new_cell_y, new_sub_x, new_sub_y, grid_size)
 }
 
 /// Find the best neighbor sub-cell that aligns with the target direction

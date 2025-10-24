@@ -609,6 +609,26 @@ impl Actor {
             return true;
         }
 
+        // STEP 1: Try to reserve a 2x2 square in the primary direction
+        if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
+            &current,
+            dir_x,
+            dir_y,
+            self.cell_width,
+            self.cell_height,
+        ) {
+            // Try to reserve all four cells atomically
+            let mut all_cells = vec![best];
+            all_cells.extend_from_slice(&additional_cells);
+
+            if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
+                // Successfully reserved square - move to best cell
+                self.reserved_subcell = Some(best);
+                return false;
+            }
+        }
+
+        // STEP 2: Fallback to current behavior (single cell reservation)
         // Get candidate neighbors in priority order
         let candidates = crate::subcell::find_best_neighbors(
             &current,
