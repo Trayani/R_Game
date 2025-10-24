@@ -480,6 +480,54 @@ impl Actor {
         (left, top, right, bottom)
     }
 
+    /// Check if a move from current to target is diagonal
+    fn is_diagonal_move(current: &SubCellCoord, target: &SubCellCoord) -> bool {
+        let dx = (target.cell_x - current.cell_x).abs() + (target.sub_x - current.sub_x).abs();
+        let dy = (target.cell_y - current.cell_y).abs() + (target.sub_y - current.sub_y).abs();
+
+        // Diagonal if both dx and dy are non-zero
+        dx > 0 && dy > 0
+    }
+
+    /// Find an anchor cell (horizontal or vertical from current) on the path to diagonal target
+    /// Returns the anchor that shares either row or column with current and is adjacent to target
+    fn find_anchor_cell(current: &SubCellCoord, target: &SubCellCoord) -> Option<SubCellCoord> {
+        // For a diagonal move, we have two possible anchors:
+        // 1. Horizontal anchor: same row as current, same column as target
+        // 2. Vertical anchor: same column as current, same row as target
+
+        // Try horizontal anchor (move horizontally first, then diagonally)
+        let h_anchor = SubCellCoord::new(
+            target.cell_x,
+            current.cell_y,
+            target.sub_x,
+            current.sub_y,
+            current.grid_size,
+        );
+
+        // Try vertical anchor (move vertically first, then diagonally)
+        let v_anchor = SubCellCoord::new(
+            current.cell_x,
+            target.cell_y,
+            current.sub_x,
+            target.sub_y,
+            current.grid_size,
+        );
+
+        // Prefer the anchor that's actually adjacent to current (single step away)
+        // Check if h_anchor is a neighbor of current
+        let current_neighbors = current.get_neighbors();
+        if current_neighbors.contains(&h_anchor) {
+            return Some(h_anchor);
+        }
+        if current_neighbors.contains(&v_anchor) {
+            return Some(v_anchor);
+        }
+
+        // If neither is a direct neighbor, prefer horizontal
+        Some(h_anchor)
+    }
+
     /// Set sub-cell destination for movement (cell-level)
     pub fn set_subcell_destination(&mut self, dest: Position) {
         self.subcell_destination = Some(dest);
@@ -510,12 +558,14 @@ impl Actor {
     /// # Parameters
     /// - `delta_time`: Time elapsed since last frame
     /// - `reservation_manager`: Manager for sub-cell reservations
-    /// - `enable_square_reservation`: If true, try to reserve 2x2 square; if false, only single cells
+    /// - `enable_square_reservation`: If true, try to reserve 2x2 square
+    /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
     pub fn update_subcell(
         &mut self,
         delta_time: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_square_reservation: bool,
+        enable_diagonal_constraint: bool,
     ) -> bool {
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -714,7 +764,7 @@ impl Actor {
             }
         }
 
-        // STEP 2: Fallback to current behavior (single cell reservation)
+        // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
         // Get candidate neighbors in priority order
         let candidates = crate::subcell::find_best_neighbors(
             &current,
@@ -726,11 +776,31 @@ impl Actor {
 
         // Try to reserve one of the candidates
         for candidate in &candidates {
-            if reservation_manager.try_reserve(*candidate, self.id) {
-                self.reserved_subcell = Some(*candidate);
-                // Clear extra reserved cells (we're doing single-cell now)
-                self.extra_reserved_subcells.clear();
-                return false;
+            // Check if this is a diagonal move
+            let is_diagonal = Self::is_diagonal_move(&current, candidate);
+
+            if enable_diagonal_constraint && is_diagonal {
+                // Diagonal mode: must also reserve H or V anchor
+                // Try to find and reserve an anchor cell (horizontal or vertical from current)
+                if let Some(anchor) = Self::find_anchor_cell(&current, candidate) {
+                    // Try to reserve both anchor and diagonal atomically
+                    if reservation_manager.try_reserve_multiple(&[anchor, *candidate], self.id) {
+                        self.reserved_subcell = Some(*candidate);
+                        // Track the anchor as extra reservation
+                        self.extra_reserved_subcells = vec![anchor];
+                        return false;
+                    }
+                }
+                // If we can't reserve with anchor, skip this diagonal candidate
+                continue;
+            } else {
+                // Non-diagonal or diagonal constraint disabled: single reservation
+                if reservation_manager.try_reserve(*candidate, self.id) {
+                    self.reserved_subcell = Some(*candidate);
+                    // Clear extra reserved cells (single-cell only)
+                    self.extra_reserved_subcells.clear();
+                    return false;
+                }
             }
         }
 

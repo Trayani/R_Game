@@ -86,9 +86,13 @@ pub struct SubCellReservationManager {
 - `is_reserved(subcell)`: Check reservation status
 - `clear()`: Release all reservations (used when switching modes)
 
-### 4. Square Reservation Strategy
+### 4. Reservation Strategies
 
-**NEW:** Actors can attempt to reserve a 2×2 square of sub-cells in their primary movement direction.
+The system supports two mutually exclusive reservation strategies, toggled with the **Q** key:
+
+#### 4a. Square Reservation Strategy (Default)
+
+Actors attempt to reserve a 2×2 square of sub-cells in their primary movement direction.
 
 **Algorithm:**
 1. Determine primary direction (X or Y, whichever has larger magnitude)
@@ -112,7 +116,33 @@ pub struct SubCellReservationManager {
 - When switching from reserved to current: Release extra 3 cells
 - At destination: Release all except destination sub-cell
 
-**Toggle:** Press **Q** to enable/disable square reservation (default: ON)
+#### 4b. Diagonal Reservation Strategy
+
+When enabled, diagonal moves require also reserving a horizontal or vertical "anchor" cell.
+
+**Algorithm:**
+1. For each candidate neighbor, check if it's a diagonal move (both X and Y components change)
+2. If diagonal:
+   - Find an anchor cell (horizontal or vertical neighbor of current)
+   - Try to atomically reserve BOTH anchor and diagonal cells
+   - If successful: move to diagonal, track anchor in `extra_reserved_subcells`
+   - If failed: skip this candidate, try next
+3. If non-diagonal: reserve normally (single cell)
+
+**Benefits:**
+- More conservative movement through tight spaces
+- Prevents actors from "cutting corners" too aggressively
+- Actors maintain clearer horizontal/vertical paths
+
+**Example:**
+```
+Current: (0, 0)
+Best diagonal: (1, 1)
+Anchor options: (1, 0) [horizontal] or (0, 1) [vertical]
+Result: Reserve both (1, 0) and (1, 1), or both (0, 1) and (1, 1)
+```
+
+**Toggle:** Press **Q** to cycle between Square and Diagonal modes
 
 ### 5. Movement Algorithm
 
@@ -145,14 +175,17 @@ Implemented in `Actor::update_subcell()`:
 
 4. **Reserving Next Sub-Cell**
    - Calculate direction to destination
-   - **If square reservation enabled:**
+   - **If Square reservation mode:**
      - Call `find_square_reservation()` to identify 2×2 square
      - Try `try_reserve_multiple()` for all 4 cells
      - If successful: set `reserved_subcell` and `extra_reserved_subcells`
-   - **Fallback to single-cell:**
+     - If failed: fall back to single-cell
+   - **If Diagonal reservation mode:**
      - Get 5 best candidate neighbors (best, ±1 CW, ±2 CW)
-     - Try to reserve first available candidate
-     - If successful: set `reserved_subcell`, clear `extra_reserved_subcells`
+     - For each candidate:
+       - If diagonal: find anchor, try reserve both atomically
+       - If horizontal/vertical: reserve normally
+     - If successful: set `reserved_subcell` and optionally `extra_reserved_subcells` (anchor)
    - **If all blocked:** Wait (no reservation made)
 
 ### 6. Candidate Selection
@@ -204,7 +237,7 @@ Returns `Some((best, [3 additional cells]))` if square can be formed.
 | **S** | Toggle sub-cell movement ON/OFF |
 | **G** | Cycle sub-cell display: None → 1×1 → 2×2 → 3×3 |
 | **T** | Cycle sub-cell offset: None → X → Y → XY |
-| **Q** | Toggle square reservation (2×2) ON/OFF |
+| **Q** | Toggle reservation mode: Square ↔ Diagonal |
 | **B** | Toggle sub-cell markers (visual indicators) |
 | **O** | Spawn actor at mouse position |
 | **D** | Set destination for selected actor |
@@ -216,9 +249,12 @@ When sub-cell movement is enabled and markers are shown (**B** key):
 
 - **Green circle** = Current sub-cell center
 - **Yellow circle + line** = Reserved sub-cell center (primary target)
-- **Black circles + lines** = Extra reserved sub-cells (from square reservation)
+- **Black circles + lines** = Extra reserved sub-cells (from square or diagonal reservation)
 - **Orange circle** = Final destination (cell-level)
 - **Grid lines** = Sub-cell boundaries (when display mode is not None)
+
+**Square Mode:** Yellow circle (primary) + 3 black circles (square formation)
+**Diagonal Mode:** Yellow circle (diagonal target) + 1 black circle (H/V anchor), or just yellow (H/V move)
 
 ### Status Display
 
@@ -234,7 +270,8 @@ Shows:
 Console output on toggle:
 ```
 Sub-cell markers: ON
-Square reservation (2×2): ON
+Reservation Mode: Square
+Reservation Mode: Diagonal
 SubCell Offset: X
 ```
 
@@ -252,7 +289,7 @@ pub struct Actor {
     pub subcell_offset_y: f32,
     pub current_subcell: Option<SubCellCoord>,
     pub reserved_subcell: Option<SubCellCoord>,
-    pub extra_reserved_subcells: Vec<SubCellCoord>,  // For square reservation
+    pub extra_reserved_subcells: Vec<SubCellCoord>,  // For square/diagonal reservation
     pub subcell_destination: Option<Position>,
 }
 ```
@@ -283,11 +320,15 @@ for actor in &mut actors {
 
 ```rust
 if subcell_movement_enabled {
+    let enable_square = reservation_mode == ReservationMode::Square;
+    let enable_diagonal = reservation_mode == ReservationMode::Diagonal;
+
     for actor in &mut actors {
         actor.update_subcell(
             delta_time,
             &mut reservation_manager,
-            square_reservation_enabled,  // Toggle for 2×2 square strategy
+            enable_square,    // True for Square mode
+            enable_diagonal,  // True for Diagonal mode
         );
     }
 } else {
@@ -371,7 +412,7 @@ As specified, the prototype **ignores blocked cells**. Actors will navigate thro
 **Recommended Settings (2×2 Baseline):**
 - Grid size: **2×2** (press G to cycle to 2×2)
 - Offset: **None** initially, experiment with **X**, **Y**, **XY**
-- Square reservation: **ON** (default)
+- Reservation mode: **Square** (default), try **Diagonal** for tighter navigation
 - Markers: **ON** for debugging, **OFF** for cleaner visuals
 
 **Why 2×2?**
@@ -395,18 +436,21 @@ As specified, the prototype **ignores blocked cells**. Actors will navigate thro
 
 1. **Single Actor**: Smooth sub-cell navigation to destination
 2. **Multiple Actors**: First-come-first-served reservation
-3. **Square Reservation**: Visual confirmation of 4-cell blocks
-4. **Offset Modes**: Different grid alignments produce different behavior
-5. **Mode Switching**: Clean transitions between modes
+3. **Square Reservation**: Visual confirmation of 4-cell blocks (1 yellow + 3 black)
+4. **Diagonal Reservation**: Visual confirmation of diagonal + anchor (1 yellow + 1 black)
+5. **Offset Modes**: Different grid alignments produce different behavior
+6. **Mode Switching**: Clean transitions between Square and Diagonal modes (Q key)
 
 ## Performance Characteristics
 
 - **Space:** O(R) where R = number of active reservations
-  - With square reservation: up to 4R for R actors
+  - Square mode: up to 4R for R actors (1 primary + 3 extras)
+  - Diagonal mode: up to 2R for R actors (1 target + 1 anchor)
   - Typical: 1-2 reservations per actor
 - **Time per frame:**
   - Single-cell: O(A × 8) neighbor checking
   - Square: O(A × 16) (neighbors + square formation)
+  - Diagonal: O(A × 8) neighbor checking + diagonal detection
 - **Worst case:** O(A × 5) reservation attempts per actor when heavily congested
 
 ## Comparison with Normal Movement
@@ -499,7 +543,9 @@ The sub-cell movement system provides fine-grained actor control through a reser
 
 - **Flexible Grid**: 2×2 baseline, supports 1×1 and 3×3
 - **Offset Modes**: Four alignment options for different behaviors
-- **Square Reservation**: Actors reserve 2×2 blocks for smoother movement
+- **Dual Reservation Strategies**:
+  - **Square Mode**: Reserve 2×2 blocks for smoother, more spacious movement
+  - **Diagonal Mode**: Reserve diagonal + anchor for tighter, more conservative navigation
 - **Atomic Operations**: All-or-nothing reservations prevent deadlocks
 - **Single-Cell at Rest**: Actors free up space when reaching destinations
 
