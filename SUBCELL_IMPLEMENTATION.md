@@ -363,6 +363,190 @@ for actor in &mut state.actors {
 }
 ```
 
+### Reservation and Release Lifecycle
+
+Understanding when reservations are made and released is critical to the system's behavior.
+
+#### When New Reservations Happen
+
+A new reservation is attempted when **all three conditions** are met:
+
+1. **Actor has `current_subcell` but NO `reserved_subcell`** (not already moving to a reserved cell)
+2. **Actor is centered on current sub-cell** (within 1.0 pixel of center)
+3. **Actor has not reached destination** (distance to destination ≥ 2.0 pixels)
+
+**Reservation Attempt Process:**
+1. Calculate direction vector to destination: `(dx, dy) = (dest.x - actor.x, dest.y - actor.y)`
+2. Normalize direction: `dir = (dx / magnitude, dy / magnitude)`
+   - **Magnitude** = `sqrt(dx² + dy²)` (Euclidean distance to destination)
+   - Used to normalize the direction vector to unit length
+3. Get 5 best candidate neighbors aligned with direction
+4. **Square Mode**: Try to reserve 2×2 square first, then fall back to single cells
+5. **Diagonal Mode**: For diagonal candidates, try to reserve anchor + diagonal atomically
+6. **Success**: Set `reserved_subcell` and optionally `extra_reserved_subcells`, actor begins moving toward reserved cell
+7. **Failure**: No reservation made, actor waits at current position until next frame
+
+#### When Releases Happen
+
+Releases occur in **three distinct scenarios**:
+
+**Scenario 1: Switching from Reserved to Current**
+
+When actor crosses the midpoint between current and reserved sub-cells:
+
+```rust
+let dist_to_reserved = distance(actor.pos, reserved.center);
+let dist_to_current = distance(actor.pos, current.center);
+
+if dist_to_reserved <= dist_to_current {
+    // RELEASE EVENTS:
+
+    // 1. Release old current_subcell (if different from reserved)
+    if current != reserved {
+        reservation_manager.release(current, actor.id);
+    }
+
+    // 2. Release ALL extra reserved cells (from square/diagonal)
+    for extra in extra_reserved_subcells {
+        reservation_manager.release(extra, actor.id);
+    }
+
+    // 3. Update state
+    current_subcell = reserved_subcell;
+    reserved_subcell = None;
+    extra_reserved_subcells.clear();
+}
+```
+
+**Timing**: This happens mid-movement, as soon as actor is closer to reserved than current.
+
+**Result**: Actor now holds only 1 reservation (the new current cell).
+
+---
+
+**Scenario 2: Reaching Final Destination**
+
+When actor gets within 2.0 pixels of destination:
+
+```rust
+let dist_to_dest = distance(actor.pos, destination);
+
+if dist_to_dest < 2.0 {
+    let dest_subcell = calculate_subcell_at(destination);
+
+    // RELEASE EVENTS:
+
+    // 1. Release current_subcell (if different from destination subcell)
+    if current_subcell != dest_subcell {
+        reservation_manager.release(current_subcell, actor.id);
+    }
+
+    // 2. Release reserved_subcell (if any)
+    if let Some(reserved) = reserved_subcell {
+        reservation_manager.release(reserved, actor.id);
+    }
+
+    // 3. Release ALL extra reserved cells
+    for extra in extra_reserved_subcells {
+        reservation_manager.release(extra, actor.id);
+    }
+
+    // 4. Update state
+    current_subcell = dest_subcell;
+    reserved_subcell = None;
+    extra_reserved_subcells.clear();
+
+    return true; // Reached!
+}
+```
+
+**Timing**: As soon as actor enters 2-pixel radius of destination.
+
+**Result**: Actor holds only the destination sub-cell, freeing 1-3 cells for other actors.
+
+---
+
+**Scenario 3: Failed Square Reservation Fallback**
+
+When square reservation fails and system falls back to single-cell:
+
+```rust
+// Try square reservation
+if enable_square {
+    if let Some((best, extras)) = find_square_reservation(...) {
+        if reservation_manager.try_reserve_multiple(&[best, ...extras], actor.id) {
+            reserved_subcell = Some(best);
+            extra_reserved_subcells = vec![...extras];
+            return; // Success!
+        }
+    }
+}
+
+// FALLBACK: Try single-cell reservation
+for candidate in candidates {
+    if reservation_manager.try_reserve(candidate, actor.id) {
+        // RELEASE EVENT:
+        // Clear any partially tracked extras (should be empty in practice)
+        extra_reserved_subcells.clear();
+
+        reserved_subcell = Some(candidate);
+        return; // Success!
+    }
+}
+```
+
+**Timing**: Same frame as failed square reservation attempt.
+
+**Result**: Actor reserves only 1 cell instead of 4.
+
+---
+
+#### Summary Table: Reservation States
+
+| State | Current | Reserved | Extras | Description |
+|-------|---------|----------|--------|-------------|
+| **At Rest** | 1 cell | None | 0 | Centered, no destination or reached destination |
+| **Moving to Reserved** | 1 cell | 1 cell | 0-3 | Mid-transit between sub-cells |
+| **At Destination** | 1 cell | None | 0 | Within 2.0 pixels of final destination |
+| **Waiting (Blocked)** | 1 cell | None | 0 | Centered but all neighbors reserved |
+
+**Key Invariant**: An actor **always** holds at least 1 reservation (current_subcell) except during initialization.
+
+#### Magnitude Explained
+
+**Magnitude** refers to the **Euclidean distance** (straight-line distance) from the actor's position to the destination:
+
+```rust
+let dx = dest_x - actor_x;
+let dy = dest_y - actor_y;
+let magnitude = sqrt(dx * dx + dy * dy);
+```
+
+**Usage**:
+- **Direction normalization**: Dividing direction vector by magnitude gives unit vector
+  - `dir_x = dx / magnitude`
+  - `dir_y = dy / magnitude`
+- **Primary direction determination**: Comparing `abs(dx)` vs `abs(dy)` determines if movement is more horizontal or vertical
+  - If `abs(dx) > abs(dy)`: Primary direction is horizontal (X)
+  - If `abs(dy) >= abs(dx)`: Primary direction is vertical (Y)
+
+**Example**:
+```
+Actor at (100, 100)
+Destination at (130, 140)
+
+dx = 30, dy = 40
+magnitude = sqrt(30² + 40²) = sqrt(900 + 1600) = sqrt(2500) = 50.0
+
+Normalized direction:
+dir_x = 30 / 50 = 0.6
+dir_y = 40 / 50 = 0.8
+
+Primary direction: Vertical (because abs(40) > abs(30))
+```
+
+This normalized direction vector is used by `find_best_neighbors()` to select sub-cells that best align with the target direction.
+
 ## Design Decisions
 
 ### 1. Conservative Distance Check
