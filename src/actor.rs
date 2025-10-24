@@ -65,6 +65,8 @@ pub struct Actor {
     pub extra_reserved_subcells: Vec<SubCellCoord>,
     /// Final destination for sub-cell movement (cell-level, NOT sub-cell level)
     pub subcell_destination: Option<Position>,
+    /// Movement tracking - records positions at key events (reserve, release, reach center)
+    pub movement_track: Vec<(f32, f32)>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -114,6 +116,7 @@ impl Actor {
             reserved_subcell: None,
             extra_reserved_subcells: Vec::new(),
             subcell_destination: None,
+            movement_track: Vec::new(),
         }
     }
 
@@ -560,6 +563,7 @@ impl Actor {
         enable_no_diagonal: bool,
         enable_anti_cross: bool,
         filter_backward: bool,
+        track_movement: bool,
     ) -> bool {
         // Calculate the destination sub-cell
         let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
@@ -595,6 +599,10 @@ impl Actor {
                     self.reserved_subcell = Some(best);
                     // Track the additional 3 cells
                     self.extra_reserved_subcells = additional_cells.to_vec();
+                    // Record position when reserving
+                    if track_movement {
+                        self.movement_track.push((self.fpos_x, self.fpos_y));
+                    }
                     return true;
                 }
             }
@@ -645,6 +653,10 @@ impl Actor {
                         self.reserved_subcell = Some(*candidate);
                         // Track the anchor as extra reservation
                         self.extra_reserved_subcells = vec![anchor];
+                        // Record position when reserving
+                        if track_movement {
+                            self.movement_track.push((self.fpos_x, self.fpos_y));
+                        }
                         return true;
                     }
                 }
@@ -656,6 +668,10 @@ impl Actor {
                     self.reserved_subcell = Some(*candidate);
                     // Clear extra reserved cells (single-cell only)
                     self.extra_reserved_subcells.clear();
+                    // Record position when reserving
+                    if track_movement {
+                        self.movement_track.push((self.fpos_x, self.fpos_y));
+                    }
                     return true;
                 }
             }
@@ -683,6 +699,7 @@ impl Actor {
     /// - `enable_anti_cross`: If true, block diagonal if same actor owns both counter-diagonal cells
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     /// - `filter_backward`: If true, filter out candidates that move away from destination
+    /// - `track_movement`: If true, record position at key events (reserve, release, reach center)
     pub fn update_subcell(
         &mut self,
         delta_time: f32,
@@ -693,6 +710,7 @@ impl Actor {
         enable_anti_cross: bool,
         enable_early_reservation: bool,
         filter_backward: bool,
+        track_movement: bool,
     ) -> bool {
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -807,12 +825,17 @@ impl Actor {
                 }
                 self.extra_reserved_subcells.clear();
 
-                // Update current to reserved
+                // Update current to reserved (reached subcell center)
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
 
                 // Register the new current subcell with the manager
                 reservation_manager.set_current(reserved, self.id);
+
+                // Record position when reaching subcell center / releasing
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
 
                 // If early reservation enabled, immediately try to reserve next cell
                 // This allows actor to continue moving without centering first
@@ -850,6 +873,7 @@ impl Actor {
                         enable_no_diagonal,
                         enable_anti_cross,
                         filter_backward,
+                        track_movement,
                     );
                 }
 
@@ -906,6 +930,7 @@ impl Actor {
             enable_no_diagonal,
             enable_anti_cross,
             filter_backward,
+            track_movement,
         );
 
         // Wait for a path to open up or continue moving

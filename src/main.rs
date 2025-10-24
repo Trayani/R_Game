@@ -108,6 +108,28 @@ impl SubCellMode {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum TrackingMode {
+    Disabled,
+    Tracking,
+}
+
+impl TrackingMode {
+    fn toggle(&self) -> TrackingMode {
+        match self {
+            TrackingMode::Disabled => TrackingMode::Tracking,
+            TrackingMode::Tracking => TrackingMode::Disabled,
+        }
+    }
+
+    fn to_string(&self) -> &'static str {
+        match self {
+            TrackingMode::Disabled => "Disabled",
+            TrackingMode::Tracking => "Tracking",
+        }
+    }
+}
+
 /// Visualization state
 struct VisState {
     grid: Grid,
@@ -137,6 +159,8 @@ struct VisState {
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
+    // Movement tracking
+    tracking_mode: TrackingMode,  // Toggle for recording actor movement paths
 }
 
 impl VisState {
@@ -205,6 +229,7 @@ impl VisState {
             filter_backward_moves: true,  // Enabled by default
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
+            tracking_mode: TrackingMode::Disabled,  // Disabled by default
         }
     }
 
@@ -901,6 +926,21 @@ impl VisState {
 
     fn draw_actor(&self) {
         for actor in &self.actors {
+            // Draw movement track (walked path) if tracking is enabled
+            if self.tracking_mode == TrackingMode::Tracking && !actor.movement_track.is_empty() {
+                // Draw lines between consecutive tracked positions
+                for i in 1..actor.movement_track.len() {
+                    let (x1, y1) = actor.movement_track[i - 1];
+                    let (x2, y2) = actor.movement_track[i];
+                    draw_line(x1, y1, x2, y2, 2.0, Color::from_rgba(255, 165, 0, 180)); // Orange trail
+                }
+
+                // Draw dots at tracked positions
+                for &(x, y) in &actor.movement_track {
+                    draw_circle(x, y, 2.0, Color::from_rgba(255, 100, 0, 200)); // Darker orange dots
+                }
+            }
+
             let (left, top, right, bottom) = actor.get_bounds();
 
             // Draw actor square with semi-transparent purple fill
@@ -1191,7 +1231,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1201,7 +1241,8 @@ impl VisState {
             subcell_movement_status,
             self.visible_cells.len(),
             self.all_corners.len(),
-            self.interesting_corners.len()
+            self.interesting_corners.len(),
+            self.tracking_mode.to_string()
         );
         draw_text(&info, 10.0, 20.0, 20.0, WHITE);
     }
@@ -1373,6 +1414,20 @@ async fn main() {
                 state.subcell_reservation_manager.clear();
                 state.highlighted_actors.clear();
                 println!("Cleared {} actors", actor_count);
+            }
+        }
+
+        // Toggle movement tracking on L key
+        if is_key_pressed(KeyCode::L) {
+            state.tracking_mode = state.tracking_mode.toggle();
+            println!("Movement Tracking: {}", state.tracking_mode.to_string());
+
+            // When disabling, clear all tracking vectors
+            if state.tracking_mode == TrackingMode::Disabled {
+                for actor in &mut state.actors {
+                    actor.movement_track.clear();
+                }
+                println!("Cleared all movement tracks");
             }
         }
 
@@ -1635,6 +1690,7 @@ async fn main() {
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
             let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
             let enable_anti_cross = state.reservation_mode == ReservationMode::AntiCross;
+            let track_movement = state.tracking_mode == TrackingMode::Tracking;
             for i in 0..state.actors.len() {
                 let _reached = state.actors[i].update_subcell(
                     delta_time,
@@ -1645,6 +1701,7 @@ async fn main() {
                     enable_anti_cross,
                     state.early_reservation_enabled,
                     state.filter_backward_moves,
+                    track_movement,
                 );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
             }

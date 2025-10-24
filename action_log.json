@@ -1,1 +1,8 @@
 [
+{"timestamp_ms":4860,"action":{"SpawnActor":{"x":267.0,"y":479.0}},"phase":"Start"},
+{"timestamp_ms":4860,"action":{"SpawnActor":{"x":267.0,"y":479.0}},"phase":"Finish"},
+{"timestamp_ms":8043,"action":{"SpawnActor":{"x":191.0,"y":485.0}},"phase":"Start"},
+{"timestamp_ms":8043,"action":{"SpawnActor":{"x":191.0,"y":485.0}},"phase":"Finish"},
+{"timestamp_ms":10593,"action":{"SetActorDestination":{"x":9,"y":32,"actor_count":44}},"phase":"Start"},
+{"timestamp_ms":10593,"action":{"SetActorDestination":{"x":9,"y":32,"actor_count":44}},"phase":"Finish"}
+]
