@@ -548,11 +548,45 @@ impl Actor {
         }
     }
 
+    /// Check if a diagonal move would create a counter-diagonal crossing
+    /// Returns true if crossing detected (should block move)
+    fn check_anti_cross(
+        from: &SubCellCoord,
+        to: &SubCellCoord,
+        reservation_manager: &crate::subcell::SubCellReservationManager,
+        actor_id: usize,
+    ) -> bool {
+        // Check if this is a diagonal move
+        if !Self::is_diagonal_move(from, to) {
+            return false; // Not diagonal, no crossing possible
+        }
+
+        // Get counter-diagonal cells
+        let counter_diag = crate::subcell::get_counter_diagonal_subcells(from, to);
+        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+
+        // Block if SAME other actor owns BOTH counter-diagonal cells
+        if let (Some(id1), Some(id2)) = (owner1, owner2) {
+            if id1 == id2 && id1 != actor_id {
+                return true; // Crossing detected
+            }
+        }
+
+        false // No crossing
+    }
+
     /// Try to reserve next sub-cell toward destination
     /// Returns true if reservation succeeded, false if all candidates blocked
+    ///
+    /// # Parameters
+    /// - `previous_current`: Optional previous position before current (for early reservation anti-cross check)
+    ///   When early reservation is enabled, we need to check crossing from the true previous position,
+    ///   not just from the newly-updated current position.
     fn try_reserve_next_subcell(
         &mut self,
         current: &SubCellCoord,
+        previous_current: Option<&SubCellCoord>,
         dir_x: f32,
         dir_y: f32,
         dest_screen_x: f32,
@@ -651,14 +685,23 @@ impl Actor {
 
             // AntiCross mode: check for counter-diagonal crossing
             if (enable_anti_cross || enable_basic3_anti_cross) && is_diagonal {
-                let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, candidate);
-                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                // When early reservation is enabled and we have a previous position,
+                // we need to check BOTH transitions for crossing:
+                // 1. previous_current → current (the just-completed move)
+                // 2. current → candidate (the move we're about to make)
 
-                // Block if SAME actor owns BOTH counter-diagonal cells
-                if let (Some(id1), Some(id2)) = (owner1, owner2) {
-                    if id1 == id2 && id1 != self.id {
-                        // Same other actor owns both counter-diagonal cells - crossing detected
+                // Check the immediate move: current → candidate
+                if Self::check_anti_cross(current, candidate, reservation_manager, self.id) {
+                    continue; // Crossing detected in immediate move
+                }
+
+                // If we have a previous position (early reservation scenario),
+                // also check the just-completed transition: previous → current
+                // This ensures we catch crossings that span across the early reservation boundary
+                if let Some(prev) = previous_current {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        // The just-completed move created a crossing
+                        // We shouldn't allow further moves that could compound this
                         continue;
                     }
                 }
@@ -841,6 +884,9 @@ impl Actor {
 
             // If closer to reserved than current, switch
             if dist_to_reserved <= dist_to_current {
+                // Save the previous current for anti-cross checking in early reservation
+                let previous_current = current;
+
                 // Only release old current sub-cell if it's different from reserved
                 if current != reserved {
                     reservation_manager.release(current, self.id);
@@ -887,8 +933,10 @@ impl Actor {
 
                     // Attempt reservation (code duplicated from centering section below)
                     // This is intentional to allow immediate reservation without centering
+                    // Pass previous_current for anti-cross check
                     self.try_reserve_next_subcell(
                         &current,
+                        Some(&previous_current), // Pass previous position for anti-cross check
                         dx_to_dest,
                         dy_to_dest,
                         dest_screen_x,
@@ -947,8 +995,10 @@ impl Actor {
         let dir_y = dy_to_dest;
 
         // Try to reserve next sub-cell using helper method
+        // No previous position needed here (not early reservation)
         self.try_reserve_next_subcell(
             &current,
+            None, // No previous position in normal centering flow
             dir_x,
             dir_y,
             dest_screen_x,

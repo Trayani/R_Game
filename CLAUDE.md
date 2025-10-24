@@ -113,6 +113,12 @@ Result: Actors cross through each other's paths
 
 **Key Advantage Over Diagonal Mode**: AntiCross does NOT reserve extra horizontal/vertical cells, so those paths remain available for other actors. It only blocks when an actual crossing pattern is detected.
 
+**Early Reservation Compatibility**: When early reservation is enabled (E key), the anti-cross check properly handles the transition. It checks BOTH:
+1. The just-completed move (previous → current)
+2. The about-to-be-reserved move (current → candidate)
+
+This ensures crossing detection works correctly even when actors reserve their next cell immediately upon reaching their current cell, preventing the scenario where actors update their logical position faster than the crossing check can detect.
+
 ### Basic3 Mode ⭐ NEW
 Limits candidate directions to exactly 3 neighbors AND enforces monotonic distance decrease.
 
