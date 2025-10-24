@@ -860,6 +860,16 @@ impl VisState {
                     draw_line(actor.fpos_x, actor.fpos_y, rx, ry, 1.5, YELLOW);
                 }
 
+                // Draw extra reserved sub-cells (from square reservation) with black lines
+                for extra_sc in &actor.extra_reserved_subcells {
+                    let (ex, ey) = extra_sc.to_screen_center(self.cell_width, self.cell_height);
+                    draw_circle(ex, ey, 3.0, BLACK);
+                    draw_circle_lines(ex, ey, 5.0, 1.5, BLACK);
+
+                    // Draw black line from actor to extra reserved sub-cell
+                    draw_line(actor.fpos_x, actor.fpos_y, ex, ey, 1.5, BLACK);
+                }
+
                 // Draw destination
                 if let Some(dest) = actor.subcell_destination {
                     let dest_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
