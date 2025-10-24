@@ -163,6 +163,10 @@ struct VisState {
     tracking_mode: TrackingMode,  // Toggle for recording actor movement paths
     // Historical tracking data - preserved even when actors are cleared
     historical_tracks: Vec<Vec<(f32, f32)>>,  // Stores tracks from cleared actors
+    // Actor configuration
+    actor_speed: f32,  // Default actor speed in pixels/second
+    actor_size_ratio: f32,  // Actor size as ratio of cell size
+    actor_collision_radius_ratio: f32,  // Collision radius as ratio of cell size
 }
 
 impl VisState {
@@ -233,6 +237,9 @@ impl VisState {
             highlight_timer: 0.0,
             tracking_mode: TrackingMode::Disabled,  // Disabled by default
             historical_tracks: Vec::new(),
+            actor_speed: config.actors.default_speed,
+            actor_size_ratio: config.actors.size_ratio,
+            actor_collision_radius_ratio: config.actors.collision_radius_ratio,
         }
     }
 
@@ -1414,15 +1421,14 @@ async fn main() {
         if is_key_pressed(KeyCode::O) {
             let (mouse_x, mouse_y) = mouse_position();
             state.action_log.log_start(Action::SpawnActor { x: mouse_x, y: mouse_y });
-            // Actor size must be smaller than cell to ensure it never spans multiple cells
-            // This guarantees NPV works correctly - actor body never overlaps blocked cells
-            let actor_size = state.cell_width.min(state.cell_height) * 0.9; // 90% of smallest cell dimension
+            // Actor size and collision radius from configuration
+            let actor_size = state.cell_width.min(state.cell_height) * state.actor_size_ratio;
             let actor_id = state.next_actor_id;
             state.next_actor_id += 1;
-            let collision_radius = state.cell_width.min(state.cell_height) * 0.3; // 30% of cell size
+            let collision_radius = state.cell_width.min(state.cell_height) * state.actor_collision_radius_ratio;
             let subcell_grid_size = state.subcell_reservation_manager.grid_size();
             let (offset_x, offset_y) = state.subcell_offset.get_offsets();
-            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y); // 120 pixels/second speed
+            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, state.actor_speed, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
