@@ -33,6 +33,8 @@ cargo test
 - **N key**: Toggle messy Y mode
 - **C key**: Copy grid to clipboard (in ■,s,o,□ format)
 - **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
+- **S key**: Toggle sub-cell movement mode
+- **Q key**: Cycle sub-cell reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Square)
 - **Esc key**: Close window
 
 ### Grid Format for Copy/Paste
@@ -56,6 +58,59 @@ The GUI displays:
 - Dark gray cells: Not visible to observer
 - White squares at cell edges: Interesting corners
 - Yellow squares at cell edges: Non-interesting corners
+
+## Sub-Cell Reservation Modes
+
+The project supports multiple reservation strategies for sub-cell movement to handle different collision avoidance scenarios. Press **Q** to cycle through modes.
+
+### Square Mode
+Reserves a 2×2 square of sub-cells in the primary movement direction.
+- **Purpose**: Provides maximum spacing between actors
+- **Behavior**: When moving, reserves the target sub-cell plus 3 additional cells forming a square
+- **Use case**: Dense environments where you want actors to maintain maximum distance
+
+### Diagonal Mode
+Diagonal moves require reserving an additional horizontal or vertical anchor cell.
+- **Purpose**: Prevents diagonal movement when perpendicular paths are blocked
+- **Behavior**: For diagonal moves, reserves both the target sub-cell AND an adjacent H/V anchor cell
+- **Limitation**: Can be overly restrictive - blocks horizontal/vertical movement unnecessarily
+
+### NoDiagonal Mode
+Completely disables diagonal movement between sub-cells.
+- **Purpose**: Forces actors to move only horizontally and vertically
+- **Behavior**: Skips all diagonal candidate sub-cells during pathfinding
+- **Use case**: Grid-aligned movement patterns, tactical formations
+
+### AntiCross Mode ⭐ NEW
+Prevents counter-diagonal crossing without restricting horizontal/vertical movement.
+
+**The Problem**: Two actors moving diagonally through each other in a crossing pattern:
+```
+Actor A: (0,0) → (1,1)
+Actor B: (0,1) → (1,0)
+Result: Actors cross through each other's paths
+```
+
+**The Solution**: Block diagonal movement ONLY when the SAME actor owns BOTH counter-diagonal cells (either as reserved OR as current position).
+
+**Example Scenarios**:
+
+**Blocked** ❌
+- Actor A at (0,0) wants to move to (1,1)
+- Actor B currently owns (0,1) AND (1,0)
+- **Result**: Actor A blocked (crossing would occur with Actor B)
+
+**Allowed** ✓
+- Actor A at (0,0) wants to move to (1,1)
+- Actor C owns (0,1), Actor D owns (1,0) (different actors)
+- **Result**: Actor A allowed (no single actor crossing pattern)
+
+**Allowed** ✓
+- Actor A at (0,0) wants to move to (1,1)
+- Only (0,1) is owned, (1,0) is free
+- **Result**: Actor A allowed (not both counter-diagonal cells owned by same actor)
+
+**Key Advantage Over Diagonal Mode**: AntiCross does NOT reserve extra horizontal/vertical cells, so those paths remain available for other actors. It only blocks when an actual crossing pattern is detected.
 
 ## Architecture
 

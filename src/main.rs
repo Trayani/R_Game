@@ -27,6 +27,7 @@ enum ReservationMode {
     Square,      // Reserve 2×2 square in movement direction
     Diagonal,    // Diagonal moves require H/V anchor reservation
     NoDiagonal,  // Diagonal moves not allowed (skip diagonal candidates)
+    AntiCross,   // Diagonal moves blocked only if same actor owns both counter-diagonal cells
 }
 
 impl ReservationMode {
@@ -35,6 +36,7 @@ impl ReservationMode {
             ReservationMode::Square => "Square",
             ReservationMode::Diagonal => "Diagonal",
             ReservationMode::NoDiagonal => "NoDiagonal",
+            ReservationMode::AntiCross => "AntiCross",
         }
     }
 
@@ -42,7 +44,8 @@ impl ReservationMode {
         match self {
             ReservationMode::Square => ReservationMode::Diagonal,
             ReservationMode::Diagonal => ReservationMode::NoDiagonal,
-            ReservationMode::NoDiagonal => ReservationMode::Square,
+            ReservationMode::NoDiagonal => ReservationMode::AntiCross,
+            ReservationMode::AntiCross => ReservationMode::Square,
         }
     }
 }
@@ -1188,7 +1191,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal) | E: toggle early reservation | F: toggle backward filter | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1620,6 +1623,7 @@ async fn main() {
             let enable_square = state.reservation_mode == ReservationMode::Square;
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
             let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
+            let enable_anti_cross = state.reservation_mode == ReservationMode::AntiCross;
             for i in 0..state.actors.len() {
                 let _reached = state.actors[i].update_subcell(
                     delta_time,
@@ -1627,6 +1631,7 @@ async fn main() {
                     enable_square,
                     enable_diagonal,
                     enable_no_diagonal,
+                    enable_anti_cross,
                     state.early_reservation_enabled,
                     state.filter_backward_moves,
                 );

@@ -558,6 +558,7 @@ impl Actor {
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
+        enable_anti_cross: bool,
         filter_backward: bool,
     ) -> bool {
         // Calculate the destination sub-cell
@@ -620,6 +621,21 @@ impl Actor {
                 continue;
             }
 
+            // AntiCross mode: check for counter-diagonal crossing
+            if enable_anti_cross && is_diagonal {
+                let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, candidate);
+                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+
+                // Block if SAME actor owns BOTH counter-diagonal cells
+                if let (Some(id1), Some(id2)) = (owner1, owner2) {
+                    if id1 == id2 && id1 != self.id {
+                        // Same other actor owns both counter-diagonal cells - crossing detected
+                        continue;
+                    }
+                }
+            }
+
             if enable_diagonal_constraint && is_diagonal {
                 // Diagonal mode: must also reserve H or V anchor
                 // Try to find and reserve an anchor cell (horizontal or vertical from current)
@@ -664,6 +680,7 @@ impl Actor {
     /// - `enable_square_reservation`: If true, try to reserve 2x2 square
     /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
     /// - `enable_no_diagonal`: If true, skip all diagonal moves entirely
+    /// - `enable_anti_cross`: If true, block diagonal if same actor owns both counter-diagonal cells
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     /// - `filter_backward`: If true, filter out candidates that move away from destination
     pub fn update_subcell(
@@ -673,6 +690,7 @@ impl Actor {
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
+        enable_anti_cross: bool,
         enable_early_reservation: bool,
         filter_backward: bool,
     ) -> bool {
@@ -697,6 +715,8 @@ impl Actor {
                     self.subcell_offset_y,
                 );
                 self.current_subcell = Some(c);
+                // Register the initial current subcell
+                reservation_manager.set_current(c, self.id);
                 c
             }
         };
@@ -791,6 +811,9 @@ impl Actor {
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
 
+                // Register the new current subcell with the manager
+                reservation_manager.set_current(reserved, self.id);
+
                 // If early reservation enabled, immediately try to reserve next cell
                 // This allows actor to continue moving without centering first
                 if enable_early_reservation {
@@ -825,6 +848,7 @@ impl Actor {
                         enable_square_reservation,
                         enable_diagonal_constraint,
                         enable_no_diagonal,
+                        enable_anti_cross,
                         filter_backward,
                     );
                 }
@@ -880,6 +904,7 @@ impl Actor {
             enable_square_reservation,
             enable_diagonal_constraint,
             enable_no_diagonal,
+            enable_anti_cross,
             filter_backward,
         );
 

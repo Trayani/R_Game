@@ -166,6 +166,8 @@ impl SubCellCoord {
 pub struct SubCellReservationManager {
     /// Map from sub-cell coordinate to actor ID that reserved it
     reservations: HashMap<SubCellCoord, usize>,
+    /// Map from actor ID to their current sub-cell position
+    current_subcells: HashMap<usize, SubCellCoord>,
     /// Grid size (2 for 2x2, 3 for 3x3)
     grid_size: i32,
 }
@@ -174,6 +176,7 @@ impl SubCellReservationManager {
     pub fn new(grid_size: i32) -> Self {
         SubCellReservationManager {
             reservations: HashMap::new(),
+            current_subcells: HashMap::new(),
             grid_size,
         }
     }
@@ -235,9 +238,33 @@ impl SubCellReservationManager {
         self.reservations.get(subcell).copied()
     }
 
+    /// Set the current sub-cell for an actor
+    pub fn set_current(&mut self, subcell: SubCellCoord, actor_id: usize) {
+        self.current_subcells.insert(actor_id, subcell);
+    }
+
+    /// Get the owner of a sub-cell (checks both reservations and current positions)
+    /// Returns Some(actor_id) if the sub-cell is either reserved or currently occupied
+    pub fn get_owner(&self, subcell: &SubCellCoord) -> Option<usize> {
+        // First check reservations
+        if let Some(&actor_id) = self.reservations.get(subcell) {
+            return Some(actor_id);
+        }
+
+        // Then check if any actor is currently at this sub-cell
+        for (&actor_id, current_sc) in &self.current_subcells {
+            if current_sc == subcell {
+                return Some(actor_id);
+            }
+        }
+
+        None
+    }
+
     /// Clear all reservations (useful for resetting)
     pub fn clear(&mut self) {
         self.reservations.clear();
+        self.current_subcells.clear();
     }
 
     /// Change the grid size and clear all reservations
@@ -404,6 +431,42 @@ fn apply_offset(base: SubCellCoord, cell_dx: i32, cell_dy: i32, sub_dx: i32, sub
     }
 
     SubCellCoord::new(new_cell_x, new_cell_y, new_sub_x, new_sub_y, grid_size)
+}
+
+/// Get the two counter-diagonal subcells for a diagonal move
+/// These are the cells that would form a crossing pattern if another actor moves through them
+/// Example: moving from (0,0) to (1,1) returns [(0,1), (1,0)]
+pub fn get_counter_diagonal_subcells(current: &SubCellCoord, target: &SubCellCoord) -> [SubCellCoord; 2] {
+    // Calculate the direction of movement
+    let dx = target.cell_x - current.cell_x;
+    let dy = target.cell_y - current.cell_y;
+    let sub_dx = target.sub_x - current.sub_x;
+    let sub_dy = target.sub_y - current.sub_y;
+
+    // Counter-diagonal cells are:
+    // 1. Same cell_x as current, same cell_y as target, with adjusted sub indices
+    // 2. Same cell_x as target, same cell_y as current, with adjusted sub indices
+
+    // For a move like (0,0,1,1) -> (0,0,2,2), counter-diagonals are (0,0,1,2) and (0,0,2,1)
+    // For a move across cells like (0,0,2,2) -> (1,1,0,0), counter-diagonals span cells
+
+    let counter1 = SubCellCoord::new(
+        current.cell_x + dx,
+        current.cell_y,
+        current.sub_x + sub_dx,
+        target.sub_y,
+        current.grid_size,
+    );
+
+    let counter2 = SubCellCoord::new(
+        current.cell_x,
+        current.cell_y + dy,
+        target.sub_x,
+        current.sub_y + sub_dy,
+        current.grid_size,
+    );
+
+    [counter1, counter2]
 }
 
 /// Find the best neighbor sub-cell that aligns with the target direction
