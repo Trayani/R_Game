@@ -65,6 +65,7 @@ struct VisState {
     subcell_movement_enabled: bool,
     subcell_reservation_manager: SubCellReservationManager,
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
+    square_reservation_enabled: bool,  // Toggle for 2x2 square reservation strategy
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
@@ -130,6 +131,7 @@ impl VisState {
             subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
+            square_reservation_enabled: true,  // Enabled by default
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
         }
@@ -1116,7 +1118,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: toggle square reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1219,6 +1221,12 @@ async fn main() {
         if is_key_pressed(KeyCode::B) {
             state.show_subcell_markers = !state.show_subcell_markers;
             println!("Sub-cell markers: {}", if state.show_subcell_markers { "ON" } else { "OFF" });
+        }
+
+        // Toggle square reservation (2x2) on Q key
+        if is_key_pressed(KeyCode::Q) {
+            state.square_reservation_enabled = !state.square_reservation_enabled;
+            println!("Square reservation (2x2): {}", if state.square_reservation_enabled { "ON" } else { "OFF" });
         }
 
         // Set destination on D key (to current mouse position)
@@ -1502,7 +1510,11 @@ async fn main() {
         if state.subcell_movement_enabled {
             // Sub-cell movement mode - update all actors with sub-cell logic
             for i in 0..state.actors.len() {
-                let _reached = state.actors[i].update_subcell(delta_time, &mut state.subcell_reservation_manager);
+                let _reached = state.actors[i].update_subcell(
+                    delta_time,
+                    &mut state.subcell_reservation_manager,
+                    state.square_reservation_enabled,
+                );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
             }
         } else {

@@ -491,10 +491,16 @@ impl Actor {
     /// 2. When closer to reserved than current, switch current to reserved
     /// 3. When centered on current, try to reserve next sub-cell toward destination
     /// 4. Use fallback neighbors if preferred sub-cell is occupied
+    ///
+    /// # Parameters
+    /// - `delta_time`: Time elapsed since last frame
+    /// - `reservation_manager`: Manager for sub-cell reservations
+    /// - `enable_square_reservation`: If true, try to reserve 2x2 square; if false, only single cells
     pub fn update_subcell(
         &mut self,
         delta_time: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_square_reservation: bool,
     ) -> bool {
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -643,24 +649,26 @@ impl Actor {
             return true;
         }
 
-        // STEP 1: Try to reserve a 2x2 square in the primary direction
-        if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
-            &current,
-            dir_x,
-            dir_y,
-            self.cell_width,
-            self.cell_height,
-        ) {
-            // Try to reserve all four cells atomically
-            let mut all_cells = vec![best];
-            all_cells.extend_from_slice(&additional_cells);
+        // STEP 1: Try to reserve a 2x2 square in the primary direction (if enabled)
+        if enable_square_reservation {
+            if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
+                &current,
+                dir_x,
+                dir_y,
+                self.cell_width,
+                self.cell_height,
+            ) {
+                // Try to reserve all four cells atomically
+                let mut all_cells = vec![best];
+                all_cells.extend_from_slice(&additional_cells);
 
-            if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
-                // Successfully reserved square - move to best cell
-                self.reserved_subcell = Some(best);
-                // Track the additional 3 cells
-                self.extra_reserved_subcells = additional_cells.to_vec();
-                return false;
+                if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
+                    // Successfully reserved square - move to best cell
+                    self.reserved_subcell = Some(best);
+                    // Track the additional 3 cells
+                    self.extra_reserved_subcells = additional_cells.to_vec();
+                    return false;
+                }
             }
         }
 
