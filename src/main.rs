@@ -161,6 +161,8 @@ struct VisState {
     highlight_timer: f32,
     // Movement tracking
     tracking_mode: TrackingMode,  // Toggle for recording actor movement paths
+    // Historical tracking data - preserved even when actors are cleared
+    historical_tracks: Vec<Vec<(f32, f32)>>,  // Stores tracks from cleared actors
 }
 
 impl VisState {
@@ -230,6 +232,7 @@ impl VisState {
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
             tracking_mode: TrackingMode::Disabled,  // Disabled by default
+            historical_tracks: Vec::new(),
         }
     }
 
@@ -925,19 +928,38 @@ impl VisState {
     }
 
     fn draw_actor(&self) {
+        // Draw historical tracks first (from cleared actors)
+        if self.tracking_mode == TrackingMode::Tracking {
+            for track in &self.historical_tracks {
+                if !track.is_empty() {
+                    // Draw thin black lines between consecutive tracked positions
+                    for i in 1..track.len() {
+                        let (x1, y1) = track[i - 1];
+                        let (x2, y2) = track[i];
+                        draw_line(x1, y1, x2, y2, 1.0, BLACK); // Thin black trail
+                    }
+
+                    // Draw small black dots at tracked positions
+                    for &(x, y) in track {
+                        draw_circle(x, y, 1.5, BLACK); // Small black dots
+                    }
+                }
+            }
+        }
+
         for actor in &self.actors {
             // Draw movement track (walked path) if tracking is enabled
             if self.tracking_mode == TrackingMode::Tracking && !actor.movement_track.is_empty() {
-                // Draw lines between consecutive tracked positions
+                // Draw thin black lines between consecutive tracked positions
                 for i in 1..actor.movement_track.len() {
                     let (x1, y1) = actor.movement_track[i - 1];
                     let (x2, y2) = actor.movement_track[i];
-                    draw_line(x1, y1, x2, y2, 2.0, Color::from_rgba(255, 165, 0, 180)); // Orange trail
+                    draw_line(x1, y1, x2, y2, 1.0, BLACK); // Thin black trail
                 }
 
-                // Draw dots at tracked positions
+                // Draw small black dots at tracked positions
                 for &(x, y) in &actor.movement_track {
-                    draw_circle(x, y, 2.0, Color::from_rgba(255, 100, 0, 200)); // Darker orange dots
+                    draw_circle(x, y, 1.5, BLACK); // Small black dots
                 }
             }
 
@@ -1406,14 +1428,23 @@ async fn main() {
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
         }
 
-        // Clear all actors on Key0
+        // Clear all actors on Key0 (but preserve their tracks if tracking is enabled)
         if is_key_pressed(KeyCode::Key0) {
             let actor_count = state.actors.len();
             if actor_count > 0 {
+                // Save tracks to historical storage before clearing actors
+                if state.tracking_mode == TrackingMode::Tracking {
+                    for actor in &state.actors {
+                        if !actor.movement_track.is_empty() {
+                            state.historical_tracks.push(actor.movement_track.clone());
+                        }
+                    }
+                }
+
                 state.actors.clear();
                 state.subcell_reservation_manager.clear();
                 state.highlighted_actors.clear();
-                println!("Cleared {} actors", actor_count);
+                println!("Cleared {} actors (tracks preserved)", actor_count);
             }
         }
 
@@ -1422,11 +1453,12 @@ async fn main() {
             state.tracking_mode = state.tracking_mode.toggle();
             println!("Movement Tracking: {}", state.tracking_mode.to_string());
 
-            // When disabling, clear all tracking vectors
+            // When disabling, clear all tracking vectors (current and historical)
             if state.tracking_mode == TrackingMode::Disabled {
                 for actor in &mut state.actors {
                     actor.movement_track.clear();
                 }
+                state.historical_tracks.clear();
                 println!("Cleared all movement tracks");
             }
         }
