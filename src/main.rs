@@ -1191,7 +1191,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1363,6 +1363,17 @@ async fn main() {
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
+        }
+
+        // Clear all actors on Key0
+        if is_key_pressed(KeyCode::Key0) {
+            let actor_count = state.actors.len();
+            if actor_count > 0 {
+                state.actors.clear();
+                state.subcell_reservation_manager.clear();
+                state.highlighted_actors.clear();
+                println!("Cleared {} actors", actor_count);
+            }
         }
 
         // Set actor destination on P key (uses pathfinding or sub-cell movement) - applies to ALL actors
