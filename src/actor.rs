@@ -54,6 +54,9 @@ pub struct Actor {
     // Sub-cell movement state
     /// Sub-cell grid size (2 for 2x2, 3 for 3x3)
     pub subcell_grid_size: i32,
+    /// Sub-cell offset (in sub-cell units, e.g., 0.5 for half-cell shift)
+    pub subcell_offset_x: f32,
+    pub subcell_offset_y: f32,
     /// Current sub-cell position
     pub current_subcell: Option<SubCellCoord>,
     /// Reserved sub-cell that actor is moving toward
@@ -78,9 +81,17 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32) -> Self {
-        // Initialize sub-cell position
-        let current_subcell = Some(SubCellCoord::from_screen_pos(fpos_x, fpos_y, cell_width, cell_height, subcell_grid_size));
+    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32) -> Self {
+        // Initialize sub-cell position with offset
+        let current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
+            fpos_x,
+            fpos_y,
+            cell_width,
+            cell_height,
+            subcell_grid_size,
+            subcell_offset_x,
+            subcell_offset_y,
+        ));
 
         Actor {
             id,
@@ -97,6 +108,8 @@ impl Actor {
             destination: None,
             last_blocking_actor: None,
             subcell_grid_size,
+            subcell_offset_x,
+            subcell_offset_y,
             current_subcell,
             reserved_subcell: None,
             extra_reserved_subcells: Vec::new(),
@@ -472,12 +485,14 @@ impl Actor {
         self.subcell_destination = Some(dest);
         // Initialize current sub-cell if not set
         if self.current_subcell.is_none() {
-            self.current_subcell = Some(SubCellCoord::from_screen_pos(
+            self.current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
                 self.fpos_x,
                 self.fpos_y,
                 self.cell_width,
                 self.cell_height,
                 self.subcell_grid_size,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
             ));
         }
     }
@@ -513,12 +528,14 @@ impl Actor {
             Some(c) => c,
             None => {
                 // Initialize from current position
-                let c = SubCellCoord::from_screen_pos(
+                let c = SubCellCoord::from_screen_pos_with_offset(
                     self.fpos_x,
                     self.fpos_y,
                     self.cell_width,
                     self.cell_height,
                     self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
                 );
                 self.current_subcell = Some(c);
                 c
@@ -539,12 +556,14 @@ impl Actor {
         // Reached destination if we're very close
         if dist_to_dest < 2.0 {
             // Calculate the destination sub-cell
-            let dest_subcell = SubCellCoord::from_screen_pos(
+            let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
                 dest_screen_x,
                 dest_screen_y,
                 self.cell_width,
                 self.cell_height,
                 self.subcell_grid_size,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
             );
 
             // Release all reservations except the destination sub-cell
@@ -575,8 +594,18 @@ impl Actor {
 
         // If we have a reserved sub-cell, move toward it
         if let Some(reserved) = self.reserved_subcell {
-            let (reserved_x, reserved_y) = reserved.to_screen_center(self.cell_width, self.cell_height);
-            let (current_x, current_y) = current.to_screen_center(self.cell_width, self.cell_height);
+            let (reserved_x, reserved_y) = reserved.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+            let (current_x, current_y) = current.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
 
             // Calculate distances
             let dx_to_reserved = reserved_x - self.fpos_x;
@@ -620,7 +649,12 @@ impl Actor {
 
         // No reserved sub-cell - we're centered on current
         // Try to reserve next sub-cell toward destination
-        let (current_center_x, current_center_y) = current.to_screen_center(self.cell_width, self.cell_height);
+        let (current_center_x, current_center_y) = current.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
         let center_dx = current_center_x - self.fpos_x;
         let center_dy = current_center_y - self.fpos_y;
         let dist_to_center = (center_dx * center_dx + center_dy * center_dy).sqrt();
@@ -641,7 +675,15 @@ impl Actor {
         let dir_y = dy_to_dest;
 
         // Calculate the destination sub-cell
-        let dest_subcell = SubCellCoord::from_screen_pos(dest_screen_x, dest_screen_y, self.cell_width, self.cell_height, self.subcell_grid_size);
+        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+            dest_screen_x,
+            dest_screen_y,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
 
         // Check if we're already at the destination sub-cell
         if current == dest_subcell {
@@ -725,6 +767,8 @@ mod tests {
             cell_width,
             cell_height,
             3,  // subcell_grid_size
+            0.0,  // No offset
+            0.0,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -751,6 +795,8 @@ mod tests {
             cell_width,
             cell_height,
             3,  // subcell_grid_size
+            0.0,  // No offset
+            0.0,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -775,6 +821,8 @@ mod tests {
             cell_width,
             cell_height,
             3,  // subcell_grid_size
+            0.0,  // No offset
+            0.0,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -799,6 +847,8 @@ mod tests {
             cell_width,
             cell_height,
             3,  // subcell_grid_size
+            0.0,  // No offset
+            0.0,
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -813,7 +863,7 @@ mod tests {
         // Start actor at cell (0,0) center
         let start_x = 0.0 * cell_width + cell_width / 2.0;
         let start_y = 0.0 * cell_height + cell_height / 2.0;
-        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3);
+        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3, 0.0, 0.0);
 
         // Create a simple path: (1,0) -> (2,0) -> (2,1)
         let path = vec![

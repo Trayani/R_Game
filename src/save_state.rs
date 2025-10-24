@@ -99,7 +99,7 @@ impl SaveState {
     }
 
     /// Restore actors from save state
-    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32) -> Vec<Actor> {
+    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32) -> Vec<Actor> {
         self.actors
             .iter()
             .map(|data| Actor::new(
@@ -112,6 +112,8 @@ impl SaveState {
                 cell_width,
                 cell_height,
                 subcell_grid_size,
+                subcell_offset_x,
+                subcell_offset_y,
             ))
             .collect()
     }

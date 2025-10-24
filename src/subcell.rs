@@ -22,6 +22,20 @@ impl SubCellCoord {
 
     /// Convert screen position to sub-cell coordinate
     pub fn from_screen_pos(screen_x: f32, screen_y: f32, cell_width: f32, cell_height: f32, grid_size: i32) -> Self {
+        Self::from_screen_pos_with_offset(screen_x, screen_y, cell_width, cell_height, grid_size, 0.0, 0.0)
+    }
+
+    /// Convert screen position to sub-cell coordinate with offset
+    /// offset_x, offset_y: offset in sub-cell units (e.g., 0.5 means shift by half a sub-cell)
+    pub fn from_screen_pos_with_offset(
+        screen_x: f32,
+        screen_y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        grid_size: i32,
+        offset_x: f32,
+        offset_y: f32,
+    ) -> Self {
         // Determine which cell
         let cell_x = (screen_x / cell_width).floor() as i32;
         let cell_y = (screen_y / cell_height).floor() as i32;
@@ -30,9 +44,16 @@ impl SubCellCoord {
         let cell_local_x = (screen_x / cell_width) - cell_x as f32;
         let cell_local_y = (screen_y / cell_height) - cell_y as f32;
 
+        // Apply offset (offset is in sub-cell units, so divide by grid_size to get cell-local units)
+        let offset_cell_x = offset_x / grid_size as f32;
+        let offset_cell_y = offset_y / grid_size as f32;
+
+        let adjusted_local_x = cell_local_x + offset_cell_x;
+        let adjusted_local_y = cell_local_y + offset_cell_y;
+
         // Convert to sub-cell index (0-1 for 2x2, 0-2 for 3x3)
-        let sub_x = (cell_local_x * grid_size as f32).floor() as i32;
-        let sub_y = (cell_local_y * grid_size as f32).floor() as i32;
+        let sub_x = (adjusted_local_x * grid_size as f32).floor() as i32;
+        let sub_y = (adjusted_local_y * grid_size as f32).floor() as i32;
 
         let max_index = grid_size - 1;
         SubCellCoord::new(cell_x, cell_y, sub_x.clamp(0, max_index), sub_y.clamp(0, max_index), grid_size)
@@ -40,11 +61,28 @@ impl SubCellCoord {
 
     /// Get screen position of sub-cell center
     pub fn to_screen_center(&self, cell_width: f32, cell_height: f32) -> (f32, f32) {
+        self.to_screen_center_with_offset(cell_width, cell_height, 0.0, 0.0)
+    }
+
+    /// Get screen position of sub-cell center with offset
+    /// offset_x, offset_y: offset in sub-cell units (e.g., 0.5 means shift by half a sub-cell)
+    pub fn to_screen_center_with_offset(
+        &self,
+        cell_width: f32,
+        cell_height: f32,
+        offset_x: f32,
+        offset_y: f32,
+    ) -> (f32, f32) {
         let sub_cell_width = cell_width / self.grid_size as f32;
         let sub_cell_height = cell_height / self.grid_size as f32;
 
-        let screen_x = self.cell_x as f32 * cell_width + (self.sub_x as f32 + 0.5) * sub_cell_width;
-        let screen_y = self.cell_y as f32 * cell_height + (self.sub_y as f32 + 0.5) * sub_cell_height;
+        // Calculate base position (center of sub-cell without offset)
+        let base_x = self.cell_x as f32 * cell_width + (self.sub_x as f32 + 0.5) * sub_cell_width;
+        let base_y = self.cell_y as f32 * cell_height + (self.sub_y as f32 + 0.5) * sub_cell_height;
+
+        // Apply offset (subtract because we're going from shifted coords back to screen coords)
+        let screen_x = base_x - offset_x * sub_cell_width;
+        let screen_y = base_y - offset_y * sub_cell_height;
 
         (screen_x, screen_y)
     }

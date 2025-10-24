@@ -14,6 +14,43 @@ enum SubCellMode {
     Grid3x3,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum SubCellOffset {
+    None,    // No offset - standard grid alignment
+    X,       // Offset by 0.5 sub-cells horizontally
+    Y,       // Offset by 0.5 sub-cells vertically
+    XY,      // Offset by 0.5 sub-cells in both directions
+}
+
+impl SubCellOffset {
+    fn next(&self) -> Self {
+        match self {
+            SubCellOffset::None => SubCellOffset::X,
+            SubCellOffset::X => SubCellOffset::Y,
+            SubCellOffset::Y => SubCellOffset::XY,
+            SubCellOffset::XY => SubCellOffset::None,
+        }
+    }
+
+    fn to_string(&self) -> &'static str {
+        match self {
+            SubCellOffset::None => "None",
+            SubCellOffset::X => "X",
+            SubCellOffset::Y => "Y",
+            SubCellOffset::XY => "XY",
+        }
+    }
+
+    fn get_offsets(&self) -> (f32, f32) {
+        match self {
+            SubCellOffset::None => (0.0, 0.0),
+            SubCellOffset::X => (0.5, 0.0),
+            SubCellOffset::Y => (0.0, 0.5),
+            SubCellOffset::XY => (0.5, 0.5),
+        }
+    }
+}
+
 impl SubCellMode {
     fn next(&self) -> Self {
         match self {
@@ -62,6 +99,7 @@ struct VisState {
     action_log: ActionLog,
     next_actor_id: usize,
     subcell_mode: SubCellMode,
+    subcell_offset: SubCellOffset,  // Offset for sub-cell grid alignment
     subcell_movement_enabled: bool,
     subcell_reservation_manager: SubCellReservationManager,
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
@@ -128,6 +166,7 @@ impl VisState {
             action_log: ActionLog::new(),
             next_actor_id: 0,
             subcell_mode,
+            subcell_offset: SubCellOffset::None,  // No offset by default
             subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
@@ -845,16 +884,18 @@ impl VisState {
 
             // Draw sub-cell positions if in sub-cell movement mode AND markers enabled
             if self.subcell_movement_enabled && self.show_subcell_markers {
+                let (offset_x, offset_y) = self.subcell_offset.get_offsets();
+
                 // Draw current sub-cell (green)
                 if let Some(current_sc) = actor.current_subcell {
-                    let (cx, cy) = current_sc.to_screen_center(self.cell_width, self.cell_height);
+                    let (cx, cy) = current_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
                     draw_circle(cx, cy, 4.0, GREEN);
                     draw_circle_lines(cx, cy, 6.0, 1.5, GREEN);
                 }
 
                 // Draw reserved sub-cell (yellow)
                 if let Some(reserved_sc) = actor.reserved_subcell {
-                    let (rx, ry) = reserved_sc.to_screen_center(self.cell_width, self.cell_height);
+                    let (rx, ry) = reserved_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
                     draw_circle(rx, ry, 4.0, YELLOW);
                     draw_circle_lines(rx, ry, 6.0, 1.5, YELLOW);
 
@@ -864,7 +905,7 @@ impl VisState {
 
                 // Draw extra reserved sub-cells (from square reservation) with black lines
                 for extra_sc in &actor.extra_reserved_subcells {
-                    let (ex, ey) = extra_sc.to_screen_center(self.cell_width, self.cell_height);
+                    let (ex, ey) = extra_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
                     draw_circle(ex, ey, 3.0, BLACK);
                     draw_circle_lines(ex, ey, 5.0, 1.5, BLACK);
 
@@ -1118,7 +1159,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: toggle square reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: toggle square reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1178,7 +1219,8 @@ async fn main() {
 
                     // Restore actors (without movement state)
                     let subcell_grid_size = state.subcell_reservation_manager.grid_size();
-                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size);
+                    let (offset_x, offset_y) = state.subcell_offset.get_offsets();
+                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
 
                     // Update next_actor_id to avoid ID conflicts
                     state.next_actor_id = state.actors.iter().map(|a| a.id).max().unwrap_or(0) + 1;
@@ -1229,6 +1271,30 @@ async fn main() {
             println!("Square reservation (2x2): {}", if state.square_reservation_enabled { "ON" } else { "OFF" });
         }
 
+        // Toggle sub-cell offset on T key (cycle through None, X, Y, XY)
+        if is_key_pressed(KeyCode::T) {
+            state.subcell_offset = state.subcell_offset.next();
+            println!("SubCell Offset: {}", state.subcell_offset.to_string());
+            // Update all existing actors with the new offset
+            let (offset_x, offset_y) = state.subcell_offset.get_offsets();
+            for actor in &mut state.actors {
+                actor.subcell_offset_x = offset_x;
+                actor.subcell_offset_y = offset_y;
+                // Recalculate current sub-cell with new offset
+                if actor.current_subcell.is_some() {
+                    actor.current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
+                        actor.fpos_x,
+                        actor.fpos_y,
+                        actor.cell_width,
+                        actor.cell_height,
+                        actor.subcell_grid_size,
+                        offset_x,
+                        offset_y,
+                    ));
+                }
+            }
+        }
+
         // Set destination on D key (to current mouse position)
         if is_key_pressed(KeyCode::D) {
             let (mouse_x, mouse_y) = mouse_position();
@@ -1248,7 +1314,8 @@ async fn main() {
             state.next_actor_id += 1;
             let collision_radius = state.cell_width.min(state.cell_height) * 0.3; // 30% of cell size
             let subcell_grid_size = state.subcell_reservation_manager.grid_size();
-            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height, subcell_grid_size); // 120 pixels/second speed
+            let (offset_x, offset_y) = state.subcell_offset.get_offsets();
+            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, 120.0, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y); // 120 pixels/second speed
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
@@ -1607,11 +1674,12 @@ async fn main() {
             for i in 0..state.actors.len() {
                 // Create temporary Actor instances from collision data for nearby actors
                 let subcell_grid_size = state.subcell_reservation_manager.grid_size();
+                let (offset_x, offset_y) = state.subcell_offset.get_offsets();
                 let nearby_actors: Vec<Actor> = actor_nearby_lists[i]
                     .iter()
                     .map(|&idx| {
                         let data = &actor_data[idx];
-                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size)
+                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size, offset_x, offset_y)
                     })
                     .collect();
 
