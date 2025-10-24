@@ -557,6 +557,7 @@ impl Actor {
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
+        enable_no_diagonal: bool,
     ) -> bool {
         // Calculate the destination sub-cell
         let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
@@ -612,6 +613,11 @@ impl Actor {
             // Check if this is a diagonal move
             let is_diagonal = Self::is_diagonal_move(current, candidate);
 
+            // NoDiagonal mode: skip all diagonal candidates
+            if enable_no_diagonal && is_diagonal {
+                continue;
+            }
+
             if enable_diagonal_constraint && is_diagonal {
                 // Diagonal mode: must also reserve H or V anchor
                 // Try to find and reserve an anchor cell (horizontal or vertical from current)
@@ -655,6 +661,7 @@ impl Actor {
     /// - `reservation_manager`: Manager for sub-cell reservations
     /// - `enable_square_reservation`: If true, try to reserve 2x2 square
     /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
+    /// - `enable_no_diagonal`: If true, skip all diagonal moves entirely
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     pub fn update_subcell(
         &mut self,
@@ -662,6 +669,7 @@ impl Actor {
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
+        enable_no_diagonal: bool,
         enable_early_reservation: bool,
     ) -> bool {
         // Check if we have a destination
@@ -812,6 +820,7 @@ impl Actor {
                         reservation_manager,
                         enable_square_reservation,
                         enable_diagonal_constraint,
+                        enable_no_diagonal,
                     );
                 }
 
@@ -865,6 +874,7 @@ impl Actor {
             reservation_manager,
             enable_square_reservation,
             enable_diagonal_constraint,
+            enable_no_diagonal,
         );
 
         // Wait for a path to open up or continue moving

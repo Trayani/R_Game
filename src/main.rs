@@ -24,8 +24,9 @@ enum SubCellOffset {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum ReservationMode {
-    Square,     // Reserve 2×2 square in movement direction
-    Diagonal,   // Diagonal moves require H/V anchor reservation
+    Square,      // Reserve 2×2 square in movement direction
+    Diagonal,    // Diagonal moves require H/V anchor reservation
+    NoDiagonal,  // Diagonal moves not allowed (skip diagonal candidates)
 }
 
 impl ReservationMode {
@@ -33,6 +34,15 @@ impl ReservationMode {
         match self {
             ReservationMode::Square => "Square",
             ReservationMode::Diagonal => "Diagonal",
+            ReservationMode::NoDiagonal => "NoDiagonal",
+        }
+    }
+
+    fn next(&self) -> ReservationMode {
+        match self {
+            ReservationMode::Square => ReservationMode::Diagonal,
+            ReservationMode::Diagonal => ReservationMode::NoDiagonal,
+            ReservationMode::NoDiagonal => ReservationMode::Square,
         }
     }
 }
@@ -1176,7 +1186,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: toggle reservation (Square/Diagonal) | E: toggle early reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal) | E: toggle early reservation | O: spawn actor\nP: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1282,12 +1292,9 @@ async fn main() {
             println!("Sub-cell markers: {}", if state.show_subcell_markers { "ON" } else { "OFF" });
         }
 
-        // Toggle reservation mode (Square/Diagonal) on Q key
+        // Cycle reservation mode (Square → Diagonal → NoDiagonal → Square) on Q key
         if is_key_pressed(KeyCode::Q) {
-            state.reservation_mode = match state.reservation_mode {
-                ReservationMode::Square => ReservationMode::Diagonal,
-                ReservationMode::Diagonal => ReservationMode::Square,
-            };
+            state.reservation_mode = state.reservation_mode.next();
             println!("Reservation Mode: {}", state.reservation_mode.to_string());
         }
 
@@ -1604,12 +1611,14 @@ async fn main() {
             // Sub-cell movement mode - update all actors with sub-cell logic
             let enable_square = state.reservation_mode == ReservationMode::Square;
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
+            let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
             for i in 0..state.actors.len() {
                 let _reached = state.actors[i].update_subcell(
                     delta_time,
                     &mut state.subcell_reservation_manager,
                     enable_square,
                     enable_diagonal,
+                    enable_no_diagonal,
                     state.early_reservation_enabled,
                 );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
