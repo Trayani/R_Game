@@ -58,6 +58,8 @@ pub struct Actor {
     pub current_subcell: Option<SubCellCoord>,
     /// Reserved sub-cell that actor is moving toward
     pub reserved_subcell: Option<SubCellCoord>,
+    /// Additional reserved sub-cells (for square reservations)
+    pub extra_reserved_subcells: Vec<SubCellCoord>,
     /// Final destination for sub-cell movement (cell-level, NOT sub-cell level)
     pub subcell_destination: Option<Position>,
 }
@@ -97,6 +99,7 @@ impl Actor {
             subcell_grid_size,
             current_subcell,
             reserved_subcell: None,
+            extra_reserved_subcells: Vec::new(),
             subcell_destination: None,
         }
     }
@@ -529,11 +532,36 @@ impl Actor {
 
         // Reached destination if we're very close
         if dist_to_dest < 2.0 {
-            // Release current sub-cell
-            reservation_manager.release(current, self.id);
-            if let Some(reserved) = self.reserved_subcell {
-                reservation_manager.release(reserved, self.id);
+            // Calculate the destination sub-cell
+            let dest_subcell = SubCellCoord::from_screen_pos(
+                dest_screen_x,
+                dest_screen_y,
+                self.cell_width,
+                self.cell_height,
+                self.subcell_grid_size,
+            );
+
+            // Release all reservations except the destination sub-cell
+            // Release current if it's not the destination
+            if current != dest_subcell {
+                reservation_manager.release(current, self.id);
             }
+            // Release reserved if it exists and is not the destination
+            if let Some(reserved) = self.reserved_subcell {
+                if reserved != dest_subcell {
+                    reservation_manager.release(reserved, self.id);
+                }
+            }
+            // Release all extra reserved cells
+            for extra in &self.extra_reserved_subcells {
+                if *extra != dest_subcell {
+                    reservation_manager.release(*extra, self.id);
+                }
+            }
+            self.extra_reserved_subcells.clear();
+
+            // Keep only the destination sub-cell reserved
+            self.current_subcell = Some(dest_subcell);
             self.subcell_destination = None;
             self.reserved_subcell = None;
             return true;
@@ -559,6 +587,12 @@ impl Actor {
                 if current != reserved {
                     reservation_manager.release(current, self.id);
                 }
+                // Release extra reserved cells (from square reservation)
+                for extra in &self.extra_reserved_subcells {
+                    reservation_manager.release(*extra, self.id);
+                }
+                self.extra_reserved_subcells.clear();
+
                 // Update current to reserved
                 self.current_subcell = Some(reserved);
                 self.reserved_subcell = None;
@@ -624,6 +658,8 @@ impl Actor {
             if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
                 // Successfully reserved square - move to best cell
                 self.reserved_subcell = Some(best);
+                // Track the additional 3 cells
+                self.extra_reserved_subcells = additional_cells.to_vec();
                 return false;
             }
         }
@@ -642,6 +678,8 @@ impl Actor {
         for candidate in &candidates {
             if reservation_manager.try_reserve(*candidate, self.id) {
                 self.reserved_subcell = Some(*candidate);
+                // Clear extra reserved cells (we're doing single-cell now)
+                self.extra_reserved_subcells.clear();
                 return false;
             }
         }
