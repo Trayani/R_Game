@@ -24,10 +24,12 @@ enum SubCellOffset {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum ReservationMode {
-    Square,      // Reserve 2×2 square in movement direction
-    Diagonal,    // Diagonal moves require H/V anchor reservation
-    NoDiagonal,  // Diagonal moves not allowed (skip diagonal candidates)
-    AntiCross,   // Diagonal moves blocked only if same actor owns both counter-diagonal cells
+    Square,           // Reserve 2×2 square in movement direction
+    Diagonal,         // Diagonal moves require H/V anchor reservation
+    NoDiagonal,       // Diagonal moves not allowed (skip diagonal candidates)
+    AntiCross,        // Diagonal moves blocked only if same actor owns both counter-diagonal cells
+    Basic3,           // Limit to 3 candidates (best + ±45° alternatives)
+    Basic3AntiCross,  // Basic3 + anti-cross checking
 }
 
 impl ReservationMode {
@@ -37,6 +39,8 @@ impl ReservationMode {
             ReservationMode::Diagonal => "Diagonal",
             ReservationMode::NoDiagonal => "NoDiagonal",
             ReservationMode::AntiCross => "AntiCross",
+            ReservationMode::Basic3 => "Basic3",
+            ReservationMode::Basic3AntiCross => "Basic3AntiCross",
         }
     }
 
@@ -45,7 +49,9 @@ impl ReservationMode {
             ReservationMode::Square => ReservationMode::Diagonal,
             ReservationMode::Diagonal => ReservationMode::NoDiagonal,
             ReservationMode::NoDiagonal => ReservationMode::AntiCross,
-            ReservationMode::AntiCross => ReservationMode::Square,
+            ReservationMode::AntiCross => ReservationMode::Basic3,
+            ReservationMode::Basic3 => ReservationMode::Basic3AntiCross,
+            ReservationMode::Basic3AntiCross => ReservationMode::Square,
         }
     }
 }
@@ -1367,7 +1373,7 @@ async fn main() {
             println!("Sub-cell markers: {}", if state.show_subcell_markers { "ON" } else { "OFF" });
         }
 
-        // Cycle reservation mode (Square → Diagonal → NoDiagonal → Square) on Q key
+        // Cycle reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Basic3 → Basic3AntiCross → Square) on Q key
         if is_key_pressed(KeyCode::Q) {
             state.reservation_mode = state.reservation_mode.next();
             println!("Reservation Mode: {}", state.reservation_mode.to_string());
@@ -1728,6 +1734,8 @@ async fn main() {
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
             let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
             let enable_anti_cross = state.reservation_mode == ReservationMode::AntiCross;
+            let enable_basic3 = state.reservation_mode == ReservationMode::Basic3;
+            let enable_basic3_anti_cross = state.reservation_mode == ReservationMode::Basic3AntiCross;
             let track_movement = state.tracking_mode == TrackingMode::Tracking;
             for i in 0..state.actors.len() {
                 let _reached = state.actors[i].update_subcell(
@@ -1737,6 +1745,8 @@ async fn main() {
                     enable_diagonal,
                     enable_no_diagonal,
                     enable_anti_cross,
+                    enable_basic3,
+                    enable_basic3_anti_cross,
                     state.early_reservation_enabled,
                     state.filter_backward_moves,
                     track_movement,

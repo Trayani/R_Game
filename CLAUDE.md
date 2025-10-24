@@ -34,7 +34,7 @@ cargo test
 - **C key**: Copy grid to clipboard (in ■,s,o,□ format)
 - **V key**: Paste grid from clipboard (parses ■,s,o,□ format)
 - **S key**: Toggle sub-cell movement mode
-- **Q key**: Cycle sub-cell reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Square)
+- **Q key**: Cycle sub-cell reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Basic3 → Basic3AntiCross → Square)
 - **Esc key**: Close window
 
 ### Grid Format for Copy/Paste
@@ -111,6 +111,37 @@ Result: Actors cross through each other's paths
 - **Result**: Actor A allowed (not both counter-diagonal cells owned by same actor)
 
 **Key Advantage Over Diagonal Mode**: AntiCross does NOT reserve extra horizontal/vertical cells, so those paths remain available for other actors. It only blocks when an actual crossing pattern is detected.
+
+### Basic3 Mode ⭐ NEW
+Limits candidate directions to exactly 3 neighbors (best-aligned + 2 alternatives at ±45°).
+
+**The Problem**: Default pathfinding considers 5 candidate neighbors (best + 4 alternatives), which can lead to:
+- Less predictable pathfinding behavior
+- Actors trying many alternative directions when the direct path is blocked
+- More complex collision scenarios with many options
+
+**The Solution**: Restrict candidate selection to only 3 neighbors:
+1. **Best neighbor**: The sub-cell most aligned with the destination direction
+2. **Alternative 1**: Neighbor rotated +45° from best direction
+3. **Alternative 2**: Neighbor rotated -45° from best direction
+
+**Benefits**:
+- More deterministic pathfinding (fewer choices = more predictable behavior)
+- Actors make cleaner turning decisions (±45° only)
+- Reduces collision checking overhead (fewer candidates to evaluate)
+
+**Example**: Actor moving northeast (direction ~45°):
+- **Default mode**: Considers N, NE, E, SE, NW (5 candidates)
+- **Basic3 mode**: Considers only NE, N, E (3 candidates - best + ±45°)
+
+### Basic3AntiCross Mode
+Combines Basic3's 3-candidate limitation with AntiCross's counter-diagonal crossing prevention.
+
+**Use case**: When you want both:
+- Deterministic pathfinding with limited alternatives (Basic3)
+- Prevention of diagonal crossing patterns (AntiCross)
+
+This mode provides the most restrictive collision avoidance while maintaining predictable pathfinding.
 
 ## Architecture
 

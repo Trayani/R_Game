@@ -507,6 +507,42 @@ pub fn find_best_neighbors(
     scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
 }
 
+/// Find the best 3 neighbors (strictly limited to ±45° alternatives)
+/// Returns exactly 3 candidates (or fewer if filtered):
+/// 1. Best aligned neighbor
+/// 2. Clockwise neighbor (±45°)
+/// 3. Counter-clockwise neighbor (±45°)
+///
+/// This provides more deterministic pathfinding with fewer alternatives.
+/// If filter_backward is true, candidates with negative scores are filtered out.
+pub fn find_best_3_neighbors(
+    current: &SubCellCoord,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    filter_backward: bool,
+) -> Vec<SubCellCoord> {
+    let neighbors = current.get_neighbors();
+
+    // Calculate alignment scores for all neighbors
+    let mut scored_neighbors: Vec<(SubCellCoord, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height)))
+        .collect();
+
+    // Sort by score (highest first)
+    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
+    if filter_backward {
+        scored_neighbors.retain(|(_, score)| *score >= 0.0);
+    }
+
+    // Return only top 3 candidates (or fewer if filtered)
+    scored_neighbors.iter().take(3).map(|(coord, _)| *coord).collect()
+}
+
 /// Spread actors across different CELLS (not sub-cells)
 /// This is for final destinations - each actor gets a different cell
 /// Uses spiral pattern: center cell, then 8 neighbors, then next ring, etc.

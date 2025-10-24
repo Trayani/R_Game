@@ -562,6 +562,8 @@ impl Actor {
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
         enable_anti_cross: bool,
+        enable_basic3: bool,
+        enable_basic3_anti_cross: bool,
         filter_backward: bool,
         track_movement: bool,
     ) -> bool {
@@ -610,14 +612,27 @@ impl Actor {
 
         // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
         // Get candidate neighbors in priority order
-        let candidates = crate::subcell::find_best_neighbors(
-            current,
-            dir_x,
-            dir_y,
-            self.cell_width,
-            self.cell_height,
-            filter_backward,
-        );
+        let candidates = if enable_basic3 || enable_basic3_anti_cross {
+            // Use limited 3-candidate search
+            crate::subcell::find_best_3_neighbors(
+                current,
+                dir_x,
+                dir_y,
+                self.cell_width,
+                self.cell_height,
+                filter_backward,
+            )
+        } else {
+            // Use standard 5-candidate search
+            crate::subcell::find_best_neighbors(
+                current,
+                dir_x,
+                dir_y,
+                self.cell_width,
+                self.cell_height,
+                filter_backward,
+            )
+        };
 
         // Try to reserve one of the candidates
         for candidate in &candidates {
@@ -630,7 +645,7 @@ impl Actor {
             }
 
             // AntiCross mode: check for counter-diagonal crossing
-            if enable_anti_cross && is_diagonal {
+            if (enable_anti_cross || enable_basic3_anti_cross) && is_diagonal {
                 let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, candidate);
                 let owner1 = reservation_manager.get_owner(&counter_diag[0]);
                 let owner2 = reservation_manager.get_owner(&counter_diag[1]);
@@ -697,6 +712,8 @@ impl Actor {
     /// - `enable_diagonal_constraint`: If true, diagonal moves require H/V anchor
     /// - `enable_no_diagonal`: If true, skip all diagonal moves entirely
     /// - `enable_anti_cross`: If true, block diagonal if same actor owns both counter-diagonal cells
+    /// - `enable_basic3`: If true, limit candidate directions to 3 (best + ±45°)
+    /// - `enable_basic3_anti_cross`: If true, combine Basic3 with anti-cross checking
     /// - `enable_early_reservation`: If true, reserve immediately after switching current (skip centering)
     /// - `filter_backward`: If true, filter out candidates that move away from destination
     /// - `track_movement`: If true, record position at key events (reserve, release, reach center)
@@ -708,6 +725,8 @@ impl Actor {
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
         enable_anti_cross: bool,
+        enable_basic3: bool,
+        enable_basic3_anti_cross: bool,
         enable_early_reservation: bool,
         filter_backward: bool,
         track_movement: bool,
@@ -872,6 +891,8 @@ impl Actor {
                         enable_diagonal_constraint,
                         enable_no_diagonal,
                         enable_anti_cross,
+                        enable_basic3,
+                        enable_basic3_anti_cross,
                         filter_backward,
                         track_movement,
                     );
@@ -929,6 +950,8 @@ impl Actor {
             enable_diagonal_constraint,
             enable_no_diagonal,
             enable_anti_cross,
+            enable_basic3,
+            enable_basic3_anti_cross,
             filter_backward,
             track_movement,
         );
