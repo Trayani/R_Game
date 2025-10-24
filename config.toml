@@ -38,7 +38,7 @@ messy_y = false
 #   "3x3"   - Show 3x3 sub-cell grid (9 sub-cells per cell) + 3x3 navigation
 # Default: "none"
 # Toggle at runtime: G key (cycles None → 1x1 → 2x2 → 3x3 → None)
-display_mode = "none"
+display_mode = "2x2"
 
 # Sub-cell movement system
 # When enabled, actors use fine-grained sub-cell pathfinding with collision avoidance
