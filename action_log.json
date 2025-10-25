@@ -1,14 +1,12 @@
 [
-{"timestamp_ms":1338,"action":{"SetActorDestination":{"x":13,"y":27,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":1338,"action":{"SetActorDestination":{"x":13,"y":27,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":4688,"action":{"SpawnActor":{"x":412.0,"y":215.0}},"phase":"Start"},
-{"timestamp_ms":4688,"action":{"SpawnActor":{"x":412.0,"y":215.0}},"phase":"Finish"},
-{"timestamp_ms":7771,"action":{"SpawnActor":{"x":213.0,"y":420.0}},"phase":"Start"},
-{"timestamp_ms":7771,"action":{"SpawnActor":{"x":213.0,"y":420.0}},"phase":"Finish"},
-{"timestamp_ms":10088,"action":{"SpawnActor":{"x":297.0,"y":216.0}},"phase":"Start"},
-{"timestamp_ms":10088,"action":{"SpawnActor":{"x":297.0,"y":216.0}},"phase":"Finish"},
-{"timestamp_ms":10688,"action":{"SetActorDestination":{"x":9,"y":27,"actor_count":1}},"phase":"Start"},
-{"timestamp_ms":10688,"action":{"SetActorDestination":{"x":9,"y":27,"actor_count":1}},"phase":"Finish"}
+{"timestamp_ms":3180,"action":{"SpawnActor":{"x":492.0,"y":163.0}},"phase":"Start"},
+{"timestamp_ms":3180,"action":{"SpawnActor":{"x":492.0,"y":163.0}},"phase":"Finish"},
+{"timestamp_ms":3746,"action":{"SetActorDestination":{"x":11,"y":27,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":3747,"action":{"SetActorDestination":{"x":11,"y":27,"actor_count":1}},"phase":"Finish"},
+{"timestamp_ms":8897,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":8897,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":1}},"phase":"Finish"},
+{"timestamp_ms":10597,"action":{"SetActorDestination":{"x":17,"y":32,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":10597,"action":{"SetActorDestination":{"x":17,"y":32,"actor_count":1}},"phase":"Finish"}
 ]
 
 ]

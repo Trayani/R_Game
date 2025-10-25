@@ -1162,10 +1162,31 @@ impl Actor {
         basic3_fallback_enabled: bool,
         track_movement: bool,
     ) -> bool {
+        // ALWAYS log first 10 frames for actor 0 to debug GUI freeze
+        static mut FRAME_COUNT: u32 = 0;
+        let always_trace = unsafe {
+            if self.id == 0 {
+                FRAME_COUNT += 1;
+                FRAME_COUNT <= 10
+            } else {
+                false
+            }
+        };
+
         // Check if we have a destination
         let dest = match self.subcell_destination {
-            Some(d) => d,
-            None => return true, // No destination, we're done
+            Some(d) => {
+                if always_trace {
+                    println!("[DestDirect ENTRY] Actor {} frame, dest=({},{})", self.id, d.x, d.y);
+                }
+                d
+            },
+            None => {
+                if always_trace {
+                    println!("[DestDirect] Actor {} has NO DESTINATION", self.id);
+                }
+                return true; // No destination, we're done
+            }
         };
 
         // Ensure we have current sub-cell
@@ -1258,7 +1279,7 @@ impl Actor {
         let dist_to_target = (dx_to_target * dx_to_target + dy_to_target * dy_to_target).sqrt();
 
         // TRACE: Log movement state for actor 0
-        if self.id == 0 && track_movement {
+        if always_trace || (self.id == 0 && track_movement) {
             println!("[DestDirect Frame] actor_pos=({:.1},{:.1}) target=({:.1},{:.1}) dist={:.2}",
                 self.fpos_x, self.fpos_y, target_x, target_y, dist_to_target);
             println!("  reserved={:?} anchor={:?} dest=({},{})",
@@ -1274,10 +1295,10 @@ impl Actor {
             self.fpos_x += (dx_to_target / dist_to_target) * move_dist;
             self.fpos_y += (dy_to_target / dist_to_target) * move_dist;
 
-            if self.id == 0 && track_movement {
+            if always_trace || (self.id == 0 && track_movement) {
                 println!("  MOVED: move_dist={:.2} new_pos=({:.1},{:.1})", move_dist, self.fpos_x, self.fpos_y);
             }
-        } else if self.id == 0 && track_movement {
+        } else if always_trace || (self.id == 0 && track_movement) {
             println!("  NOT MOVING: dist_to_target={:.4} < 0.001", dist_to_target);
         }
 

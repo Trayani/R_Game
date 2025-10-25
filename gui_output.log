@@ -1,0 +1,146 @@
+warning: unused import: `HashSet`
+ --> src/subcell.rs:1:33
+  |
+1 | use std::collections::{HashMap, HashSet};
+  |                                 ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `enable_square_reservation`
+    --> src/actor.rs:1154:9
+     |
+1154 |         enable_square_reservation: bool,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_enable_square_reservation`
+     |
+     = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `enable_diagonal_constraint`
+    --> src/actor.rs:1155:9
+     |
+1155 |         enable_diagonal_constraint: bool,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_enable_diagonal_constraint`
+
+warning: unused variable: `enable_no_diagonal`
+    --> src/actor.rs:1156:9
+     |
+1156 |         enable_no_diagonal: bool,
+     |         ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_enable_no_diagonal`
+
+warning: unused variable: `enable_basic3`
+    --> src/actor.rs:1158:9
+     |
+1158 |         enable_basic3: bool,
+     |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_enable_basic3`
+
+warning: unused variable: `enable_basic3_anti_cross`
+    --> src/actor.rs:1159:9
+     |
+1159 |         enable_basic3_anti_cross: bool,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_enable_basic3_anti_cross`
+
+warning: unused variable: `filter_backward`
+    --> src/actor.rs:1161:9
+     |
+1161 |         filter_backward: bool,
+     |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_filter_backward`
+
+warning: unused variable: `basic3_fallback_enabled`
+    --> src/actor.rs:1162:9
+     |
+1162 |         basic3_fallback_enabled: bool,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_basic3_fallback_enabled`
+
+warning: unused variable: `cell_width`
+  --> src/save_state.rs:32:64
+   |
+32 |     pub fn from_grid_and_actors(grid: &Grid, actors: &[Actor], cell_width: f32, cell_height: f32) -> Self {
+   |                                                                ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+
+warning: unused variable: `cell_height`
+  --> src/save_state.rs:32:81
+   |
+32 |     pub fn from_grid_and_actors(grid: &Grid, actors: &[Actor], cell_width: f32, cell_height: f32) -> Self {
+   |                                                                                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: unused variable: `center_x`
+   --> src/subcell.rs:788:18
+    |
+788 |             let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
+    |                  ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_center_x`
+
+warning: unused variable: `center_y`
+   --> src/subcell.rs:788:28
+    |
+788 |             let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
+    |                            ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_center_y`
+
+warning: unused variable: `max_index`
+   --> src/subcell.rs:877:9
+    |
+877 |     let max_index = grid_size - 1;
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_max_index`
+
+warning: unused variable: `cell_width`
+   --> src/subcell.rs:872:5
+    |
+872 |     cell_width: f32,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+
+warning: unused variable: `cell_height`
+   --> src/subcell.rs:873:5
+    |
+873 |     cell_height: f32,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: method `is_position_valid` is never used
+   --> src/actor.rs:383:8
+    |
+84  | impl Actor {
+    | ---------- method in this implementation
+...
+383 |     fn is_position_valid(&self, fpos_x: f32, fpos_y: f32, grid: &Grid) -> bool {
+    |        ^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: function `determine_targets` is never used
+   --> src/pathfinding.rs:671:4
+    |
+671 | fn determine_targets(dest: &Position, grid: &Grid) -> HashSet<Position> {
+    |    ^^^^^^^^^^^^^^^^^
+
+warning: function `apply_offset` is never used
+   --> src/subcell.rs:408:4
+    |
+408 | fn apply_offset(base: SubCellCoord, cell_dx: i32, cell_dy: i32, sub_dx: i32, sub_dy: i32, grid_size: i32) -> SubCellCoord {
+    |    ^^^^^^^^^^^^
+
+warning: `rustgame3` (lib) generated 18 warnings (run `cargo fix --lib -p rustgame3` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/debug/rustgame3`
+Loaded configuration from config.toml
+Early Reservation: OFF
+Actor 0 spawned at (492.0, 163.0). Total actors: 1
+Sub-cell destinations set: (11, 27) for 1 actors (spread across 1 cells)
+Sub-cell destinations set: (14, 30) for 1 actors (spread across 1 cells)
+Sub-cell destinations set: (17, 32) for 1 actors (spread across 1 cells)
+
+Session Duration: 10597ms
+Total Events: 8 (4 action pairs)
+Grid Modifications: 0 blocked, 0 freed, 0 toggled
+Actor Operations: 1 spawned, 3 destination commands (3 total actors commanded)
+Log Sizes: JSON=793 bytes, Compact=54 bytes (93.2% reduction)
+
+=== Action Log with Durations ===
+[  3180ms] #  1 START  SpawnActor { x: 492.0, y: 163.0 }
+[  3180ms] #  2 FINISH SpawnActor { x: 492.0, y: 163.0 } [duration: 0ms]
+[  3746ms] #  3 START  SetActorDestination { x: 11, y: 27, actor_count: 1 }
+[  3747ms] #  4 FINISH SetActorDestination { x: 11, y: 27, actor_count: 1 } [duration: 1ms]
+[  8897ms] #  5 START  SetActorDestination { x: 14, y: 30, actor_count: 1 }
+[  8897ms] #  6 FINISH SetActorDestination { x: 14, y: 30, actor_count: 1 } [duration: 0ms]
+[ 10597ms] #  7 START  SetActorDestination { x: 17, y: 32, actor_count: 1 }
+[ 10597ms] #  8 FINISH SetActorDestination { x: 17, y: 32, actor_count: 1 } [duration: 0ms]
+=== End of Log ===
+
+Action log saved to action_log.json (streaming mode)
+Compact action log saved to action_log.bin (54 bytes vs 793 bytes JSON, 93.2% smaller)
