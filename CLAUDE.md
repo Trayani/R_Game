@@ -302,6 +302,96 @@ Together, these principles create **8x effective test coverage** per test case:
 
 This comprehensive approach ensures algorithmic correctness across diverse scenarios.
 
+### Simulation Tests
+
+**Simulation tests** are integration tests that simulate real usage scenarios with multiple actors, obstacles, and pathfinding. These tests validate the complete system behavior rather than individual components.
+
+**Template**: Use `tests/test_save_state_simulation.rs` as the reference template for creating new simulation tests.
+
+#### Key Components of a Simulation Test
+
+1. **Load Initial State**
+   - Use `SaveState::load_from_file()` to load grid and actor configurations
+   - Alternatively, create actors programmatically with known positions
+   - Document the scenario being tested (e.g., "F9 + P workflow")
+
+2. **Set Destinations**
+   - Use `spread_cell_destinations()` to distribute actors across multiple destination cells
+   - Or set specific destinations for controlled scenarios
+   - Log destination assignments for debugging
+
+3. **Run Simulation Loop**
+   - Typical parameters: `delta_time = 0.016` (~60 FPS), `max_iterations = 4000`
+   - Update all actors each iteration using `update_subcell_destination_direct()`
+   - Track progress: count reached actors, record positions at intervals
+   - Log progress every 100-200 iterations
+
+4. **Verify Results with Realistic Thresholds**
+   - **Success ratio**: At least 40-50% of actors reach destination (accounts for obstacles/crowding)
+   - **Progress check**: All actors move >100 pixels from start (no complete deadlock)
+   - **Stuck tolerance**: Allow up to 20% of actors to be stuck (realistic with obstacles)
+   - **Minimum success**: At least one actor must reach destination (system not broken)
+
+5. **Detailed Logging**
+   - Starting positions of all actors
+   - Destination assignments
+   - Progress snapshots at intervals (e.g., every 100 iterations)
+   - Final positions with REACHED/STUCK status
+   - Distance traveled analysis for debugging stuck actors
+
+#### Example Structure
+
+```rust
+#[test]
+fn test_scenario_name() {
+    // Step 1: Load/create initial state
+    let save_state = SaveState::load_from_file("save_state.json")?;
+    let mut grid = /* recreate grid */;
+    let mut actors = save_state.restore_actors(/* params */);
+    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+
+    // Step 2: Set destinations
+    let cell_destinations = spread_cell_destinations(target_x, target_y, actors.len());
+    for (actor, (dest_x, dest_y)) in actors.iter_mut().zip(cell_destinations.iter()) {
+        actor.set_subcell_destination(Position { x: *dest_x, y: *dest_y });
+    }
+
+    // Step 3: Run simulation
+    let max_iterations = 4000;
+    let mut reached_count = 0;
+    for iteration in 0..max_iterations {
+        for i in 0..actors.len() {
+            let reached = actors[i].update_subcell_destination_direct(
+                delta_time, &mut reservation_mgr, /* flags */
+            );
+            if reached { reached_count += 1; }
+        }
+        // Log progress periodically
+    }
+
+    // Step 4: Verify results
+    let success_ratio = reached_count as f32 / actors.len() as f32;
+    assert!(success_ratio >= 0.4, "Expected at least 40% success");
+    // Additional assertions...
+}
+```
+
+#### When to Create Simulation Tests
+
+- Testing complete workflows (like F9 + P in the GUI)
+- Validating multi-actor behavior with obstacles
+- Regression testing for pathfinding changes
+- Performance validation (actors should make steady progress)
+- Integration testing of reservation system with real scenarios
+
+#### Tips
+
+- Use realistic thresholds (40-50% success) to account for edge cases
+- Long simulations (4000+ iterations) test stuck/deadlock scenarios
+- Track position history for debugging stuck actors
+- Test with save_state.json for consistent, realistic scenarios
+- Document what manual GUI workflow the test simulates
+
 ## Messy X Position
 
 **Messy X** is a special observer state where the observer occupies two adjacent horizontal cells instead of a single cell. This represents an observer whose position is not cleanly aligned to one cell.
