@@ -1252,37 +1252,10 @@ impl Actor {
             self.subcell_offset_y,
         );
 
-        // Move toward target position
+        // Calculate distance to target (used for both movement and switching)
         let dx_to_target = target_x - self.fpos_x;
         let dy_to_target = target_y - self.fpos_y;
         let dist_to_target = (dx_to_target * dx_to_target + dy_to_target * dy_to_target).sqrt();
-
-        // If target is essentially current position (no reservation, not moving to center), stay still
-        if dist_to_target < 0.1 {
-            // Try to reserve next sub-cell if we don't have one
-            // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-            if self.reserved_subcell.is_none() {
-                if !self.try_reserve_diagonal_with_anchor(
-                    &current,
-                    None,
-                    dx_to_dest,
-                    dy_to_dest,
-                    reservation_manager,
-                    enable_anti_cross,
-                    track_movement,
-                ) {
-                    // Diagonal failed, try H/V
-                    self.try_reserve_horizontal_vertical(
-                        &current,
-                        dx_to_dest,
-                        dy_to_dest,
-                        reservation_manager,
-                        track_movement,
-                    );
-                }
-            }
-            return false; // Stay in place
-        }
 
         // Move toward target
         let movement = self.speed * delta_time;
@@ -1292,31 +1265,28 @@ impl Actor {
             self.fpos_y += (dy_to_target / dist_to_target) * move_dist;
         }
 
-        // Check if we should switch from reserved to current
+        // Check if we should switch from reserved to current (triangle-based switching)
         if let Some(reserved) = self.reserved_subcell {
-            let (reserved_x, reserved_y) = reserved.to_screen_center_with_offset(
-                self.cell_width,
-                self.cell_height,
-                self.subcell_offset_x,
-                self.subcell_offset_y,
-            );
-            let (current_x, current_y) = current.to_screen_center_with_offset(
-                self.cell_width,
-                self.cell_height,
-                self.subcell_offset_x,
-                self.subcell_offset_y,
-            );
+            // Triangle-based movement: switch based on boundary proximity, not center proximity
+            let should_switch = if enable_early_reservation {
+                // Early mode: Switch when closer to boundary than to current center
+                let (current_x, current_y) = current.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                let dx_to_curr = current_x - self.fpos_x;
+                let dy_to_curr = current_y - self.fpos_y;
+                let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
 
-            let dx_to_reserved = reserved_x - self.fpos_x;
-            let dy_to_reserved = reserved_y - self.fpos_y;
-            let dist_to_reserved = (dx_to_reserved * dx_to_reserved + dy_to_reserved * dy_to_reserved).sqrt();
+                dist_to_target < dist_to_current_center
+            } else {
+                // Standard mode: Switch when at boundary (cannot move further)
+                dist_to_target < 0.5
+            };
 
-            let dx_to_current = current_x - self.fpos_x;
-            let dy_to_current = current_y - self.fpos_y;
-            let dist_to_current = (dx_to_current * dx_to_current + dy_to_current * dy_to_current).sqrt();
-
-            // If closer to reserved than current, switch
-            if dist_to_reserved <= dist_to_current {
+            if should_switch {
                 let previous_current = current;
 
                 // Release old current sub-cell if different
