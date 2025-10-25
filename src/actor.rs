@@ -1257,12 +1257,28 @@ impl Actor {
         let dy_to_target = target_y - self.fpos_y;
         let dist_to_target = (dx_to_target * dx_to_target + dy_to_target * dy_to_target).sqrt();
 
+        // TRACE: Log movement state for actor 0
+        if self.id == 0 && track_movement {
+            println!("[DestDirect Frame] actor_pos=({:.1},{:.1}) target=({:.1},{:.1}) dist={:.2}",
+                self.fpos_x, self.fpos_y, target_x, target_y, dist_to_target);
+            println!("  reserved={:?} anchor={:?} dest=({},{})",
+                self.reserved_subcell.is_some(),
+                self.extra_reserved_subcells.len(),
+                dest.x, dest.y);
+        }
+
         // Move toward target
         let movement = self.speed * delta_time;
         if dist_to_target > 0.001 {
             let move_dist = movement.min(dist_to_target);
             self.fpos_x += (dx_to_target / dist_to_target) * move_dist;
             self.fpos_y += (dy_to_target / dist_to_target) * move_dist;
+
+            if self.id == 0 && track_movement {
+                println!("  MOVED: move_dist={:.2} new_pos=({:.1},{:.1})", move_dist, self.fpos_x, self.fpos_y);
+            }
+        } else if self.id == 0 && track_movement {
+            println!("  NOT MOVING: dist_to_target={:.4} < 0.001", dist_to_target);
         }
 
         // Check if we should switch from reserved to current (triangle-based switching)
@@ -1280,13 +1296,25 @@ impl Actor {
                 let dy_to_curr = current_y - self.fpos_y;
                 let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
 
-                dist_to_target < dist_to_current_center
+                let switch = dist_to_target < dist_to_current_center;
+                if self.id == 0 && track_movement {
+                    println!("  EARLY CHECK: dist_to_boundary={:.2} dist_to_center={:.2} switch={}",
+                        dist_to_target, dist_to_current_center, switch);
+                }
+                switch
             } else {
                 // Standard mode: Switch when at boundary (cannot move further)
-                dist_to_target < 0.5
+                let switch = dist_to_target < 0.5;
+                if self.id == 0 && track_movement {
+                    println!("  STANDARD CHECK: dist_to_boundary={:.2} < 0.5? switch={}", dist_to_target, switch);
+                }
+                switch
             };
 
             if should_switch {
+                if self.id == 0 && track_movement {
+                    println!("  SWITCHING: current={:?} -> reserved={:?}", current, reserved);
+                }
                 let previous_current = current;
 
                 // Release old current sub-cell if different
@@ -1355,6 +1383,10 @@ impl Actor {
         } else {
             // No reservation - try to reserve next sub-cell
             // DestinationDirect: Try diagonal+anchor first, fallback to H/V
+            if self.id == 0 && track_movement {
+                println!("  NO RESERVATION: Attempting diagonal+anchor");
+            }
+
             if !self.try_reserve_diagonal_with_anchor(
                 &current,
                 None,
@@ -1365,13 +1397,21 @@ impl Actor {
                 track_movement,
             ) {
                 // Diagonal failed, try H/V
-                self.try_reserve_horizontal_vertical(
+                if self.id == 0 && track_movement {
+                    println!("  Diagonal failed, trying H/V");
+                }
+                let success = self.try_reserve_horizontal_vertical(
                     &current,
                     dx_to_dest,
                     dy_to_dest,
                     reservation_manager,
                     track_movement,
                 );
+                if self.id == 0 && track_movement {
+                    println!("  H/V result: {}", success);
+                }
+            } else if self.id == 0 && track_movement {
+                println!("  Diagonal+anchor SUCCESS");
             }
         }
 
