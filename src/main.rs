@@ -24,12 +24,13 @@ enum SubCellOffset {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum ReservationMode {
-    Square,           // Reserve 2×2 square in movement direction
-    Diagonal,         // Diagonal moves require H/V anchor reservation
-    NoDiagonal,       // Diagonal moves not allowed (skip diagonal candidates)
-    AntiCross,        // Diagonal moves blocked only if same actor owns both counter-diagonal cells
-    Basic3,           // Limit to 3 candidates (best + ±45° alternatives)
-    Basic3AntiCross,  // Basic3 + anti-cross checking
+    Square,              // Reserve 2×2 square in movement direction
+    Diagonal,            // Diagonal moves require H/V anchor reservation
+    NoDiagonal,          // Diagonal moves not allowed (skip diagonal candidates)
+    AntiCross,           // Diagonal moves blocked only if same actor owns both counter-diagonal cells
+    Basic3,              // Limit to 3 candidates (best + ±45° alternatives)
+    Basic3AntiCross,     // Basic3 + anti-cross checking
+    DestinationDirect,   // Move directly toward destination within reservation boundaries
 }
 
 impl ReservationMode {
@@ -41,6 +42,7 @@ impl ReservationMode {
             ReservationMode::AntiCross => "AntiCross",
             ReservationMode::Basic3 => "Basic3",
             ReservationMode::Basic3AntiCross => "Basic3AntiCross",
+            ReservationMode::DestinationDirect => "DestinationDirect",
         }
     }
 
@@ -52,6 +54,7 @@ impl ReservationMode {
             "AntiCross" => ReservationMode::AntiCross,
             "Basic3" => ReservationMode::Basic3,
             "Basic3AntiCross" => ReservationMode::Basic3AntiCross,
+            "DestinationDirect" => ReservationMode::DestinationDirect,
             _ => {
                 eprintln!("Warning: Invalid reservation mode '{}', defaulting to Square", s);
                 ReservationMode::Square
@@ -66,7 +69,8 @@ impl ReservationMode {
             ReservationMode::NoDiagonal => ReservationMode::AntiCross,
             ReservationMode::AntiCross => ReservationMode::Basic3,
             ReservationMode::Basic3 => ReservationMode::Basic3AntiCross,
-            ReservationMode::Basic3AntiCross => ReservationMode::Square,
+            ReservationMode::Basic3AntiCross => ReservationMode::DestinationDirect,
+            ReservationMode::DestinationDirect => ReservationMode::Square,
         }
     }
 }
@@ -1303,7 +1307,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1779,22 +1783,43 @@ async fn main() {
             let enable_anti_cross = state.reservation_mode == ReservationMode::AntiCross;
             let enable_basic3 = state.reservation_mode == ReservationMode::Basic3;
             let enable_basic3_anti_cross = state.reservation_mode == ReservationMode::Basic3AntiCross;
+            let use_destination_direct = state.reservation_mode == ReservationMode::DestinationDirect;
             let track_movement = state.tracking_mode == TrackingMode::Tracking;
+
             for i in 0..state.actors.len() {
-                let _reached = state.actors[i].update_subcell(
-                    delta_time,
-                    &mut state.subcell_reservation_manager,
-                    enable_square,
-                    enable_diagonal,
-                    enable_no_diagonal,
-                    enable_anti_cross,
-                    enable_basic3,
-                    enable_basic3_anti_cross,
-                    state.early_reservation_enabled,
-                    state.filter_backward_moves,
-                    state.basic3_fallback_enabled,
-                    track_movement,
-                );
+                let _reached = if use_destination_direct {
+                    // Use destination-direct movement strategy
+                    state.actors[i].update_subcell_destination_direct(
+                        delta_time,
+                        &mut state.subcell_reservation_manager,
+                        enable_square,
+                        enable_diagonal,
+                        enable_no_diagonal,
+                        enable_anti_cross,
+                        enable_basic3,
+                        enable_basic3_anti_cross,
+                        state.early_reservation_enabled,
+                        state.filter_backward_moves,
+                        state.basic3_fallback_enabled,
+                        track_movement,
+                    )
+                } else {
+                    // Use standard sub-cell movement
+                    state.actors[i].update_subcell(
+                        delta_time,
+                        &mut state.subcell_reservation_manager,
+                        enable_square,
+                        enable_diagonal,
+                        enable_no_diagonal,
+                        enable_anti_cross,
+                        enable_basic3,
+                        enable_basic3_anti_cross,
+                        state.early_reservation_enabled,
+                        state.filter_backward_moves,
+                        state.basic3_fallback_enabled,
+                        track_movement,
+                    )
+                };
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
             }
         } else {

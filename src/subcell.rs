@@ -595,6 +595,116 @@ pub fn find_best_3_neighbors(
     }
 }
 
+/// Calculate rectangular bounds for free-movement area between current and reserved sub-cells
+/// Returns (min_x, min_y, max_x, max_y) in screen coordinates
+pub fn calculate_rectangle_bounds(
+    current: &SubCellCoord,
+    reserved: &SubCellCoord,
+    cell_width: f32,
+    cell_height: f32,
+    offset_x: f32,
+    offset_y: f32,
+) -> (f32, f32, f32, f32) {
+    let (curr_x, curr_y) = current.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
+    let (res_x, res_y) = reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
+
+    let min_x = curr_x.min(res_x);
+    let max_x = curr_x.max(res_x);
+    let min_y = curr_y.min(res_y);
+    let max_y = curr_y.max(res_y);
+
+    (min_x, min_y, max_x, max_y)
+}
+
+/// Check if a position is within the rectangular free-movement area
+pub fn is_within_rectangle(
+    pos_x: f32,
+    pos_y: f32,
+    min_x: f32,
+    min_y: f32,
+    max_x: f32,
+    max_y: f32,
+) -> bool {
+    pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
+}
+
+/// Calculate the optimal target position for destination-direct movement
+///
+/// Returns the position the actor should move toward based on:
+/// - Diagonal reservation: Clamp destination to rectangle between current & reserved
+/// - H/V reservation: Return reserved sub-cell center
+/// - No reservation: Return current sub-cell center IF closer to destination, else actor's current position
+pub fn calculate_optimal_boundary(
+    current_subcell: &SubCellCoord,
+    reserved_subcell: Option<&SubCellCoord>,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    actor_pos_x: f32,
+    actor_pos_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    offset_x: f32,
+    offset_y: f32,
+) -> (f32, f32) {
+    match reserved_subcell {
+        Some(reserved) => {
+            // Check if this is a diagonal reservation
+            let dx_cells = (reserved.cell_x - current_subcell.cell_x).abs();
+            let dy_cells = (reserved.cell_y - current_subcell.cell_y).abs();
+            let dx_subs = (reserved.sub_x - current_subcell.sub_x).abs();
+            let dy_subs = (reserved.sub_y - current_subcell.sub_y).abs();
+
+            let is_diagonal = (dx_cells > 0 || dx_subs > 0) && (dy_cells > 0 || dy_subs > 0);
+
+            if is_diagonal {
+                // Diagonal reservation: Clamp destination to rectangle
+                let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds(
+                    current_subcell,
+                    reserved,
+                    cell_width,
+                    cell_height,
+                    offset_x,
+                    offset_y,
+                );
+
+                let clamped_x = dest_screen_x.max(min_x).min(max_x);
+                let clamped_y = dest_screen_y.max(min_y).min(max_y);
+
+                (clamped_x, clamped_y)
+            } else {
+                // H/V reservation: Move directly to reserved sub-cell center
+                reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y)
+            }
+        }
+        None => {
+            // No reservation: Move to current sub-cell center IF it's closer to destination
+            let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
+                cell_width,
+                cell_height,
+                offset_x,
+                offset_y,
+            );
+
+            // Calculate distances
+            let actor_to_dest_dx = dest_screen_x - actor_pos_x;
+            let actor_to_dest_dy = dest_screen_y - actor_pos_y;
+            let actor_to_dest_dist = (actor_to_dest_dx * actor_to_dest_dx + actor_to_dest_dy * actor_to_dest_dy).sqrt();
+
+            let center_to_dest_dx = dest_screen_x - center_x;
+            let center_to_dest_dy = dest_screen_y - center_y;
+            let center_to_dest_dist = (center_to_dest_dx * center_to_dest_dx + center_to_dest_dy * center_to_dest_dy).sqrt();
+
+            if center_to_dest_dist < actor_to_dest_dist {
+                // Center is closer to destination - move toward it
+                (center_x, center_y)
+            } else {
+                // Actor's current position is closer (or equal) - stay in place
+                (actor_pos_x, actor_pos_y)
+            }
+        }
+    }
+}
+
 /// Spread actors across different CELLS (not sub-cells)
 /// This is for final destinations - each actor gets a different cell
 /// Uses spiral pattern: center cell, then 8 neighbors, then next ring, etc.

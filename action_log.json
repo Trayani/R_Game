@@ -1,8 +1,1 @@
 [
-{"timestamp_ms":1471,"action":{"SetActorDestination":{"x":15,"y":35,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":1471,"action":{"SetActorDestination":{"x":15,"y":35,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":23571,"action":{"SetActorDestination":{"x":15,"y":34,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":23571,"action":{"SetActorDestination":{"x":15,"y":34,"actor_count":16}},"phase":"Finish"}
-]
-
-]

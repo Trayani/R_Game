@@ -1018,6 +1018,271 @@ impl Actor {
         // Wait for a path to open up or continue moving
         false
     }
+
+    /// Update sub-cell movement with destination-direct strategy
+    /// Returns true if destination reached, false otherwise
+    ///
+    /// This implements destination-oriented movement where:
+    /// 1. With diagonal reservation: Move freely toward destination within rectangular area
+    /// 2. With H/V reservation: Move directly to reserved sub-cell center
+    /// 3. No reservation: Move to current center if closer, else wait
+    /// 4. Uses same reservation logic as standard sub-cell movement
+    ///
+    /// # Parameters
+    /// - Same as `update_subcell`
+    pub fn update_subcell_destination_direct(
+        &mut self,
+        delta_time: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_square_reservation: bool,
+        enable_diagonal_constraint: bool,
+        enable_no_diagonal: bool,
+        enable_anti_cross: bool,
+        enable_basic3: bool,
+        enable_basic3_anti_cross: bool,
+        enable_early_reservation: bool,
+        filter_backward: bool,
+        basic3_fallback_enabled: bool,
+        track_movement: bool,
+    ) -> bool {
+        // Check if we have a destination
+        let dest = match self.subcell_destination {
+            Some(d) => d,
+            None => return true, // No destination, we're done
+        };
+
+        // Ensure we have current sub-cell
+        let current = match self.current_subcell {
+            Some(c) => c,
+            None => {
+                // Initialize from current position
+                let c = SubCellCoord::from_screen_pos_with_offset(
+                    self.fpos_x,
+                    self.fpos_y,
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                self.current_subcell = Some(c);
+                // Register the initial current subcell
+                reservation_manager.set_current(c, self.id);
+                c
+            }
+        };
+
+        // Get destination screen position (cell level)
+        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+
+        // Check if we've reached the destination
+        let dx_to_dest = dest_screen_x - self.fpos_x;
+        let dy_to_dest = dest_screen_y - self.fpos_y;
+        let dist_to_dest = (dx_to_dest * dx_to_dest + dy_to_dest * dy_to_dest).sqrt();
+
+        // Reached destination if we're very close
+        if dist_to_dest < 2.0 {
+            // Calculate the destination sub-cell
+            let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+                dest_screen_x,
+                dest_screen_y,
+                self.cell_width,
+                self.cell_height,
+                self.subcell_grid_size,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+
+            // Release all reservations except the destination sub-cell
+            if current != dest_subcell {
+                reservation_manager.release(current, self.id);
+            }
+            if let Some(reserved) = self.reserved_subcell {
+                if reserved != dest_subcell {
+                    reservation_manager.release(reserved, self.id);
+                }
+            }
+            for extra in &self.extra_reserved_subcells {
+                if *extra != dest_subcell {
+                    reservation_manager.release(*extra, self.id);
+                }
+            }
+            self.extra_reserved_subcells.clear();
+
+            // Keep only the destination sub-cell reserved
+            self.current_subcell = Some(dest_subcell);
+            self.subcell_destination = None;
+            self.reserved_subcell = None;
+            return true;
+        }
+
+        // Calculate optimal target position based on reservation state
+        let (target_x, target_y) = crate::subcell::calculate_optimal_boundary(
+            &current,
+            self.reserved_subcell.as_ref(),
+            dest_screen_x,
+            dest_screen_y,
+            self.fpos_x,
+            self.fpos_y,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        // Move toward target position
+        let dx_to_target = target_x - self.fpos_x;
+        let dy_to_target = target_y - self.fpos_y;
+        let dist_to_target = (dx_to_target * dx_to_target + dy_to_target * dy_to_target).sqrt();
+
+        // If target is essentially current position (no reservation, not moving to center), stay still
+        if dist_to_target < 0.1 {
+            // Try to reserve next sub-cell if we don't have one
+            if self.reserved_subcell.is_none() {
+                self.try_reserve_next_subcell(
+                    &current,
+                    None,
+                    dx_to_dest,
+                    dy_to_dest,
+                    dest_screen_x,
+                    dest_screen_y,
+                    reservation_manager,
+                    enable_square_reservation,
+                    enable_diagonal_constraint,
+                    enable_no_diagonal,
+                    enable_anti_cross,
+                    enable_basic3,
+                    enable_basic3_anti_cross,
+                    filter_backward,
+                    basic3_fallback_enabled,
+                    track_movement,
+                );
+            }
+            return false; // Stay in place
+        }
+
+        // Move toward target
+        let movement = self.speed * delta_time;
+        if dist_to_target > 0.001 {
+            let move_dist = movement.min(dist_to_target);
+            self.fpos_x += (dx_to_target / dist_to_target) * move_dist;
+            self.fpos_y += (dy_to_target / dist_to_target) * move_dist;
+        }
+
+        // Check if we should switch from reserved to current
+        if let Some(reserved) = self.reserved_subcell {
+            let (reserved_x, reserved_y) = reserved.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+            let (current_x, current_y) = current.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+
+            let dx_to_reserved = reserved_x - self.fpos_x;
+            let dy_to_reserved = reserved_y - self.fpos_y;
+            let dist_to_reserved = (dx_to_reserved * dx_to_reserved + dy_to_reserved * dy_to_reserved).sqrt();
+
+            let dx_to_current = current_x - self.fpos_x;
+            let dy_to_current = current_y - self.fpos_y;
+            let dist_to_current = (dx_to_current * dx_to_current + dy_to_current * dy_to_current).sqrt();
+
+            // If closer to reserved than current, switch
+            if dist_to_reserved <= dist_to_current {
+                let previous_current = current;
+
+                // Release old current sub-cell if different
+                if current != reserved {
+                    reservation_manager.release(current, self.id);
+                }
+                // Release extra reserved cells
+                for extra in &self.extra_reserved_subcells {
+                    reservation_manager.release(*extra, self.id);
+                }
+                self.extra_reserved_subcells.clear();
+
+                // Update current to reserved
+                self.current_subcell = Some(reserved);
+                self.reserved_subcell = None;
+
+                // Register the new current subcell
+                reservation_manager.set_current(reserved, self.id);
+
+                // Record position when reaching subcell
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+
+                // If early reservation enabled, immediately try to reserve next cell
+                if enable_early_reservation {
+                    let current = reserved;
+
+                    // Check if at destination sub-cell
+                    let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_grid_size,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    if current != dest_subcell {
+                        // Attempt reservation with previous position for anti-cross check
+                        self.try_reserve_next_subcell(
+                            &current,
+                            Some(&previous_current),
+                            dx_to_dest,
+                            dy_to_dest,
+                            dest_screen_x,
+                            dest_screen_y,
+                            reservation_manager,
+                            enable_square_reservation,
+                            enable_diagonal_constraint,
+                            enable_no_diagonal,
+                            enable_anti_cross,
+                            enable_basic3,
+                            enable_basic3_anti_cross,
+                            filter_backward,
+                            basic3_fallback_enabled,
+                            track_movement,
+                        );
+                    }
+                }
+
+                return false;
+            }
+        } else {
+            // No reservation - try to reserve next sub-cell
+            self.try_reserve_next_subcell(
+                &current,
+                None,
+                dx_to_dest,
+                dy_to_dest,
+                dest_screen_x,
+                dest_screen_y,
+                reservation_manager,
+                enable_square_reservation,
+                enable_diagonal_constraint,
+                enable_no_diagonal,
+                enable_anti_cross,
+                enable_basic3,
+                enable_basic3_anti_cross,
+                filter_backward,
+                basic3_fallback_enabled,
+                track_movement,
+            );
+        }
+
+        false
+    }
 }
 
 #[cfg(test)]
