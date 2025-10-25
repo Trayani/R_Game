@@ -5,6 +5,7 @@ pub mod cone;
 pub mod config;
 pub mod corners;
 pub mod grid;
+pub mod mirror_triangle;
 pub mod pathfinding;
 pub mod ray;
 pub mod raycast;

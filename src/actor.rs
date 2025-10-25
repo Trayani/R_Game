@@ -1,6 +1,7 @@
 use crate::Grid;
 use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
+use crate::mirror_triangle::{identify_mirror_triangle, try_reserve_mirror, release_redundant, MirrorTriangleInfo};
 
 /// Movement event for logging
 #[derive(Clone, Debug)]
@@ -650,6 +651,50 @@ impl Actor {
         println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: ALL BLOCKED (tried {} candidates)",
             self.id, diagonal_candidates.len());
         false
+    }
+
+    /// Try to reserve a mirror triangle for continuous boundary movement
+    /// Returns Some(MirrorTriangleInfo) if successful, None if mirror couldn't be reserved
+    fn try_reserve_mirror_triangle(
+        &mut self,
+        current_psc: &SubCellCoord,
+        reserved_diagonal: &SubCellCoord,
+        anchor: &SubCellCoord,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        track_movement: bool,
+    ) -> Option<MirrorTriangleInfo> {
+        // Identify the mirror triangle
+        let mirror_info = identify_mirror_triangle(
+            current_psc,
+            reserved_diagonal,
+            anchor,
+            dest_screen_x,
+            dest_screen_y,
+            self.cell_width,
+            self.cell_height,
+        )?;
+
+        // Try to reserve the mirror
+        if try_reserve_mirror(&mirror_info, self.id, reservation_manager) {
+            // Success! Update actor state
+            // The new diagonal becomes our next reserved subcell
+            self.reserved_subcell = Some(mirror_info.new_diagonal);
+
+            // The shared edge becomes extra reserved (one of them will be anchor)
+            self.extra_reserved_subcells = mirror_info.shared_edge.to_vec();
+
+            if track_movement {
+                self.movement_track.push((self.fpos_x, self.fpos_y));
+            }
+
+            println!("[MIRROR] Actor {} successfully reserved mirror triangle", self.id);
+            Some(mirror_info)
+        } else {
+            println!("[MIRROR] Actor {} failed to reserve mirror (blocked)", self.id);
+            None
+        }
     }
 
     /// Try to reserve H/V sub-cell (fallback when diagonal blocked)
@@ -1349,30 +1394,84 @@ impl Actor {
                 }
                 let previous_current = current;
 
-                // Release old current sub-cell if different
-                if current != reserved {
-                    reservation_manager.release(current, self.id);
-                }
-                // Release extra reserved cells
-                for extra in &self.extra_reserved_subcells {
-                    reservation_manager.release(*extra, self.id);
-                }
-                self.extra_reserved_subcells.clear();
+                // MIRROR TRIANGLE LOGIC: Try to reserve mirror BEFORE releasing everything
+                // This enables continuous boundary surfing as per spec Q2.5-Q2.6
+                let mirror_reserved = if let Some(&anchor_copy) = self.extra_reserved_subcells.first() {
+                    // We have a triangle: (current, reserved, anchor)
+                    // Try to reserve the mirror triangle
+                    if self.id == 0 && track_movement {
+                        println!("  [MIRROR] Attempting mirror reservation...");
+                    }
 
-                // Update current to reserved
-                self.current_subcell = Some(reserved);
-                self.reserved_subcell = None;
+                    let mirror_info = self.try_reserve_mirror_triangle(
+                        &current,
+                        &reserved,
+                        &anchor_copy,
+                        dest_screen_x,
+                        dest_screen_y,
+                        reservation_manager,
+                        track_movement,
+                    );
 
-                // Register the new current subcell
-                reservation_manager.set_current(reserved, self.id);
+                    if let Some(info) = mirror_info {
+                        // Mirror succeeded! Release ONLY the redundant subcell
+                        release_redundant(&info.redundant, self.id, reservation_manager);
 
-                // Record position when reaching subcell
-                if track_movement {
-                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                        // Update PSC to the reserved diagonal (we've crossed into it)
+                        self.current_subcell = Some(reserved);
+                        reservation_manager.set_current(reserved, self.id);
+
+                        // The mirror is already set up in try_reserve_mirror_triangle:
+                        // - self.reserved_subcell = new diagonal
+                        // - self.extra_reserved_subcells = shared edge
+
+                        if self.id == 0 && track_movement {
+                            println!("  [MIRROR SUCCESS] Continuous flow maintained!");
+                            println!("    New PSC: {:?}", reserved);
+                            println!("    Reserved diagonal: {:?}", self.reserved_subcell);
+                            println!("    Shared edge: {:?}", self.extra_reserved_subcells);
+                        }
+
+                        true // Mirror succeeded
+                    } else {
+                        false // Mirror failed
+                    }
+                } else {
+                    false // No anchor, can't do mirror (probably pure H/V movement)
+                };
+
+                // If mirror failed or not applicable, fall back to standard switching
+                if !mirror_reserved {
+                    if self.id == 0 && track_movement {
+                        println!("  [FALLBACK] Standard switching (no mirror)");
+                    }
+
+                    // Release old current sub-cell if different
+                    if current != reserved {
+                        reservation_manager.release(current, self.id);
+                    }
+                    // Release extra reserved cells
+                    for extra in &self.extra_reserved_subcells {
+                        reservation_manager.release(*extra, self.id);
+                    }
+                    self.extra_reserved_subcells.clear();
+
+                    // Update current to reserved
+                    self.current_subcell = Some(reserved);
+                    self.reserved_subcell = None;
+
+                    // Register the new current subcell
+                    reservation_manager.set_current(reserved, self.id);
+
+                    // Record position when reaching subcell
+                    if track_movement {
+                        self.movement_track.push((self.fpos_x, self.fpos_y));
+                    }
                 }
 
                 // If early reservation enabled, immediately try to reserve next cell
-                if enable_early_reservation {
+                // (Only if mirror didn't already set up next reservation)
+                if enable_early_reservation && !mirror_reserved {
                     let current = reserved;
 
                     // Check if at destination sub-cell
