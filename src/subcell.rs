@@ -692,11 +692,14 @@ pub fn calculate_triangle_boundary_target(
     // Determine the starting point for ray-casting toward destination
     let (ray_start_x, ray_start_y) = if actor_in_triangle {
         // Actor inside: start ray from actor's position
+        println!("[BOUNDARY] Actor inside triangle, ray-casting from actor pos");
         (actor_x, actor_y)
     } else {
         // Actor outside: start ray from triangle center
         let center_x = (current_x + reserved_x + anchor_x) / 3.0;
         let center_y = (current_y + reserved_y + anchor_y) / 3.0;
+        println!("[BOUNDARY] Actor OUTSIDE triangle, ray-casting from center ({:.1},{:.1})",
+            center_x, center_y);
         (center_x, center_y)
     };
 
@@ -721,6 +724,9 @@ pub fn calculate_triangle_boundary_target(
     let boundary_t = t_min * 0.99;
     let target_x = ray_start_x + norm_dir_x * boundary_t;
     let target_y = ray_start_y + norm_dir_y * boundary_t;
+
+    println!("[BOUNDARY] Triangle boundary at ({:.1},{:.1}), t={:.2} (closest to dest in triangle)",
+        target_x, target_y, boundary_t);
 
     (target_x, target_y)
 }
@@ -792,7 +798,10 @@ pub fn calculate_optimal_boundary(
                 }
             } else {
                 // H/V reservation: Move directly to reserved sub-cell center
-                reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y)
+                let target = reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
+                println!("[BOUNDARY] H/V reservation: target=reserved center ({:.1},{:.1})",
+                    target.0, target.1);
+                target
             }
         }
         None => {
@@ -812,14 +821,17 @@ pub fn calculate_optimal_boundary(
 
             if dir_len < 0.001 {
                 // Already at destination
+                println!("[BOUNDARY] No reservation: at destination");
                 (actor_pos_x, actor_pos_y)
             } else {
                 // Move a small step toward destination (enough to trigger reservation)
                 let step_size = (cell_width / 4.0).min(cell_height / 4.0);
                 let norm_dir_x = dir_x / dir_len;
                 let norm_dir_y = dir_y / dir_len;
-
-                (actor_pos_x + norm_dir_x * step_size, actor_pos_y + norm_dir_y * step_size)
+                let target = (actor_pos_x + norm_dir_x * step_size, actor_pos_y + norm_dir_y * step_size);
+                println!("[BOUNDARY] No reservation: small step toward dest ({:.1},{:.1})",
+                    target.0, target.1);
+                target
             }
         }
     }

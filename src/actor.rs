@@ -640,11 +640,15 @@ impl Actor {
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
                     }
+                    println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: reserved={:?} anchor={:?} (toward dest)",
+                        self.id, diagonal, anchor);
                     return true;
                 }
             }
         }
 
+        println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: ALL BLOCKED (tried {} candidates)",
+            self.id, diagonal_candidates.len());
         false
     }
 
@@ -686,10 +690,14 @@ impl Actor {
                 if track_movement {
                     self.movement_track.push((self.fpos_x, self.fpos_y));
                 }
+                println!("[RESERVE] Actor {} H/V FALLBACK: reserved={:?} (diagonal blocked)",
+                    self.id, candidate);
                 return true;
             }
         }
 
+        println!("[RESERVE] Actor {} H/V FALLBACK: ALL BLOCKED (tried {} candidates)",
+            self.id, hv_candidates.len());
         false
     }
 
