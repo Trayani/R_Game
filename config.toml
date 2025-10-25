@@ -64,7 +64,7 @@ show_markers = false
 #   "Basic3AntiCross"  - Basic3 + anti-cross checking (most restrictive)
 # Default: "Square"
 # Toggle at runtime: Q key (cycles through all modes)
-reservation_mode = "Square"
+reservation_mode = "Basic3AntiCross"
 
 # Early reservation system
 # When enabled, actors reserve their next sub-cell immediately upon reaching current sub-cell
@@ -72,7 +72,18 @@ reservation_mode = "Square"
 # Possible values: true, false
 # Default: false
 # Toggle at runtime: E key
-early_reservation_enabled = false
+early_reservation_enabled = true
+
+# Sub-cell offset alignment
+# Offsets the sub-cell grid alignment for all actors
+# Possible values:
+#   "None" - No offset, standard grid alignment (default)
+#   "X"    - Offset by 0.5 sub-cells horizontally
+#   "Y"    - Offset by 0.5 sub-cells vertically
+#   "XY"   - Offset by 0.5 sub-cells in both directions
+# Default: "None"
+# Toggle at runtime: T key (cycles None → X → Y → XY → None)
+offset = "None"
 
 [actors]
 # Default actor speed in pixels per second

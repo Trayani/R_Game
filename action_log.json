@@ -1,8 +1,16 @@
 [
-{"timestamp_ms":6986,"action":{"ToggleCell":{"x":7,"y":36}},"phase":"Start"},
-{"timestamp_ms":6987,"action":{"ToggleCell":{"x":7,"y":36}},"phase":"Finish"},
-{"timestamp_ms":9502,"action":{"SetActorDestination":{"x":6,"y":37,"actor_count":63}},"phase":"Start"},
-{"timestamp_ms":9502,"action":{"SetActorDestination":{"x":6,"y":37,"actor_count":63}},"phase":"Finish"}
+{"timestamp_ms":4847,"action":{"SetActorDestination":{"x":5,"y":11,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":4847,"action":{"SetActorDestination":{"x":5,"y":11,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":17831,"action":{"SetActorDestination":{"x":5,"y":11,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":17831,"action":{"SetActorDestination":{"x":5,"y":11,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":29414,"action":{"SetActorDestination":{"x":4,"y":13,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":29414,"action":{"SetActorDestination":{"x":4,"y":13,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":41814,"action":{"SetActorDestination":{"x":19,"y":36,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":41814,"action":{"SetActorDestination":{"x":19,"y":36,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":53631,"action":{"SetActorDestination":{"x":22,"y":38,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":53631,"action":{"SetActorDestination":{"x":22,"y":38,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":65382,"action":{"SetActorDestination":{"x":22,"y":38,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":65382,"action":{"SetActorDestination":{"x":22,"y":38,"actor_count":16}},"phase":"Finish"}
 ]
 
 ]

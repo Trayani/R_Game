@@ -90,6 +90,19 @@ impl SubCellOffset {
         }
     }
 
+    fn from_string(s: &str) -> SubCellOffset {
+        match s {
+            "None" => SubCellOffset::None,
+            "X" => SubCellOffset::X,
+            "Y" => SubCellOffset::Y,
+            "XY" => SubCellOffset::XY,
+            _ => {
+                eprintln!("Warning: Invalid subcell offset '{}', defaulting to None", s);
+                SubCellOffset::None
+            }
+        }
+    }
+
     fn get_offsets(&self) -> (f32, f32) {
         match self {
             SubCellOffset::None => (0.0, 0.0),
@@ -248,7 +261,7 @@ impl VisState {
             action_log: ActionLog::new(),
             next_actor_id: 0,
             subcell_mode,
-            subcell_offset: SubCellOffset::None,  // No offset by default
+            subcell_offset: SubCellOffset::from_string(&config.subcell.offset),
             subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
