@@ -1164,6 +1164,7 @@ impl Actor {
     ) -> bool {
         // ALWAYS log first 100 frames for actor 0 to debug GUI freeze
         static mut FRAME_COUNT: u32 = 0;
+        static mut LOGGED_NO_DEST: bool = false;
         let always_trace = unsafe {
             if self.id == 0 {
                 FRAME_COUNT += 1;
@@ -1179,11 +1180,13 @@ impl Actor {
                 if always_trace {
                     println!("[DestDirect ENTRY] Actor {} frame, dest=({},{})", self.id, d.x, d.y);
                 }
+                unsafe { LOGGED_NO_DEST = false; } // Reset flag when destination is set
                 d
             },
             None => {
-                if always_trace {
+                if always_trace && unsafe { !LOGGED_NO_DEST } {
                     println!("[DestDirect] Actor {} has NO DESTINATION", self.id);
+                    unsafe { LOGGED_NO_DEST = true; }
                 }
                 return true; // No destination, we're done
             }
