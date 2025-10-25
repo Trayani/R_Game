@@ -3,8 +3,7 @@
 Subcell selection must adhere to this logic:
 
 ** PRIMARY CELL **
-1.
-actor must have reserved his own primary subcell that represents his position in the grid.
+Before anything, the actor must have reserved his own primary subcell that represents his position in the grid.
 This subcell ("SC") is called "current" in the old implementation, but should be named "primary" in the future iterations.
 Primary subcell ("PSC") is also considered reserved by the actor, so no other actor can reserve it.
 
@@ -14,9 +13,10 @@ Primary subcell ("PSC") is also considered reserved by the actor, so no other ac
   This should happen only during Grid initialization.
   TEST THIS
 
-** RESERVATION **
 
-2. There are 8 SCs around the actor: 2 Horizontal, 2 Vertical and 4 Diagonal.
+** RESERVATION - overview**
+
+There are 8 SCs around the actor: 2 Horizontal, 2 Vertical and 4 Diagonal.
 Navigation takes into consideration that individual Manhattan-like distances of X and Y float coordinates muse never increase.
 Thus, the navigation always evaluates 3 SCs representing  3 normalized directions towards the destination ("DEST").
 The directions are horizontal, vertical and diagonal (diagonal is further split into vertical and horizontal).
@@ -25,7 +25,7 @@ If only V/H SC is reserved, the actor shall move to the reserved SC's center.
 To reserve a diagonal SC, the actor must also reserve vertical or horizontal SC.. whether to prefer V or H,
 depends on relative position on the SC center to the destination.
 
-**TEXTUAL EXAMPLE REPRESENTATION SUB-CELL**
+**TEXTUAL EXAMPLE OF SUB-CELL RESERVATION RULES**
 
 
           DC(NWV)
@@ -62,8 +62,9 @@ D8(SWH)     | /  V | V  \ |
 *8... another SC center to the EAST
 V.... is a vertically sided triangle, that favors vertical movement over horizontal
 H.... is a horizontally sided triangle, that favors horizontal movement over vertical
+
 D*... EXAMPLES of potential destinations placed to demonstrate reservation priorities
-- N/S/E/W/H/V tags in (...) ... describe classification of the reserved subcell configuration
+- N/S/E/W/H/V tags in D*(...) ... describe classification of the reserved subcell configuration
 -- N: NORTH (up from SC center)  X S: SOUTH (down from SC center)
 -- E: EAST (east from SC center) X W: WEST (west from SC center)
 -- V: VERTICAL (diagonal direction favors vertical movement)
@@ -76,6 +77,7 @@ D1(NEH): NORTH-EAST of * where but WEST is stronger: try to reserve in this orde
   2) it is a tie between horizontal direction (*4) and vertical triangle (*2,*3)  ... that depends on who's subcell is closer to destination
   3) the worst but still allowed: purely vertical direction at *2
 
+
 D2(E): pure EAST of *: try to reserve in this order: *8; (*1,*2) OR (*7,*6)  (priority can be decided by the precise float position)
 D3D3(SEH): SOUTH-EAST of * where but WEST is stronger:  (*4,*5); (*5,*6) OR *4 (depending on float position); *6
 D5(SEV): (*5,*6); *6 OR (*4,*5) (depends..); *6
@@ -85,78 +87,104 @@ D9(SWH) and D8(SWH): (*7,*8); *8 or (*7,*6); *6
 
 
 ** MOVEMENT **
-IF the actor reserved purely H/V SC, he will move toward the reserved SC center.  That's it.
+- IF the actor reserved purely H/V SC, he will move toward the reserved SC center.  That's it.
+- But if the optimal diagonal is reserved, the actor has the full triangle are to his disposal and should move directly to the destination if possible.
+- Last option: non-optimal diagonal: move to the diagonal SC center
 
-But if diagonal is reserved, the actor has the full triangle are to his disposal and should move directly to the destination if possible
 Going back to the example of D1(NEH):
-A) if actor reserved the best configuration (*4,*3), then he will move to the vertical boundary of the triangle
-(defined by position of  *4 ... *3 subcells).
-So on X axis, the target position is (*3).x  while the target position on the Y axis is extrapolated based on relative
-position between the PSC and DEST
-B) if actor reserved diagonal (*3,*2), that does NOT cover the direct direction to DEST, then the actor moves to center of the diagonal SC (*3)
+    1) if actor reserved the best configuration (*4,*3), then he will move to the vertical boundary of the triangle
+    (defined by position of  *4 ... *3 subcells).
+    So on X axis, the target position is (*3).x  while the target position on the Y axis is extrapolated based on relative
+    position between the PSC and DEST
+    2) if actor reserved the non-optimal diagonal (*3,*2), that does NOT cover the direct direction to DEST, then the actor moves to center of the diagonal SC (*3)
+    3) if actor reserved only V/H, he will move to the reserved SC's center
+
+another example D7(SWV):
+    1) if actor reserved the best configuration (*6,*7), then he will move to the horizontal boundary of the triangle
+    (defined by position of  *6 ... *7 subcells).
+    So on Y axis, the target position is (*6).y  while the target position on the X axis is extrapolated based on relative
+    position between the PSC and DEST
+    2) if actor reserved the non-optimal diagonal (*7,*8), that does NOT cover the direct direction to DEST, then the actor moves to center of the diagonal SC (*7)
+    3) if actor reserved only V/H, he will move to the reserved SC's center
 
 
 
-___________________________________________
-|\     |     /|\     |     /|\     |     /|
-| \    |    / | \    |    / | \    |    / |
-|  \   |   /  |  \   |   /  |  \   |   /  |
-|   \  |  /   |   \  |  /   |   \  |  /   |
-|    \ | /    |    \ | /    |    \ | /    |
-|     \|/     |     \|/     |     \|/     |
-|------O1-----|------O2-----|-----O3------|
-|     /|\     |     /|\     |     /|\     |
-|    / | \    |    / | \    |    / | \    |
-|   /  |  \   |   /  |  \   |   /  |  \   |
-|  /   |   \  |  /   |   \  |  /   |   \  |
-| /    |    \ | /    |    \ | /    |    \ |
-|/     |     \|/     |     \|/     |     \|
-O4------------O5------------O6-----------O7
-|\     |     /|\     |     /|\     |     /|
-| \    |    / | \    |    / | \    |    / |
-|  \   |   /  |  \   |   /  |  \   |   /  |
-|   \  |  /   |   \  |  /   |   \  |  /   |
-|    \ | /    |    \ | /    |    \ | /    |
-|     \|/     |     \|/     |     \|/     |
-|------O8-----|------O9-----|------OA-----|
-|     /|\     |     /|\     |     /|\     |
-|    / | \    |    / | \    |    / | \    |
-|   /  |  \   |   /  |  \   |   /  |  \   |
-|  /   |   \  |  /   |   \  |  /   |   \  |
-| /    |    \ | /    |    \ | /    |    \ |
-|/     |     \|/     |     \|/     |     \|
-‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+** RESERVATION - detail**
+So, reservation is a process of checking for other subcells that allow the actor to plan his movement.
+Once actor "starts reserving", this means that he is checking for a net SC (each tick).
 
-1_____
-\    |
- \ U |
-  \  |
-   \ |
- L  \|
-_____2
-
-   /\
-    /  \
-   /    \
-  /      \
- /________\
----
-\\
- \
-  \
-   \
+If reservation happens based on new primary cell, it follows RESERVATION RULES described above.
+But if the reservation happens based on a position of an optimal triangle boundary, additional rules have to apply:
+1) reserve the "mirror" triangle that completes a rectangle with the actor's already reserved triangle.
+This is because the mirror is placed on the optimal path to DEST.
+When reserving the mirror, the the rules are best illustrated with an extended the visualization from above
 
 
-1) which better
+    |------*-----*G------*F-----|
+    |     /|\     |     /|\     |
+    |    / | \    |    / | \    |
+    |   /  |  \   |   /  |  \   |
+    |  /   |   \  |  /   |   \  |
+    | /    |    \ | /    |    \ |
+    |/     |     \|/     |     \|
+  *7-------*6----*5------*C----*D
+    |\     |     /|\     |     /| DH
+    | \    |    / | \    |    / |
+    |  \   |   /  |  \   |   /  |
+    |   \  |  r   |   \  |  /   |
+    |    \ | /    |    \ | /    |
+    |     \|/     |     \|/     |
+    |------*A----*N------*E-----*I
+   *B
+
+     DD(SWV)
+
+In this example, the starting SC is still *.
+The destination DD(SWV) is somewhere further away with Y coordinate between (*B).y an (*A).y, so it requires a diagonal movement.
+If the actors moves to DD(SWV), he would reserve the optimal triangle (*7,*6).
+To continue directly toward DD, SC *A will have to be reserved and (*7,*6) will be kept reserved. Only * should be released.
+Eventually, the actor will reach diagonal boundary defined as *7...*A and to continue *B will have to be reserved while *6  already released.
+This continues until the actor reaches the destination or cannot maintain moving on the optimal triangle.
+If he cannot reserve the optimal triangle anymore ( because some SC is reserved or blocked), the actor will from his reserved SCs the one
+that is closest to the destination and will reserve base on that SC.
+
+There is also more complex example of DH destination the is placed very closely (but below) SC *D.
+To travel directly from * to DEST, the following triangles have to be passed:
+(*,*5,*G), (*F,*5,*G), (*F,*5,*C), (*F,*D,*C), (*E,*D,*C), (*E,*D,*I)
 
 
-Rare cases:
-A) if the all 3 SCs are reserved, the actor stands and waits. On every tick, the actor tries to reserve a SC again.
 
-B) if the DEST.SC.row == actor.SC.row , then the actor would move horizontally to DEST.
-But if there is a reserved or blocked SC on the horizontal line to DEST, the actor must obviously evaluate diagonal (ideally)
-or even vertical movement (less ideally).
+Reservation eagerness is controlled by a new configuration value reservation_eagerness
+- CENTER: actor starts reserving only after the target position (SC or boundary position) is reached
+- ROUND: when the target position (SC or boundary position)  is closer than all other reserved SCs
 
-C) For DEST.SC.column == actor.SC.column, the same pattern as for A) applies, but this time it is vertical movement.
 
-C) At this point, DEST is neither on the same column nor row as the actor. So a diago
+There should also be release_eagerness configuration
+- CENTER:
+-- SC: actor releases the his primary cell only after reaching the target SC and sets the target to his SC
+-- boundary: only after reaching the boundary position, will actor release the redundant SC, that is not needed to enter the mirror.
+Other two significant SCs are still held reserved.
+There is also a case, when the actor may not continue traveling via boundaries and heads to SC center : in that case the two
+redundant SCs are released upon reaching the SC center
+- ROUND:
+-- SC: when the target SC center is closer than all other reserved SCs
+-- boundary: When the boundary position is closer than redundant-to-be SC, that is not needed to enter the mirror.
+Only the redundant-to-be is thus already redundant and released. Other two significant SCs are still held reserved.
+
+Do no support reservation_eagerness=ROUND with release_eagerness=CENTER
+
+ORGANIC!
+And finally, I wish to acknowledge that the optimal triangle boundary movement likely greatly increases complexity.
+And that is why, the solution must be organic! This means, that the program must be able to naturally navigate via optimal triangles
+and their mirrors without rigid dependency on what happened before an actor got to a place.
+
+On the subcell visualization, I placed 'r' as an example:
+'r; is a position the is clearly placed on the boundary line  (*5....*A).
+How the actor got there? That should not matter!
+If the actor does not have a primary SC (he was likely spawned there), he must immediately reserve it - preferably
+the one that is closest to the destination.
+If the actor can reserve 2 additional cells of his super cell and construct the optimal triangle covering the ideal direction, let him do it!
+
+The point is that all of this should be testable and deterministic without complex state "batton passing".
+Literally create many tests where you spawn an actor and verify he travels directly via triangles. Then repeat
+the spawning on the path, but closer to distance: the actor should always behave the same way.
