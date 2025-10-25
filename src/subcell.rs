@@ -186,18 +186,27 @@ impl SubCellReservationManager {
     }
 
     /// Try to reserve a sub-cell for an actor
-    /// Returns true if reservation succeeded, false if already reserved
+    /// Returns true if reservation succeeded, false if already reserved or occupied
     pub fn try_reserve(&mut self, subcell: SubCellCoord, actor_id: usize) -> bool {
+        // Check if already reserved
         if let Some(&reserved_by) = self.reservations.get(&subcell) {
-            // Already reserved
             if reserved_by == actor_id {
                 // Already reserved by this actor - that's ok
                 return true;
             }
+            // Reserved by another actor
             return false;
         }
 
-        // Not reserved - reserve it
+        // Check if currently occupied by another actor
+        for (&other_actor_id, current_sc) in &self.current_subcells {
+            if current_sc == &subcell && other_actor_id != actor_id {
+                // Currently occupied by another actor
+                return false;
+            }
+        }
+
+        // Not reserved and not occupied - reserve it
         self.reservations.insert(subcell, actor_id);
         true
     }
@@ -206,11 +215,20 @@ impl SubCellReservationManager {
     /// Returns true if ALL cells could be reserved, false otherwise
     /// If reservation fails, no cells are reserved (atomic operation)
     pub fn try_reserve_multiple(&mut self, subcells: &[SubCellCoord], actor_id: usize) -> bool {
-        // First check if all cells are available or already reserved by this actor
+        // First check if all cells are available or already reserved/occupied by this actor
         for subcell in subcells {
+            // Check reservations
             if let Some(&reserved_by) = self.reservations.get(subcell) {
                 if reserved_by != actor_id {
                     // Cell is reserved by another actor - fail
+                    return false;
+                }
+            }
+
+            // Check current positions
+            for (&other_actor_id, current_sc) in &self.current_subcells {
+                if current_sc == subcell && other_actor_id != actor_id {
+                    // Cell is currently occupied by another actor - fail
                     return false;
                 }
             }
