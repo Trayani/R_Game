@@ -641,8 +641,23 @@ impl Actor {
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
                     }
-                    println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: reserved={:?} anchor={:?} (toward dest)",
-                        self.id, diagonal, anchor);
+
+                    // Check if this is an optimal triangle (for logging/debugging)
+                    let is_optimal = self.is_triangle_optimal(
+                        current,
+                        diagonal,
+                        &anchor,
+                        dir_x + self.fpos_x,  // Convert direction to destination position
+                        dir_y + self.fpos_y,
+                    );
+
+                    if is_optimal {
+                        println!("[RESERVE] Actor {} OPTIMAL TRIANGLE: reserved={:?} anchor={:?}",
+                            self.id, diagonal, anchor);
+                    } else {
+                        println!("[RESERVE] Actor {} NON-OPTIMAL TRIANGLE: reserved={:?} anchor={:?}",
+                            self.id, diagonal, anchor);
+                    }
                     return true;
                 }
             }
@@ -651,6 +666,111 @@ impl Actor {
         println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: ALL BLOCKED (tried {} candidates)",
             self.id, diagonal_candidates.len());
         false
+    }
+
+    /// Test if a ray intersects a triangle using barycentric coordinates
+    ///
+    /// Returns true if the ray from origin in direction (dir_x, dir_y) intersects
+    /// the triangle formed by the three vertices (in screen coordinates)
+    fn ray_intersects_triangle(
+        origin_x: f32,
+        origin_y: f32,
+        dir_x: f32,
+        dir_y: f32,
+        v0_x: f32,
+        v0_y: f32,
+        v1_x: f32,
+        v1_y: f32,
+        v2_x: f32,
+        v2_y: f32,
+    ) -> bool {
+        // 2D ray-triangle intersection using barycentric coordinates
+        // The ray is: P(t) = origin + t * dir (where t >= 0)
+        // The triangle is: P(u, v) = v0 + u*(v1-v0) + v*(v2-v0) (where u,v >= 0 and u+v <= 1)
+
+        // Edge vectors
+        let edge1_x = v1_x - v0_x;
+        let edge1_y = v1_y - v0_y;
+        let edge2_x = v2_x - v0_x;
+        let edge2_y = v2_y - v0_y;
+
+        // Vector from v0 to ray origin
+        let tvec_x = origin_x - v0_x;
+        let tvec_y = origin_y - v0_y;
+
+        // Calculate determinant (cross product in 2D)
+        let det = edge1_x * edge2_y - edge1_y * edge2_x;
+
+        // If determinant is near zero, ray and triangle are parallel
+        if det.abs() < 1e-6 {
+            return false;
+        }
+
+        let inv_det = 1.0 / det;
+
+        // Calculate u parameter (barycentric coordinate)
+        let u = (tvec_x * edge2_y - tvec_y * edge2_x) * inv_det;
+        if u < 0.0 || u > 1.0 {
+            return false;
+        }
+
+        // Calculate v parameter (barycentric coordinate)
+        let v = (dir_x * tvec_y - dir_y * tvec_x) * inv_det;
+        if v < 0.0 || u + v > 1.0 {
+            return false;
+        }
+
+        // Calculate t parameter (distance along ray)
+        let t = (edge2_x * tvec_y - edge2_y * tvec_x) * inv_det;
+
+        // Ray intersects triangle if t >= 0 (forward direction)
+        t >= 0.0
+    }
+
+    /// Check if a triangle is optimal (contains the destination vector from current position)
+    ///
+    /// Per spec Q2.2: A triangle is optimal if the ray from the actor toward the destination
+    /// intersects the triangle formed by (current, diagonal, anchor)
+    fn is_triangle_optimal(
+        &self,
+        current: &SubCellCoord,
+        diagonal: &SubCellCoord,
+        anchor: &SubCellCoord,
+        dest_x: f32,
+        dest_y: f32,
+    ) -> bool {
+        // Get triangle vertices in screen coordinates
+        let (v0_x, v0_y) = current.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let (v1_x, v1_y) = diagonal.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let (v2_x, v2_y) = anchor.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        // Direction from current position toward destination
+        let dir_x = dest_x - self.fpos_x;
+        let dir_y = dest_y - self.fpos_y;
+
+        // Test if ray intersects triangle
+        Self::ray_intersects_triangle(
+            self.fpos_x, self.fpos_y,
+            dir_x, dir_y,
+            v0_x, v0_y,
+            v1_x, v1_y,
+            v2_x, v2_y,
+        )
     }
 
     /// Check if we should attempt reservation based on eagerness mode
