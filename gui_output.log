@@ -116,31 +116,147 @@ warning: function `apply_offset` is never used
     |    ^^^^^^^^^^^^
 
 warning: `rustgame3` (lib) generated 18 warnings (run `cargo fix --lib -p rustgame3` to apply 1 suggestion)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s
      Running `target/debug/rustgame3`
 Loaded configuration from config.toml
-Early Reservation: OFF
-Actor 0 spawned at (492.0, 163.0). Total actors: 1
-Sub-cell destinations set: (11, 27) for 1 actors (spread across 1 cells)
-Sub-cell destinations set: (14, 30) for 1 actors (spread across 1 cells)
-Sub-cell destinations set: (17, 32) for 1 actors (spread across 1 cells)
-
-Session Duration: 10597ms
-Total Events: 8 (4 action pairs)
-Grid Modifications: 0 blocked, 0 freed, 0 toggled
-Actor Operations: 1 spawned, 3 destination commands (3 total actors commanded)
-Log Sizes: JSON=793 bytes, Compact=54 bytes (93.2% reduction)
-
-=== Action Log with Durations ===
-[  3180ms] #  1 START  SpawnActor { x: 492.0, y: 163.0 }
-[  3180ms] #  2 FINISH SpawnActor { x: 492.0, y: 163.0 } [duration: 0ms]
-[  3746ms] #  3 START  SetActorDestination { x: 11, y: 27, actor_count: 1 }
-[  3747ms] #  4 FINISH SetActorDestination { x: 11, y: 27, actor_count: 1 } [duration: 1ms]
-[  8897ms] #  5 START  SetActorDestination { x: 14, y: 30, actor_count: 1 }
-[  8897ms] #  6 FINISH SetActorDestination { x: 14, y: 30, actor_count: 1 } [duration: 0ms]
-[ 10597ms] #  7 START  SetActorDestination { x: 17, y: 32, actor_count: 1 }
-[ 10597ms] #  8 FINISH SetActorDestination { x: 17, y: 32, actor_count: 1 } [duration: 0ms]
-=== End of Log ===
-
-Action log saved to action_log.json (streaming mode)
-Compact action log saved to action_log.bin (54 bytes vs 793 bytes JSON, 93.2% smaller)
+=== INITIAL CONFIGURATION ===
+Sub-cell movement: ENABLED
+Reservation mode: DestinationDirect
+Early reservation: ON
+Filter backward: ON
+Basic3 fallback: OFF
+Tracking mode: Disabled
+Actor speed: 50
+============================
+[MAIN LOOP 1] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 1] use_destination_direct=true
+[MAIN LOOP 2] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 2] use_destination_direct=true
+[MAIN LOOP 3] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 3] use_destination_direct=true
+[MAIN LOOP 4] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 4] use_destination_direct=true
+[MAIN LOOP 5] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 5] use_destination_direct=true
+[MAIN LOOP 6] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 6] use_destination_direct=true
+[MAIN LOOP 7] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 7] use_destination_direct=true
+[MAIN LOOP 8] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 8] use_destination_direct=true
+[MAIN LOOP 9] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 9] use_destination_direct=true
+[MAIN LOOP 10] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 10] use_destination_direct=true
+[MAIN LOOP 11] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 11] use_destination_direct=true
+[MAIN LOOP 12] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 12] use_destination_direct=true
+[MAIN LOOP 13] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 13] use_destination_direct=true
+[MAIN LOOP 14] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 14] use_destination_direct=true
+[MAIN LOOP 15] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 15] use_destination_direct=true
+[MAIN LOOP 16] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 16] use_destination_direct=true
+[MAIN LOOP 17] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 17] use_destination_direct=true
+[MAIN LOOP 18] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 18] use_destination_direct=true
+[MAIN LOOP 19] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 19] use_destination_direct=true
+[MAIN LOOP 20] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 20] use_destination_direct=true
+[MAIN LOOP 21] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 21] use_destination_direct=true
+[MAIN LOOP 22] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 22] use_destination_direct=true
+[MAIN LOOP 23] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 23] use_destination_direct=true
+[MAIN LOOP 24] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 24] use_destination_direct=true
+[MAIN LOOP 25] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 25] use_destination_direct=true
+[MAIN LOOP 26] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 26] use_destination_direct=true
+[MAIN LOOP 27] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 27] use_destination_direct=true
+[MAIN LOOP 28] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 28] use_destination_direct=true
+[MAIN LOOP 29] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 29] use_destination_direct=true
+[MAIN LOOP 30] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 30] use_destination_direct=true
+[MAIN LOOP 31] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 31] use_destination_direct=true
+[MAIN LOOP 32] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 32] use_destination_direct=true
+[MAIN LOOP 33] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 33] use_destination_direct=true
+[MAIN LOOP 34] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 34] use_destination_direct=true
+[MAIN LOOP 35] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 35] use_destination_direct=true
+[MAIN LOOP 36] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 36] use_destination_direct=true
+[MAIN LOOP 37] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 37] use_destination_direct=true
+[MAIN LOOP 38] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 38] use_destination_direct=true
+[MAIN LOOP 39] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 39] use_destination_direct=true
+[MAIN LOOP 40] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 40] use_destination_direct=true
+[MAIN LOOP 41] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 41] use_destination_direct=true
+[MAIN LOOP 42] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 42] use_destination_direct=true
+[MAIN LOOP 43] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 43] use_destination_direct=true
+[MAIN LOOP 44] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 44] use_destination_direct=true
+[MAIN LOOP 45] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 45] use_destination_direct=true
+[MAIN LOOP 46] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 46] use_destination_direct=true
+[MAIN LOOP 47] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 47] use_destination_direct=true
+[MAIN LOOP 48] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 48] use_destination_direct=true
+[MAIN LOOP 49] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 49] use_destination_direct=true
+[MAIN LOOP 50] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 50] use_destination_direct=true
+[MAIN LOOP 51] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 51] use_destination_direct=true
+[MAIN LOOP 52] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 52] use_destination_direct=true
+[MAIN LOOP 53] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 53] use_destination_direct=true
+[MAIN LOOP 54] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 54] use_destination_direct=true
+[MAIN LOOP 55] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 55] use_destination_direct=true
+[MAIN LOOP 56] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 56] use_destination_direct=true
+[MAIN LOOP 57] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 57] use_destination_direct=true
+[MAIN LOOP 58] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 58] use_destination_direct=true
+[MAIN LOOP 59] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 59] use_destination_direct=true
+[MAIN LOOP 60] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 60] use_destination_direct=true
+[MAIN LOOP 61] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 61] use_destination_direct=true
+[MAIN LOOP 62] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 62] use_destination_direct=true
+[MAIN LOOP 63] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 63] use_destination_direct=true
+[MAIN LOOP 64] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 64] use_destination_direct=true
+[MAIN LOOP 65] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 65] use_destination_direct=true
+[MAIN LOOP 66] subcell_movement_enabled=true, reservation_mode=DestinationDirect
+[MAIN LOOP 66] use_destination_direct=true

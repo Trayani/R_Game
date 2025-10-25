@@ -1162,12 +1162,12 @@ impl Actor {
         basic3_fallback_enabled: bool,
         track_movement: bool,
     ) -> bool {
-        // ALWAYS log first 10 frames for actor 0 to debug GUI freeze
+        // ALWAYS log first 100 frames for actor 0 to debug GUI freeze
         static mut FRAME_COUNT: u32 = 0;
         let always_trace = unsafe {
             if self.id == 0 {
                 FRAME_COUNT += 1;
-                FRAME_COUNT <= 10
+                FRAME_COUNT <= 100
             } else {
                 false
             }

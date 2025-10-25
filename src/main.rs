@@ -1331,6 +1331,17 @@ async fn main() {
 
     let mut state = VisState::new(&config);
 
+    // Log initial configuration state
+    println!("=== INITIAL CONFIGURATION ===");
+    println!("Sub-cell movement: {}", if state.subcell_movement_enabled { "ENABLED" } else { "DISABLED" });
+    println!("Reservation mode: {:?}", state.reservation_mode);
+    println!("Early reservation: {}", if state.early_reservation_enabled { "ON" } else { "OFF" });
+    println!("Filter backward: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
+    println!("Basic3 fallback: {}", if state.basic3_fallback_enabled { "ON" } else { "OFF" });
+    println!("Tracking mode: {:?}", state.tracking_mode);
+    println!("Actor speed: {}", state.actor_speed);
+    println!("============================");
+
     loop {
         // Handle input continuously
         let (mouse_x, mouse_y) = mouse_position();
@@ -1777,6 +1788,17 @@ async fn main() {
 
         if state.subcell_movement_enabled {
             // Sub-cell movement mode - update all actors with sub-cell logic
+            static mut MAIN_LOOP_COUNT: u32 = 0;
+            let always_trace_main = unsafe {
+                MAIN_LOOP_COUNT += 1;
+                MAIN_LOOP_COUNT <= 100
+            };
+
+            if always_trace_main {
+                println!("[MAIN LOOP {}] subcell_movement_enabled=true, reservation_mode={:?}",
+                    unsafe { MAIN_LOOP_COUNT }, state.reservation_mode);
+            }
+
             let enable_square = state.reservation_mode == ReservationMode::Square;
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
             let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
@@ -1786,9 +1808,22 @@ async fn main() {
             let use_destination_direct = state.reservation_mode == ReservationMode::DestinationDirect;
             let track_movement = state.tracking_mode == TrackingMode::Tracking;
 
+            if always_trace_main {
+                println!("[MAIN LOOP {}] use_destination_direct={}",
+                    unsafe { MAIN_LOOP_COUNT }, use_destination_direct);
+            }
+
             for i in 0..state.actors.len() {
+                if always_trace_main && i == 0 {
+                    println!("[MAIN LOOP {}] About to update actor {}, use_destination_direct={}",
+                        unsafe { MAIN_LOOP_COUNT }, i, use_destination_direct);
+                }
                 let _reached = if use_destination_direct {
                     // Use destination-direct movement strategy
+                    if always_trace_main && i == 0 {
+                        println!("[MAIN LOOP {}] Calling update_subcell_destination_direct for actor {}",
+                            unsafe { MAIN_LOOP_COUNT }, i);
+                    }
                     state.actors[i].update_subcell_destination_direct(
                         delta_time,
                         &mut state.subcell_reservation_manager,
