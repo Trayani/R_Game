@@ -773,6 +773,78 @@ impl Actor {
         )
     }
 
+    /// Try to reserve ANY available subcell in the current supercell (cell)
+    /// Returns true if any reservation succeeded
+    ///
+    /// This is used when preferred directions are blocked - actor tries to reserve
+    /// any available subcell in their current cell, sorted by distance to actor's position
+    fn try_reserve_any_available_in_current_cell(
+        &mut self,
+        current: &SubCellCoord,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        track_movement: bool,
+    ) -> bool {
+        // Get all subcells in the current supercell (cell)
+        let mut subcells_in_cell: Vec<SubCellCoord> = Vec::new();
+
+        for sub_y in 0..self.subcell_grid_size {
+            for sub_x in 0..self.subcell_grid_size {
+                let sc = SubCellCoord::new(
+                    current.cell_x,
+                    current.cell_y,
+                    sub_x,
+                    sub_y,
+                    self.subcell_grid_size,
+                );
+                subcells_in_cell.push(sc);
+            }
+        }
+
+        // Sort by distance to actor's current float position
+        subcells_in_cell.sort_by(|a, b| {
+            let (a_x, a_y) = a.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+            let (b_x, b_y) = b.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+
+            let dist_a = ((a_x - self.fpos_x).powi(2) + (a_y - self.fpos_y).powi(2)).sqrt();
+            let dist_b = ((b_x - self.fpos_x).powi(2) + (b_y - self.fpos_y).powi(2)).sqrt();
+
+            dist_a.partial_cmp(&dist_b).unwrap()
+        });
+
+        // Try to reserve each subcell in order of distance
+        for sc in &subcells_in_cell {
+            // Skip if it's already our current subcell
+            if sc == current {
+                continue;
+            }
+
+            if reservation_manager.try_reserve(*sc, self.id) {
+                self.reserved_subcell = Some(*sc);
+                self.extra_reserved_subcells.clear();
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+                println!("[RESERVE] Actor {} ANY-AVAILABLE: reserved={:?} (all preferred blocked)",
+                    self.id, sc);
+                return true;
+            }
+        }
+
+        println!("[RESERVE] Actor {} ANY-AVAILABLE: ALL BLOCKED (cell too crowded)",
+            self.id);
+        false
+    }
+
     /// Check if we should attempt reservation based on eagerness mode
     ///
     /// CENTER mode: Reserve when destination subcell center is within threshold distance
@@ -1871,18 +1943,9 @@ impl Actor {
                 return false;
             }
         } else {
-            // No reservation - check if we should attempt reservation based on eagerness
-            if !self.should_attempt_reservation(
-                reservation_eagerness,
-                reservation_threshold_distance,
-                dest_screen_x,
-                dest_screen_y,
-            ) {
-                if self.id == 0 && track_movement {
-                    println!("  NOT READY TO RESERVE: eagerness check failed");
-                }
-                return false;
-            }
+            // No reservation - always attempt to reserve when we have no reservation yet
+            // The eagerness check applies to EARLY reservations (reserving next-next cell),
+            // not to initial reservations (reserving the first next cell)
 
             // Try to reserve next sub-cell
             // DestinationDirect: Try diagonal+anchor first, fallback to H/V
@@ -1890,7 +1953,8 @@ impl Actor {
                 println!("  NO RESERVATION: Attempting diagonal+anchor");
             }
 
-            if !self.try_reserve_diagonal_with_anchor(
+            // Try diagonal+anchor first
+            let diagonal_success = self.try_reserve_diagonal_with_anchor(
                 &current,
                 None,
                 dx_to_dest,
@@ -1898,20 +1962,32 @@ impl Actor {
                 reservation_manager,
                 enable_anti_cross,
                 track_movement,
-            ) {
+            );
+
+            if !diagonal_success {
                 // Diagonal failed, try H/V
                 if self.id == 0 && track_movement {
                     println!("  Diagonal failed, trying H/V");
                 }
-                let success = self.try_reserve_horizontal_vertical(
+                let hv_success = self.try_reserve_horizontal_vertical(
                     &current,
                     dx_to_dest,
                     dy_to_dest,
                     reservation_manager,
                     track_movement,
                 );
-                if self.id == 0 && track_movement {
-                    println!("  H/V result: {}", success);
+
+                if !hv_success {
+                    // All preferred directions blocked, try ANY available subcell in current cell
+                    if self.id == 0 && track_movement {
+                        println!("  All preferred blocked, trying any available in cell");
+                    }
+                    self.try_reserve_any_available_in_current_cell(
+                        &current,
+                        reservation_manager,
+                        track_movement,
+                    );
+                    // Note: If this also fails, actor will stay in place (cell too crowded)
                 }
             } else if self.id == 0 && track_movement {
                 println!("  Diagonal+anchor SUCCESS");

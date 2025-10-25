@@ -823,8 +823,8 @@ pub fn calculate_optimal_boundary(
             }
         }
         None => {
-            // No reservation: Move toward destination to trigger reservation attempt
-            // Return a point in the destination direction (within current sub-cell)
+            // No reservation: Stay at current subcell center
+            // Per design documentation: actors should stay in place when they cannot move/reserve
             let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
                 cell_width,
                 cell_height,
@@ -832,24 +832,20 @@ pub fn calculate_optimal_boundary(
                 offset_y,
             );
 
-            // Calculate direction toward destination
-            let dir_x = dest_screen_x - actor_pos_x;
-            let dir_y = dest_screen_y - actor_pos_y;
-            let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
+            // Check if already at center - if so, just stay
+            let dx_to_center = center_x - actor_pos_x;
+            let dy_to_center = center_y - actor_pos_y;
+            let dist_to_center = (dx_to_center * dx_to_center + dy_to_center * dy_to_center).sqrt();
 
-            if dir_len < 0.001 {
-                // Already at destination
-                println!("[BOUNDARY] No reservation: at destination");
+            if dist_to_center < 0.5 {
+                // Already at or very close to center - stay in place
+                println!("[BOUNDARY] No reservation: staying at current position");
                 (actor_pos_x, actor_pos_y)
             } else {
-                // Move a small step toward destination (enough to trigger reservation)
-                let step_size = (cell_width / 4.0).min(cell_height / 4.0);
-                let norm_dir_x = dir_x / dir_len;
-                let norm_dir_y = dir_y / dir_len;
-                let target = (actor_pos_x + norm_dir_x * step_size, actor_pos_y + norm_dir_y * step_size);
-                println!("[BOUNDARY] No reservation: small step toward dest ({:.1},{:.1})",
-                    target.0, target.1);
-                target
+                // Move toward subcell center
+                println!("[BOUNDARY] No reservation: moving to subcell center ({:.1},{:.1})",
+                    center_x, center_y);
+                (center_x, center_y)
             }
         }
     }
