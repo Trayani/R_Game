@@ -447,6 +447,9 @@ fn test_destination_direct_basic_movement() {
             false, // filter_backward
             false, // basic3_fallback_enabled
             false, // track_movement
+            0.1,   // reservation_threshold_distance
+            rustgame3::ReservationEagerness::Center,
+            rustgame3::ReleaseEagerness::Center,
         );
 
         if reached {
