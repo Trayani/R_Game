@@ -163,6 +163,46 @@ Combines Basic3's 3-candidate limitation with AntiCross's counter-diagonal cross
 
 This mode provides the most restrictive collision avoidance while maintaining predictable pathfinding.
 
+### DestinationDirect Mode ⭐ NEW
+Move fluidly toward destination within reservation boundaries, rather than rigidly toward sub-cell centers.
+
+**The Core Principle**: Reserved sub-cells define movement **boundaries**, not target positions. Actors aim directly for their destination within the allowed area.
+
+**Behavior by Reservation Type**:
+
+**Diagonal Reservation** ✓
+- Actor can move freely in rectangular area between current & reserved sub-cells
+- Target: Destination position (clamped to rectangle bounds)
+- Provides fluid, natural diagonal movement
+
+**Horizontal/Vertical Reservation** ✓
+- Actor moves directly to reserved sub-cell center
+- No centering requirement on current sub-cell
+- Skips intermediate alignment steps
+
+**No Reservation** ✓
+- Actor moves to current sub-cell center IF it's closer to destination
+- Otherwise: stays in place and waits
+- Continues trying to reserve each frame
+
+**Advantages Over Standard Sub-Cell Movement**:
+- More direct paths toward destinations
+- Less "zigzag" behavior from centering requirements
+- Actors naturally align with destination direction
+- Still respects all collision avoidance (anti-cross, etc.)
+
+**Example Scenario**:
+```
+Actor at (5.2, 5.8) in sub-cell (5,5,1,1)
+Destination at (8.3, 8.7)
+Reserved sub-cell: (6,6,0,0) [diagonal]
+
+Standard mode: Move to (5.5, 5.5) center, then toward (6.25, 6.25)
+DestinationDirect: Move directly toward (8.3, 8.7) within rectangle
+```
+
+Press **Q** to cycle through modes. DestinationDirect comes after Basic3AntiCross.
+
 ## Architecture
 
 ### Core Raycasting Algorithm
