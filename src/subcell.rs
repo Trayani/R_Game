@@ -160,6 +160,43 @@ impl SubCellCoord {
         // Dot product
         dir_x * norm_target_x + dir_y * norm_target_y
     }
+
+    /// Check if moving to `other` would violate the design doc rule (line 20):
+    /// "individual Manhattan-like distances of X and Y float coordinates must never increase"
+    ///
+    /// Returns true if moving to `other` would increase distanceX OR distanceY to destination
+    pub fn violates_distance_rule(
+        &self,
+        other: &SubCellCoord,
+        actor_x: f32,
+        actor_y: f32,
+        dest_x: f32,
+        dest_y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        offset_x: f32,
+        offset_y: f32,
+    ) -> bool {
+        // Current distances from actor to destination
+        let curr_dist_x = (dest_x - actor_x).abs();
+        let curr_dist_y = (dest_y - actor_y).abs();
+
+        // New distances if we move to other
+        let (other_x, other_y) = other.to_screen_center_with_offset(
+            cell_width, cell_height, offset_x, offset_y
+        );
+        let new_dist_x = (dest_x - other_x).abs();
+        let new_dist_y = (dest_y - other_y).abs();
+
+        // Allow a small tolerance for subcell-center alignment (half a subcell width)
+        // This prevents rejecting valid H/V moves where one component increases slightly
+        // due to centering within the subcell
+        let subcell_width = cell_width / 2.0; // Assuming 2x2 subcell grid
+        let tolerance = subcell_width * 0.6; // 60% of subcell width
+
+        // Violates rule if EITHER distance increases beyond tolerance
+        (new_dist_x - curr_dist_x) > tolerance || (new_dist_y - curr_dist_y) > tolerance
+    }
 }
 
 /// Sub-cell reservation manager

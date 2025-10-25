@@ -593,6 +593,8 @@ impl Actor {
         previous_current: Option<&SubCellCoord>,
         dir_x: f32,
         dir_y: f32,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
@@ -603,6 +605,21 @@ impl Actor {
         let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = neighbors
             .iter()
             .filter(|n| Self::is_diagonal_move(current, n))
+            .filter(|n| {
+                // DESIGN DOC RULE (line 20): Filter candidates that would increase distance
+                // "individual Manhattan-like distances of X and Y float coordinates must never increase"
+                !current.violates_distance_rule(
+                    n,
+                    self.fpos_x,
+                    self.fpos_y,
+                    dest_screen_x,
+                    dest_screen_y,
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                )
+            })
             .map(|n| {
                 let score = current.alignment_score(
                     n,
@@ -1080,6 +1097,8 @@ impl Actor {
         current: &SubCellCoord,
         dir_x: f32,
         dir_y: f32,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         track_movement: bool,
     ) -> bool {
@@ -1101,6 +1120,22 @@ impl Actor {
         for n in neighbors.iter() {
             if Self::is_diagonal_move(current, n) {
                 continue; // Skip diagonals
+            }
+
+            // DESIGN DOC RULE (line 20): Filter candidates that would increase distance
+            // "individual Manhattan-like distances of X and Y float coordinates must never increase"
+            if current.violates_distance_rule(
+                n,
+                self.fpos_x,
+                self.fpos_y,
+                dest_screen_x,
+                dest_screen_y,
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            ) {
+                continue; // Skip - would increase distanceX or distanceY
             }
 
             // Check if it's horizontal or vertical
@@ -1923,6 +1958,8 @@ impl Actor {
                                 Some(&previous_current),
                                 dx_to_dest,
                                 dy_to_dest,
+                                dest_screen_x,
+                                dest_screen_y,
                                 reservation_manager,
                                 enable_anti_cross,
                                 track_movement,
@@ -1932,6 +1969,8 @@ impl Actor {
                                     &current,
                                     dx_to_dest,
                                     dy_to_dest,
+                                    dest_screen_x,
+                                    dest_screen_y,
                                     reservation_manager,
                                     track_movement,
                                 );
@@ -1959,6 +1998,8 @@ impl Actor {
                 None,
                 dx_to_dest,
                 dy_to_dest,
+                dest_screen_x,
+                dest_screen_y,
                 reservation_manager,
                 enable_anti_cross,
                 track_movement,
@@ -1969,26 +2010,18 @@ impl Actor {
                 if self.id == 0 && track_movement {
                     println!("  Diagonal failed, trying H/V");
                 }
-                let hv_success = self.try_reserve_horizontal_vertical(
+                self.try_reserve_horizontal_vertical(
                     &current,
                     dx_to_dest,
                     dy_to_dest,
+                    dest_screen_x,
+                    dest_screen_y,
                     reservation_manager,
                     track_movement,
                 );
-
-                if !hv_success {
-                    // All preferred directions blocked, try ANY available subcell in current cell
-                    if self.id == 0 && track_movement {
-                        println!("  All preferred blocked, trying any available in cell");
-                    }
-                    self.try_reserve_any_available_in_current_cell(
-                        &current,
-                        reservation_manager,
-                        track_movement,
-                    );
-                    // Note: If this also fails, actor will stay in place (cell too crowded)
-                }
+                // Note: If H/V also fails, actor will stay in place (all directions blocked)
+                // The any_available fallback should ONLY be used during initialization when
+                // actor has no primary subcell, not as a movement fallback.
             } else if self.id == 0 && track_movement {
                 println!("  Diagonal+anchor SUCCESS");
             }
