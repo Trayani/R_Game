@@ -1,0 +1,162 @@
+!! this is relevant to reservation_mode = "DestinationDirect" !!
+
+Subcell selection must adhere to this logic:
+
+** PRIMARY CELL **
+1.
+actor must have reserved his own primary subcell that represents his position in the grid.
+This subcell ("SC") is called "current" in the old implementation, but should be named "primary" in the future iterations.
+Primary subcell ("PSC") is also considered reserved by the actor, so no other actor can reserve it.
+
+- IF the actor does not have assigned any PSC, he needs to immediatelly reserve one in his super-cell.
+  Actor's super-cell is determined by the center his float position in the grid. He needs to pick the first available if he does not have.
+  If all SC in actor's position are reserved, he needs to stay and wait and check every tick if any SC can be reserved.
+  This should happen only during Grid initialization.
+  TEST THIS
+
+** RESERVATION **
+
+2. There are 8 SCs around the actor: 2 Horizontal, 2 Vertical and 4 Diagonal.
+Navigation takes into consideration that individual Manhattan-like distances of X and Y float coordinates muse never increase.
+Thus, the navigation always evaluates 3 SCs representing  3 normalized directions towards the destination ("DEST").
+The directions are horizontal, vertical and diagonal (diagonal is further split into vertical and horizontal).
+One (or two in case of diagonal) SCs must be reserved to allow the actor to move.
+If only V/H SC is reserved, the actor shall move to the reserved SC's center.
+To reserve a diagonal SC, the actor must also reserve vertical or horizontal SC.. whether to prefer V or H,
+depends on relative position on the SC center to the destination.
+
+**TEXTUAL EXAMPLE REPRESENTATION SUB-CELL**
+
+
+          DC(NWV)
+         \               DF(NEV)
+          \      DE(N)
+           \
+           *1______*2______*3
+            |\     |     /|
+DB(NWH)     | \  V | V  / |       D1(NEH)
+            |  \   |   /  |
+DA(NWH)     |   \  |  /   |
+            |  H \ | / H  |
+            |     \|/     |
+DG(W)     *8|------*------|*4     D2(E)
+            |     /|\     |
+D9(SWH)     |  H / | \ H  |      D3(SEH)
+            |   /  |  \   |
+            |  /   |   \  |
+D8(SWH)     | /  V | V  \ |
+            |/     |     \|    D4(SEH)
+          *7‾‾‾‾‾‾‾*6‾‾‾‾‾‾*5
+
+                   D6(S)
+           D7(SWV)     D5(SEV)
+------------------------------------------------
+*... is the center of this example sub-cell
+*1... another SC center to the NORTH-EAST
+*2... another SC center to the NORTH
+*3... another SC center to the NORTH-WEST
+*4... another SC center to the WEST
+*5... another SC center to the SOUTH-WEST
+*6... another SC center to the SOUTH
+*7... another SC center to the SOUTH-EAST
+*8... another SC center to the EAST
+V.... is a vertically sided triangle, that favors vertical movement over horizontal
+H.... is a horizontally sided triangle, that favors horizontal movement over vertical
+D*... EXAMPLES of potential destinations placed to demonstrate reservation priorities
+- N/S/E/W/H/V tags in (...) ... describe classification of the reserved subcell configuration
+-- N: NORTH (up from SC center)  X S: SOUTH (down from SC center)
+-- E: EAST (east from SC center) X W: WEST (west from SC center)
+-- V: VERTICAL (diagonal direction favors vertical movement)
+-- H: HORIZONTAL (diagonal direction favors horizontal movement)
+
+So to decode
+D1(NEH): NORTH-EAST of * where but WEST is stronger: try to reserve in this order:  (*4,*3);  (*2,*3) OR *4 ;  *2
+ why:
+  1) try to reserve the horizontal triangle corresponding to direct destination direction.
+  2) it is a tie between horizontal direction (*4) and vertical triangle (*2,*3)  ... that depends on who's subcell is closer to destination
+  3) the worst but still allowed: purely vertical direction at *2
+
+D2(E): pure EAST of *: try to reserve in this order: *8; (*1,*2) OR (*7,*6)  (priority can be decided by the precise float position)
+D3D3(SEH): SOUTH-EAST of * where but WEST is stronger:  (*4,*5); (*5,*6) OR *4 (depending on float position); *6
+D5(SEV): (*5,*6); *6 OR (*4,*5) (depends..); *6
+D6(S): *6; (*5,*6) or (*7,*6)
+D9(SWH) and D8(SWH): (*7,*8); *8 or (*7,*6); *6
+.. and so on
+
+
+** MOVEMENT **
+IF the actor reserved purely H/V SC, he will move toward the reserved SC center.  That's it.
+
+But if diagonal is reserved, the actor has the full triangle are to his disposal and should move directly to the destination if possible
+Going back to the example of D1(NEH):
+A) if actor reserved the best configuration (*4,*3), then he will move to the vertical boundary of the triangle
+(defined by position of  *4 ... *3 subcells).
+So on X axis, the target position is (*3).x  while the target position on the Y axis is extrapolated based on relative
+position between the PSC and DEST
+B) if actor reserved diagonal (*3,*2), that does NOT cover the direct direction to DEST, then the actor moves to center of the diagonal SC (*3)
+
+
+
+___________________________________________
+|\     |     /|\     |     /|\     |     /|
+| \    |    / | \    |    / | \    |    / |
+|  \   |   /  |  \   |   /  |  \   |   /  |
+|   \  |  /   |   \  |  /   |   \  |  /   |
+|    \ | /    |    \ | /    |    \ | /    |
+|     \|/     |     \|/     |     \|/     |
+|------O1-----|------O2-----|-----O3------|
+|     /|\     |     /|\     |     /|\     |
+|    / | \    |    / | \    |    / | \    |
+|   /  |  \   |   /  |  \   |   /  |  \   |
+|  /   |   \  |  /   |   \  |  /   |   \  |
+| /    |    \ | /    |    \ | /    |    \ |
+|/     |     \|/     |     \|/     |     \|
+O4------------O5------------O6-----------O7
+|\     |     /|\     |     /|\     |     /|
+| \    |    / | \    |    / | \    |    / |
+|  \   |   /  |  \   |   /  |  \   |   /  |
+|   \  |  /   |   \  |  /   |   \  |  /   |
+|    \ | /    |    \ | /    |    \ | /    |
+|     \|/     |     \|/     |     \|/     |
+|------O8-----|------O9-----|------OA-----|
+|     /|\     |     /|\     |     /|\     |
+|    / | \    |    / | \    |    / | \    |
+|   /  |  \   |   /  |  \   |   /  |  \   |
+|  /   |   \  |  /   |   \  |  /   |   \  |
+| /    |    \ | /    |    \ | /    |    \ |
+|/     |     \|/     |     \|/     |     \|
+‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+1_____
+\    |
+ \ U |
+  \  |
+   \ |
+ L  \|
+_____2
+
+   /\
+    /  \
+   /    \
+  /      \
+ /________\
+---
+\\
+ \
+  \
+   \
+
+
+1) which better
+
+
+Rare cases:
+A) if the all 3 SCs are reserved, the actor stands and waits. On every tick, the actor tries to reserve a SC again.
+
+B) if the DEST.SC.row == actor.SC.row , then the actor would move horizontally to DEST.
+But if there is a reserved or blocked SC on the horizontal line to DEST, the actor must obviously evaluate diagonal (ideally)
+or even vertical movement (less ideally).
+
+C) For DEST.SC.column == actor.SC.column, the same pattern as for A) applies, but this time it is vertical movement.
+
+C) At this point, DEST is neither on the same column nor row as the actor. So a diago
