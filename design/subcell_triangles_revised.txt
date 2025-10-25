@@ -1,0 +1,939 @@
+SUBCELL TRIANGLES - DESTINATIONDIRECT MODE
+Q&A SPECIFICATION DOCUMENT
+==========================================
+
+!! This specification is for reservation_mode = "DestinationDirect" !!
+
+This document uses a Question & Answer format to precisely define the triangle-based
+subcell navigation system. Each concept is presented as a question with a detailed answer,
+examples, and implementation notes.
+
+
+================================================================================
+SECTION 1: CORE CONCEPTS
+================================================================================
+
+Q1.1: What is a Primary Subcell (PSC)?
+---------------------------------------
+A: The Primary Subcell (PSC) is the single subcell that represents an actor's current
+   position in the grid. It is:
+   - Always reserved by the actor (exclusive ownership)
+   - Required before any other navigation can occur
+   - Determined by which subcell contains the actor's float position center
+   - Previously called "current" subcell in old implementation
+
+   Implementation Note: Use terminology "primary" consistently in code, not "current".
+
+
+Q1.2: What happens if an actor spawns without a PSC?
+-----------------------------------------------------
+A: The actor must immediately attempt to reserve a PSC in their supercell (the cell
+   containing their spawn position). The process is:
+
+   1. Identify supercell from actor's float position center
+   2. Attempt to reserve the first available subcell in that supercell
+   3. If ALL subcells are reserved: actor remains at exact spawn float position and
+      waits, checking every tick for availability
+   4. Once any subcell becomes available, reserve it as PSC
+
+   Edge Case: This should only occur during grid initialization with high actor density.
+
+   Testing Required: Create tests with overcrowded spawn areas to verify waiting behavior
+   and proper PSC acquisition.
+
+
+Q1.3: What is a Triangle in this system?
+-----------------------------------------
+A: A triangle is a movement corridor spanning multiple subcells. It is NOT confined to
+   a single subcell. A triangle is defined by three subcell centers as vertices:
+
+   Triangle Vertices:
+   1. Primary Subcell (PSC) center - where actor currently is
+   2. Reserved Subcell A center - on one cardinal direction (H or V)
+   3. Reserved Subcell B center - on the perpendicular cardinal direction
+
+   Example: For PSC at (*), with horizontal reservation at (*4) and diagonal at (*3),
+            the triangle vertices are: (*, *3, *4)
+
+   Visual:
+         *3 (NE diagonal)
+         /|
+        / |
+       /  |
+      *---*4 (E horizontal)
+    (PSC)
+
+   The triangle interior is the region bounded by these three subcell centers.
+
+
+Q1.4: What makes a triangle "optimal"?
+---------------------------------------
+A: A triangle is OPTIMAL if and only if:
+
+   "Drawing a straight line from the actor's current position to the destination
+    passes through the triangle's interior (or along its edges)."
+
+   Mathematical Definition:
+   - Let V = vector from actor position to destination
+   - Let T = triangle formed by (PSC, SC_A, SC_B)
+   - Optimal if: ray from actor along V intersects T before exiting
+
+   Non-Optimal Triangle: Any triangle that does NOT contain the destination vector.
+   The actor cannot move directly toward destination within a non-optimal triangle.
+
+   Implementation: Use ray-triangle intersection test or point-in-triangle test
+   on the clamped destination direction.
+
+
+Q1.5: What is an H-triangle vs V-triangle?
+-------------------------------------------
+A: H and V triangles differ in which cardinal direction is prioritized:
+
+   H-Triangle (Horizontally-sided):
+   - One edge spans horizontally (connects horizontal reserved SC to PSC)
+   - The perpendicular edge is vertical
+   - Favors horizontal movement
+   - Used when: |destination.x - actor.x| > |destination.y - actor.y|
+
+   V-Triangle (Vertically-sided):
+   - One edge spans vertically (connects vertical reserved SC to PSC)
+   - The perpendicular edge is horizontal
+   - Favors vertical movement
+   - Used when: |destination.x - actor.x| <= |destination.y - actor.y|
+
+   Classification Rule:
+   ```
+   if abs(dest.x - actor.x) > abs(dest.y - actor.y):
+       use H-triangle
+   else:
+       use V-triangle
+   ```
+
+
+================================================================================
+SECTION 2: RESERVATION LOGIC
+================================================================================
+
+Q2.1: What are the 8 neighboring subcells around PSC?
+------------------------------------------------------
+A: From any PSC (*), there are 8 adjacent subcell centers:
+
+   *1 (NW diagonal)    *2 (N vertical)     *3 (NE diagonal)
+   *8 (W horizontal)   * (PSC)             *4 (E horizontal)
+   *7 (SW diagonal)    *6 (S vertical)     *5 (SE diagonal)
+
+   Categories:
+   - 2 Horizontal: *8 (W), *4 (E)
+   - 2 Vertical: *2 (N), *6 (S)
+   - 4 Diagonal: *1 (NW), *3 (NE), *5 (SE), *7 (SW)
+
+
+Q2.2: What subcells must be reserved for diagonal movement?
+------------------------------------------------------------
+A: Diagonal movement requires reserving BOTH:
+   1. The diagonal subcell (e.g., *3 for NE)
+   2. One cardinal subcell (either horizontal *4 or vertical *2)
+
+   The cardinal choice depends on H vs V classification (see Q1.5):
+   - If H-triangle: reserve diagonal + horizontal cardinal
+   - If V-triangle: reserve diagonal + vertical cardinal
+
+   Example: Moving NE with H-preference
+   - Reserve *3 (NE diagonal) AND *4 (E horizontal)
+   - Forms triangle (*, *3, *4)
+
+
+Q2.3: What is the reservation priority order?
+----------------------------------------------
+A: Reservation attempts follow a prioritized order based on destination direction.
+   The actor tries each option until one succeeds (all SCs available and not blocked).
+
+   General Priority Template:
+   1st: Optimal triangle (contains destination vector)
+   2nd: Alternative triangle (different H/V choice)
+   3rd: Pure cardinal direction only
+   4th: Pure perpendicular cardinal direction
+
+   Specific Examples (see ASCII diagram in Q2.4 for context):
+
+   D1(NEH) - NorthEast with Horizontal preference:
+     1. (*4, *3) - H-triangle NE
+     2. (*2, *3) - V-triangle NE  [if closer to dest than *4]
+     2. *4       - pure horizontal
+     3. *2       - pure vertical
+
+   D2(E) - Pure East:
+     1. *8 - pure horizontal east
+     2. (*1, *2) - V-triangle NE [if closer to dest]
+     2. (*7, *6) - V-triangle SE [if closer to dest]
+
+   D5(SEV) - SouthEast with Vertical preference:
+     1. (*5, *6) - V-triangle SE
+     2. *6       - pure vertical
+     2. (*4, *5) - H-triangle SE [if closer to dest than *6]
+     3. *4       - pure horizontal
+
+   Tiebreaker for "OR" cases: When multiple options have equal priority (e.g.,
+   "(*1,*2) OR (*7,*6)"), choose the option whose subcell center is closer to
+   the destination.
+
+
+Q2.4: ASCII diagram reference for reservation examples
+-------------------------------------------------------
+
+          DC(NWV)
+         \               DF(NEV)
+          \      DE(N)
+           \
+           *1______*2______*3
+            |\     |     /|
+DB(NWH)     | \  V | V  / |       D1(NEH)
+            |  \   |   /  |
+DA(NWH)     |   \  |  /   |
+            |  H \ | / H  |
+            |     \|/     |
+DG(W)     *8|------*------|*4     D2(E)
+            |     /|\     |
+D9(SWH)     |  H / | \ H  |      D3(SEH)
+            |   /  |  \   |
+            |  /   |   \  |
+D8(SWH)     | /  V | V  \ |
+            |/     |     \|    D4(SEH)
+          *7‾‾‾‾‾‾‾*6‾‾‾‾‾‾*5
+
+                   D6(S)
+           D7(SWV)     D5(SEV)
+
+Legend:
+* = PSC center (actor's primary subcell)
+*N = Neighboring subcell center (N = 1-8)
+D* = Example destination positions
+H/V tags = Triangle type preference for that destination
+
+
+Q2.5: What is a "mirror triangle"?
+-----------------------------------
+A: A mirror triangle is the NEXT triangle in the sequence when continuing toward
+   destination along an optimal path. It "mirrors" the current triangle by sharing
+   two subcell vertices and adding one new subcell.
+
+   Geometry: Current triangle + mirror triangle = rectangular corridor
+
+   Example: Actor in triangle (*, *7, *6) moving toward destination DD(SWV)
+   - Current triangle vertices: (*, *7, *6)
+   - Mirror triangle vertices: (*A, *7, *6) where *A is next diagonal subcell
+   - Together they form a rectangle with corners at (*, *6, *7, *A)
+
+   Visual:
+       *-----*6
+       |\    |
+       | \ M |  M = mirror triangle (*A, *7, *6)
+       |  \  |
+       | C \ |  C = current triangle (*, *7, *6)
+       |    \|
+       *7----*A
+
+   Purpose: Allows continuous diagonal movement toward destination without
+   zigzagging to subcell centers.
+
+
+Q2.6: How does mirror triangle reservation work?
+-------------------------------------------------
+A: When an actor reaches a triangle boundary and wants to continue toward destination:
+
+   Step 1: Identify which new subcell would form the mirror
+           - Shared edge = the two vertices closest to destination
+           - New subcell = the diagonal neighbor that completes the rectangle
+
+   Step 2: Attempt to reserve the new subcell
+
+   Step 3: If successful:
+           - Add new subcell to reservations
+           - Keep the 2 shared subcells reserved
+           - Release the 1 old subcell no longer needed (based on release eagerness)
+
+   Step 4: If reservation fails (blocked or reserved by another actor):
+           - Find the reserved SC closest to destination
+           - Use that as new "base" and follow standard reservation priority from Q2.3
+           - This may result in moving to SC center rather than continuing on boundary
+
+   Example from Q2.5:
+   - Current reservations: (*, *7, *6)
+   - Approaching boundary between *7 and *6
+   - Reserve *A to form mirror (*A, *7, *6)
+   - Release * (the PSC behind the actor)
+   - New reservations: (*A, *7, *6) where *A is now the new PSC
+
+
+Q2.7: How are mirror triangles discovered?
+-------------------------------------------
+A: Dynamically, one triangle at a time. There is NO pathfinding or precomputation
+   of triangle chains.
+
+   Process Each Tick:
+   1. Actor knows current PSC
+   2. Actor knows currently reserved subcells (if any)
+   3. Actor evaluates destination direction
+   4. Actor attempts reservation based on current position (see Q2.3)
+   5. If in optimal triangle approaching boundary: attempt mirror reservation (Q2.6)
+
+   Key Principle: "Organic Navigation"
+   - Actor behavior depends ONLY on current position + destination + reserved SCs
+   - Does NOT depend on historical path or previous triangles
+   - Spawning actor at position P should produce identical behavior regardless of
+     how they arrived at P
+
+   Testing Approach: Spawn actors at many positions along an expected path. Verify
+   that each spawned actor follows the same trajectory from that position forward.
+
+
+================================================================================
+SECTION 3: MOVEMENT BEHAVIOR
+================================================================================
+
+Q3.1: Where does the actor move each tick?
+-------------------------------------------
+A: Movement target depends on what is currently reserved:
+
+   Case A: NO reservations beyond PSC
+           Target = PSC center
+           (Actor stays centered in their primary subcell)
+
+   Case B: Pure cardinal reservation (H or V only)
+           Target = reserved SC center
+           Movement = direct line from current position to reserved SC center
+           No triangle geometry involved
+
+   Case C: Optimal triangle reservation (diagonal + cardinal)
+           Target = destination position, clamped to triangle boundary
+           Movement = toward destination, stop at triangle edge if needed
+
+   Case D: Non-optimal triangle reservation
+           Target = diagonal SC center
+           Movement = toward diagonal SC center
+           (Cannot move directly to destination since triangle doesn't contain it)
+
+   Implementation: Each tick, calculate target position based on current reservations,
+   then move actor toward target at configured movement speed.
+
+
+Q3.2: How do you calculate target position for an optimal triangle?
+--------------------------------------------------------------------
+A: For an optimal triangle, the target is the destination clamped to triangle bounds.
+
+   Algorithm:
+   1. Get actor's current float position (ax, ay)
+   2. Get destination position (dx, dy)
+   3. Create ray from (ax, ay) toward (dx, dy)
+   4. Find intersection of ray with triangle boundary
+      - If ray stays inside triangle: target = (dx, dy) [destination itself]
+      - If ray exits triangle: target = intersection point on triangle edge
+
+   Implementation Options:
+   - Ray-triangle intersection test
+   - Or check if destination is inside triangle; if yes use it, else project onto edges
+
+   Example: Triangle (*, *3, *4), destination at D1(NEH)
+   - If destination is beyond *3-*4 edge: target = point on edge closest to dest direction
+   - If destination is inside triangle: target = destination exactly
+
+
+Q3.3: What does "move toward target" mean precisely?
+-----------------------------------------------------
+A: Each tick, move the actor's float position toward the calculated target position.
+
+   Movement Vector:
+   ```
+   direction = normalize(target - actor_position)
+   displacement = direction * movement_speed * delta_time
+   new_position = actor_position + displacement
+   ```
+
+   Clamping: If displacement would overshoot target, clamp to target exactly:
+   ```
+   distance_to_target = length(target - actor_position)
+   if length(displacement) > distance_to_target:
+       new_position = target
+   ```
+
+   Configuration: `movement_speed` should be a configurable parameter (e.g., 2.0 grid
+   units per second).
+
+
+Q3.4: What happens when actor reaches the target position?
+-----------------------------------------------------------
+A: Depends on reservation eagerness configuration (see Section 4):
+
+   CENTER eagerness:
+   - Actor reaches target exactly
+   - THEN begins attempting next reservation
+   - May pause briefly if next reservation isn't immediately available
+
+   ROUND eagerness:
+   - Actor begins attempting next reservation when target is closer than all other
+     reserved SCs (see Q4.2)
+   - Typically starts reserving before reaching target
+   - Results in smoother continuous movement
+
+
+Q3.5: When does the actor's PSC change?
+----------------------------------------
+A: The PSC changes when the actor's float position center enters a different subcell.
+
+   Process:
+   1. Each tick, check which subcell contains actor_position
+   2. If different from current PSC:
+      a. The new subcell must already be reserved by this actor
+      b. Set new subcell as PSC
+      c. Release old PSC (timing depends on release_eagerness - see Q4.3)
+
+   Validation: It is an ERROR if actor's position enters a subcell that is:
+   - Not reserved by this actor
+   - Reserved by another actor
+   - In a blocked cell
+
+   This ensures collision-free movement through reservation system.
+
+
+================================================================================
+SECTION 4: TIMING & EAGERNESS CONFIGURATION
+================================================================================
+
+Q4.1: What is reservation_threshold_distance?
+----------------------------------------------
+A: A configuration parameter that controls when the actor starts attempting to reserve
+   the next subcell(s).
+
+   Definition: When actor is within this distance of the target position, begin
+   attempting reservation for the next movement.
+
+   Default Value: 0.1 grid units
+
+   Purpose: Prevents gaps in movement where actor reaches target but has no next
+   reservation yet. Allows for smooth continuous motion.
+
+   Implementation:
+   ```
+   distance_to_target = length(target_position - actor_position)
+   if distance_to_target <= reservation_threshold_distance:
+       attempt_next_reservation()
+   ```
+
+
+Q4.2: What is reservation_eagerness and how does it work?
+----------------------------------------------------------
+A: Controls WHEN actor begins attempting next reservation.
+
+   CENTER Mode:
+   - Begin reserving after reaching target position
+   - "Reached" = within reservation_threshold_distance of target
+   - Conservative: only looks ahead one step
+
+   ROUND Mode:
+   - Begin reserving when target position is closer than all other reserved SCs
+   - "Closer" = distance from actor's current float position
+   - Formula: min(distance(actor_pos, reserved_SC[i])) > distance(actor_pos, target)
+   - Aggressive: may reserve multiple steps ahead
+
+
+Q4.3: What is release_eagerness and how does it work?
+------------------------------------------------------
+A: Controls WHEN actor releases subcells that are no longer needed.
+
+   CENTER Mode:
+   - Release subcell only after reaching the position where it becomes redundant
+
+   For SC targets: Release old PSC after reaching new SC center
+   For boundary targets: Release redundant SC after reaching boundary position
+
+   ROUND Mode:
+   - Release subcell when the release position is closer than the subcell being released
+   - Formula: distance(actor_pos, release_position) < distance(actor_pos, redundant_SC)
+
+   Example for mirror transition (*, *7, *6) -> (*A, *7, *6):
+   - CENTER: Release * only after actor reaches boundary between *7 and *6
+   - ROUND: Release * when actor is closer to that boundary than to * center
+
+
+Q4.4: Why is ROUND reservation + CENTER release forbidden?
+-----------------------------------------------------------
+A: This combination causes excessive subcell reservation that degrades system performance.
+
+   The Problem:
+   - ROUND reservation: Actor reserves aggressively, potentially 2-3 triangles ahead
+   - CENTER release: Actor holds onto old subcells until exactly reaching release point
+   - Result: Actor simultaneously reserves 4-6 subcells unnecessarily
+
+   Impact:
+   - Blocks other actors from using subcells that current actor doesn't need yet
+   - Creates artificial congestion in the grid
+   - Violates the principle of minimal reservation
+
+   Allowed Combinations:
+   - CENTER + CENTER: Conservative both ways (minimal reservations)
+   - ROUND + ROUND: Aggressive both ways (balanced lookahead)
+   - CENTER + ROUND: Conservative reservation, aggressive release (balanced)
+
+   Forbidden Combination:
+   - ROUND + CENTER: Aggressive reservation, conservative release (excessive holding)
+
+
+Q4.5: What are the recommended configuration combinations?
+-----------------------------------------------------------
+A:
+   Recommended Default:
+   - reservation_eagerness = CENTER
+   - release_eagerness = CENTER
+   - reservation_threshold_distance = 0.1
+   Rationale: Most predictable, easiest to debug, minimal reservation footprint
+
+   Aggressive Performance:
+   - reservation_eagerness = ROUND
+   - release_eagerness = ROUND
+   - reservation_threshold_distance = 0.25
+   Rationale: Smoothest movement, fewer pauses, higher throughput
+
+   Balanced:
+   - reservation_eagerness = CENTER
+   - release_eagerness = ROUND
+   - reservation_threshold_distance = 0.15
+   Rationale: Conservative lookahead with efficient cleanup
+
+
+================================================================================
+SECTION 5: EDGE CASES
+================================================================================
+
+Q5.1: What if destination is inside actor's current PSC?
+---------------------------------------------------------
+A: The actor has ARRIVED. Stop all movement.
+
+   Behavior:
+   - Target position = destination (within PSC)
+   - No additional SC reservations needed
+   - Actor may continue moving toward exact destination point within PSC
+   - Once within epsilon distance of destination: stop moving completely
+
+   Implementation:
+   ```
+   psc_contains_destination = is_point_in_subcell(destination, PSC)
+   if psc_contains_destination and distance(actor_pos, dest) < 0.01:
+       movement_complete = true
+       velocity = (0, 0)
+   ```
+
+
+Q5.2: What if all optimal reservations are blocked?
+----------------------------------------------------
+A: Fall back through priority list until finding available option.
+
+   Process:
+   1. Try optimal triangle (diagonal + cardinal) - BLOCKED
+   2. Try alternative triangle (different H/V) - BLOCKED
+   3. Try pure cardinal direction - BLOCKED
+   4. Try perpendicular cardinal - BLOCKED
+   5. All options blocked: WAIT
+
+   Wait Behavior:
+   - Actor stops at current position
+   - Maintains PSC reservation
+   - Checks every tick for any option to become available
+   - Resumes movement once any path opens
+
+   No Backtracking: Actor never reserves subcells that increase distance to destination
+   (unless using a fallback mode - not in this spec).
+
+
+Q5.3: What if mirror reservation fails?
+----------------------------------------
+A: Actor cannot continue on optimal triangle boundary. Recalculate from current position.
+
+   Recovery Process:
+   1. Actor is at/near boundary of current triangle
+   2. Mirror reservation attempt fails (new SC reserved by someone else)
+   3. Identify which of currently reserved SCs is closest to destination
+   4. Set that SC as temporary "base" position
+   5. Apply standard reservation priority (Q2.3) from that base
+   6. This usually results in moving toward the closest reserved SC center
+
+   Example:
+   - Current triangle (*, *7, *6), trying to reserve mirror *A - FAILS
+   - Currently reserved: PSC=*, also hold *7 and *6
+   - Check: distance(dest, *7) vs distance(dest, *6)
+   - Assume *6 is closer
+   - Move toward *6 center (pure vertical movement)
+   - Once centered on *6, set *6 as new PSC
+   - Release *7 and *
+   - Re-evaluate reservation from *6
+
+
+Q5.4: What if actor position is on exact boundary between subcells?
+--------------------------------------------------------------------
+A: Use consistent tiebreaker rule for subcell assignment.
+
+   Tiebreaker Rules (applied in order):
+   1. If actor already has PSC and position is on PSC boundary: stay in current PSC
+   2. If position is exactly on boundary: use subcell that is closer to destination
+   3. If equidistant to destination: use subcell with lower ID (x + y * cols)
+
+   This ensures deterministic PSC assignment without oscillation.
+
+
+Q5.5: What if destination changes while actor is moving?
+---------------------------------------------------------
+A: Immediately recalculate reservations based on new destination. This is the "organic"
+   principle in action.
+
+   Process:
+   1. Destination updated
+   2. Current tick: re-evaluate optimal triangle for NEW destination
+      - Is current triangle still optimal for new destination?
+        YES: continue current movement
+        NO: proceed to step 3
+   3. Release reservations that are no longer useful
+   4. Attempt new reservations based on new destination direction
+   5. Recalculate target position
+
+   Note: Current PSC is never released due to destination change. Only additional
+   reservations beyond PSC are affected.
+
+
+Q5.6: What if actor spawns on grid boundary?
+---------------------------------------------
+A: Some neighboring subcells won't exist. Only attempt reservations for valid subcells.
+
+   Example: Actor spawns at top-left corner
+   - PSC candidates: only SE quadrant subcells exist
+   - Neighbors *1, *2, *3, *8 do NOT exist (would be outside grid)
+   - Only *4, *5, *6, *7 are valid reservation candidates
+
+   Reservation Logic:
+   - Filter priority list (Q2.3) to only include valid (in-bounds) subcells
+   - Attempt reservation in filtered priority order
+   - If all valid options blocked: wait as usual (Q5.2)
+
+
+Q5.7: What if multiple actors try to reserve same subcell simultaneously?
+--------------------------------------------------------------------------
+A: Subcell reservation must be atomic. Use mutex/lock or actor ID precedence.
+
+   Recommended Implementation: Actor ID Precedence
+   ```
+   function try_reserve_subcell(actor_id, subcell):
+       if subcell.owner == None:
+           subcell.owner = actor_id
+           return SUCCESS
+       elif subcell.owner == actor_id:
+           return SUCCESS  # Actor already owns it
+       else:
+           return BLOCKED  # Another actor owns it
+   ```
+
+   Alternative: Priority Queue
+   - Actors with lower ID get priority in tiebreak
+   - Ensures deterministic resolution of conflicts
+
+   This prevents race conditions in multi-threaded implementations.
+
+
+================================================================================
+SECTION 6: ALGORITHM SUMMARY
+================================================================================
+
+Q6.1: What is the complete per-tick algorithm?
+-----------------------------------------------
+
+A: Each tick, for each actor, execute this sequence:
+
+```
+1. INITIALIZATION CHECK
+   if actor has no PSC:
+       attempt to reserve any subcell in actor's supercell
+       if success:
+           set as PSC
+       else:
+           stay at spawn position, retry next tick
+       return  # Done for this tick
+
+2. ARRIVAL CHECK
+   if destination is in PSC and distance(actor_pos, dest) < 0.01:
+       stop moving (arrived)
+       return
+
+3. UPDATE PSC
+   determine which subcell contains actor_position
+   if different from current PSC:
+       verify new subcell is reserved by this actor
+       set new subcell as PSC
+       apply release_eagerness logic to old PSC
+
+4. RESERVATION ATTEMPT
+   if distance(actor_pos, target_pos) <= reservation_threshold_distance:
+       calculate destination direction
+       determine H vs V preference (Q1.5)
+
+       if currently in optimal triangle approaching boundary:
+           attempt mirror reservation (Q2.6)
+       else:
+           attempt standard reservation priority (Q2.3)
+
+5. TARGET CALCULATION
+   if no reservations beyond PSC:
+       target = PSC center
+   elif pure cardinal reservation:
+       target = reserved SC center
+   elif optimal triangle reservation:
+       target = clamp(destination, triangle_boundary)
+   elif non-optimal triangle reservation:
+       target = diagonal SC center
+
+6. MOVEMENT
+   direction = normalize(target - actor_position)
+   displacement = direction * movement_speed * delta_time
+
+   if length(displacement) > distance(actor_pos, target):
+       actor_position = target  # Arrived at target
+   else:
+       actor_position = actor_position + displacement
+
+7. RELEASE LOGIC
+   apply release_eagerness rules (Q4.3)
+   release subcells that are now redundant
+```
+
+
+Q6.2: How do you test the "organic" principle?
+-----------------------------------------------
+A: Create position-invariant tests that verify actors behave identically regardless of
+   how they arrived at a position.
+
+   Test Template:
+   ```
+   1. Define: start position S, destination D, grid with obstacles
+   2. Run actor from S to D, record trajectory T1
+   3. Pick intermediate position P along T1 (e.g., 25%, 50%, 75% of path)
+   4. Spawn NEW actor at position P with same destination D
+   5. Record trajectory T2 from P to D
+   6. Compare: T2 should match the subpath of T1 from P onward
+   ```
+
+   Key Assertion:
+   ```
+   trajectory_from(P, D) should be IDENTICAL regardless of:
+   - Whether actor traveled from S->P first
+   - Actor's velocity when reaching P
+   - Time spent reaching P
+   - Previous reservations before reaching P
+   ```
+
+   This validates that behavior is purely position-dependent (organic), not
+   state-dependent.
+
+
+Q6.3: What are the key invariants that must always hold?
+---------------------------------------------------------
+A:
+   Invariant 1: PSC Exclusivity
+   - Every actor has exactly one PSC
+   - No two actors share the same PSC
+   - An actor's float position is always within their PSC (or on boundary)
+
+   Invariant 2: Reservation Validity
+   - An actor only moves toward positions within reserved subcells
+   - Before entering a subcell, it must be reserved by that actor
+   - Blocked cells cannot be reserved
+
+   Invariant 3: Progress Toward Destination
+   - Reservations never increase distance to destination
+   - Actor only releases reservations that are behind or perpendicular to movement
+   - (Exception: waiting due to all paths blocked - no reservation change)
+
+   Invariant 4: Finite Reservation Count
+   - An actor reserves at most 3 subcells simultaneously:
+     * 1 PSC + 2 for optimal triangle
+   - (Temporary: may hold 4 during transition with ROUND release, but briefly)
+
+   Invariant 5: Deterministic Behavior
+   - Given identical: position, destination, reserved SCs, and grid state
+   - Actor must make identical reservation and movement decisions
+   - No randomness, no history dependence
+
+
+================================================================================
+SECTION 7: EXAMPLES WALKTHROUGH
+================================================================================
+
+Q7.1: Example 1 - Simple diagonal movement NE with H-preference
+----------------------------------------------------------------
+
+Setup:
+- Actor PSC at (5, 5) subcell (1, 1) [bottom-right quadrant]
+- Destination at (8.2, 6.3)
+- Distance: dx=3.2, dy=1.3 → |dx| > |dy| → H-preference
+
+Tick 1:
+- Actor at (5.4, 5.4) in PSC (5,5,1,1)
+- Evaluate direction: NE with H-preference
+- Attempt reservation: (E, NE) = (6,5,1,1) and (6,6,1,1)
+- Success! Reserve both
+- Triangle: ((5,5,1,1), (6,5,1,1), (6,6,1,1))
+- Check if optimal: ray to (8.2, 6.3) passes through triangle → YES
+- Target: clamp((8.2, 6.3), triangle) = intersection with East edge
+- Move toward target
+
+Tick 5:
+- Actor at (5.9, 5.6), approaching boundary between (6,5,1,1) and (6,6,1,1)
+- Within threshold of target
+- Attempt mirror reservation: need (7,6,1,1) to form new triangle
+- Success! Reserve (7,6,1,1)
+- Release (5,5,1,1) per release_eagerness
+- New triangle: ((6,5,1,1), (6,6,1,1), (7,6,1,1))
+- New PSC: (6,5,1,1) [actor crossed into it]
+- Continue toward destination
+
+Continues until destination reached...
+
+
+Q7.2: Example 2 - Blocked optimal path, fallback to pure cardinal
+------------------------------------------------------------------
+
+Setup:
+- Actor PSC at (3, 3) subcell (0, 0) [top-left quadrant]
+- Destination at (6.0, 6.0)
+- Direction: SE, distance equal in x and y → V-preference
+
+Tick 1:
+- Attempt optimal: (S, SE) = (3,4,0,0) and (4,4,0,0)
+- (4,4,0,0) is BLOCKED (reserved by another actor)
+- Fallback: try alternative (E, SE)
+- (4,3,0,0) is FREE, (4,4,0,0) still BLOCKED
+- Fallback: try pure S = (3,4,0,0)
+- Success! Reserve (3,4,0,0)
+- Target: (3,4,0,0) center = (3.25, 4.25)
+- Move toward target (pure vertical movement)
+
+Tick 4:
+- Actor reaches (3.25, 4.25), now in PSC (3,4,0,0)
+- (4,4,0,0) still blocked
+- Attempt reservation from new position
+- Try (S, SE) from this new PSC
+- ...continues with new reservation attempts
+
+
+Q7.3: Example 3 - Mirror reservation fails, re-route to SC center
+------------------------------------------------------------------
+
+Setup:
+- Actor in optimal triangle ((5,5,1,1), (5,6,1,1), (6,6,1,1))
+- Moving toward destination at (7.5, 8.0)
+- Approaching boundary between (5,6,1,1) and (6,6,1,1)
+
+Tick 10:
+- Within threshold of boundary
+- Attempt mirror reservation: need (6,7,1,1)
+- BLOCKED by another actor!
+- Current reservations: PSC=(5,5,1,1), also hold (5,6,1,1), (6,6,1,1)
+- Determine closest to destination:
+  * distance((7.5,8.0), (5,6,1,1)) = ~2.8
+  * distance((7.5,8.0), (6,6,1,1)) = ~2.3
+- (6,6,1,1) is closer
+- New target: (6,6,1,1) center
+- Move toward (6,6,1,1) center
+
+Tick 14:
+- Reached (6,6,1,1) center, set as new PSC
+- Release (5,5,1,1) and (5,6,1,1)
+- Re-evaluate reservation from (6,6,1,1)
+- (6,7,1,1) now FREE!
+- Resume optimal triangle movement
+
+
+================================================================================
+SECTION 8: IMPLEMENTATION CHECKLIST
+================================================================================
+
+Core Data Structures:
+[ ] Actor struct with: position (float), PSC (subcell ID), reserved_subcells (set)
+[ ] Subcell struct with: owner (actor ID or None), blocked (bool)
+[ ] Grid struct with: cells, subcell ownership map
+
+Configuration Parameters:
+[ ] movement_speed (float, default 2.0 grid units/second)
+[ ] reservation_threshold_distance (float, default 0.1)
+[ ] reservation_eagerness (enum: CENTER or ROUND)
+[ ] release_eagerness (enum: CENTER or ROUND)
+[ ] Validation: reject ROUND + CENTER combination
+
+Geometry Functions:
+[ ] is_point_in_subcell(point, subcell) -> bool
+[ ] get_subcell_center(subcell) -> (x, y)
+[ ] ray_triangle_intersection(ray_origin, ray_direction, triangle) -> point or None
+[ ] clamp_point_to_triangle(point, triangle) -> point
+
+Reservation Logic:
+[ ] get_reservation_priority(actor_pos, destination, H_or_V) -> list of SC options
+[ ] try_reserve_subcell(actor, subcell) -> bool
+[ ] release_subcell(actor, subcell)
+[ ] identify_mirror_subcell(current_triangle, destination) -> subcell
+
+Movement Logic:
+[ ] calculate_target_position(actor, destination) -> (x, y)
+[ ] move_actor_toward_target(actor, target, delta_time)
+[ ] update_psc_if_needed(actor)
+
+Testing:
+[ ] Test: spawn without PSC in crowded area
+[ ] Test: simple cardinal movement (N, S, E, W)
+[ ] Test: diagonal optimal triangle movement (all 4 diagonals)
+[ ] Test: blocked optimal path, fallback to pure cardinal
+[ ] Test: mirror reservation success
+[ ] Test: mirror reservation failure, re-route
+[ ] Test: destination inside PSC (arrival)
+[ ] Test: organic principle - spawn at intermediate positions
+[ ] Test: configuration combinations (CENTER+CENTER, ROUND+ROUND, etc.)
+[ ] Test: grid boundary edge cases
+[ ] Test: simultaneous reservation conflicts
+
+
+================================================================================
+SECTION 9: OPEN QUESTIONS / FUTURE EXTENSIONS
+================================================================================
+
+Q9.1: Should actors prioritize avoiding other actors' reserved paths?
+----------------------------------------------------------------------
+Not in current spec. Actors only check if subcell is reserved, not whether it's
+on another actor's optimal path. This could be a future enhancement for smoother
+multi-actor behavior.
+
+
+Q9.2: What about dynamic obstacles that appear/disappear?
+----------------------------------------------------------
+Not addressed in current spec. If an obstacle appears in a reserved subcell,
+system behavior is undefined. Suggest: treat as reservation failure, trigger
+re-routing.
+
+
+Q9.3: Should there be a maximum wait time before forcing re-routing?
+---------------------------------------------------------------------
+Not in current spec. Actor could theoretically wait indefinitely if all paths
+blocked. Consider adding timeout with forced alternative destination or backtracking.
+
+
+Q9.4: How to handle very slow movement speeds or high delta_time?
+------------------------------------------------------------------
+If displacement per tick exceeds subcell size, actor could "skip" subcells.
+Recommend: clamp delta_time to maximum value, or use fixed timestep.
+
+
+================================================================================
+END OF SPECIFICATION
+================================================================================
+
+Document Version: 1.0
+Last Updated: Based on Q&A session 2025-10-25
+Related Files:
+  - subcell_triangles_original.txt (original specification)
+  - CLAUDE.md (project documentation)
+
+For questions or clarifications, refer to the original design discussion or
+create test cases to validate specific scenarios.
