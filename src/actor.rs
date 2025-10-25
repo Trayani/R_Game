@@ -893,40 +893,75 @@ impl Actor {
     ) -> bool {
         let neighbors = current.get_neighbors();
 
-        // Collect H/V candidates sorted by alignment
-        let mut hv_candidates: Vec<(SubCellCoord, f32)> = neighbors
-            .iter()
-            .filter(|n| !Self::is_diagonal_move(current, n))
-            .map(|n| {
-                let score = current.alignment_score(
-                    n,
-                    dir_x,
-                    dir_y,
-                    self.cell_width,
-                    self.cell_height,
-                );
-                (*n, score)
-            })
-            .collect();
+        // Priority list per spec Q2.3:
+        // 1. Dominant cardinal direction (H or V based on which component is larger)
+        // 2. Perpendicular cardinal direction
 
-        hv_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        // Determine dominant direction
+        let abs_dx = dir_x.abs();
+        let abs_dy = dir_y.abs();
+        let horizontal_dominant = abs_dx > abs_dy;
 
-        // Try to reserve best H/V
-        for (candidate, _score) in &hv_candidates {
-            if reservation_manager.try_reserve(*candidate, self.id) {
-                self.reserved_subcell = Some(*candidate);
-                self.extra_reserved_subcells.clear();
-                if track_movement {
-                    self.movement_track.push((self.fpos_x, self.fpos_y));
-                }
-                println!("[RESERVE] Actor {} H/V FALLBACK: reserved={:?} (diagonal blocked)",
-                    self.id, candidate);
-                return true;
+        // Separate H and V candidates
+        let mut horizontal_candidates: Vec<SubCellCoord> = Vec::new();
+        let mut vertical_candidates: Vec<SubCellCoord> = Vec::new();
+
+        for n in neighbors.iter() {
+            if Self::is_diagonal_move(current, n) {
+                continue; // Skip diagonals
+            }
+
+            // Check if it's horizontal or vertical
+            let dx_cells = (n.cell_x - current.cell_x).abs();
+            let dy_cells = (n.cell_y - current.cell_y).abs();
+            let dx_subs = (n.sub_x - current.sub_x).abs();
+            let dy_subs = (n.sub_y - current.sub_y).abs();
+
+            if (dx_cells > 0 || dx_subs > 0) && dy_cells == 0 && dy_subs == 0 {
+                horizontal_candidates.push(*n);
+            } else if (dy_cells > 0 || dy_subs > 0) && dx_cells == 0 && dx_subs == 0 {
+                vertical_candidates.push(*n);
             }
         }
 
-        println!("[RESERVE] Actor {} H/V FALLBACK: ALL BLOCKED (tried {} candidates)",
-            self.id, hv_candidates.len());
+        // Sort each group by alignment score
+        horizontal_candidates.sort_by(|a, b| {
+            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height);
+            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height);
+            score_b.partial_cmp(&score_a).unwrap()
+        });
+
+        vertical_candidates.sort_by(|a, b| {
+            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height);
+            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height);
+            score_b.partial_cmp(&score_a).unwrap()
+        });
+
+        // Try in priority order: dominant direction first, then perpendicular
+        let priority_order: Vec<&Vec<SubCellCoord>> = if horizontal_dominant {
+            vec![&horizontal_candidates, &vertical_candidates]
+        } else {
+            vec![&vertical_candidates, &horizontal_candidates]
+        };
+
+        for candidate_group in priority_order {
+            for candidate in candidate_group.iter() {
+                if reservation_manager.try_reserve(*candidate, self.id) {
+                    self.reserved_subcell = Some(*candidate);
+                    self.extra_reserved_subcells.clear();
+                    if track_movement {
+                        self.movement_track.push((self.fpos_x, self.fpos_y));
+                    }
+                    let direction = if horizontal_candidates.contains(candidate) { "H" } else { "V" };
+                    println!("[RESERVE] Actor {} {}-FALLBACK: reserved={:?} (diagonal blocked)",
+                        self.id, direction, candidate);
+                    return true;
+                }
+            }
+        }
+
+        println!("[RESERVE] Actor {} H/V FALLBACK: ALL BLOCKED (H={}, V={})",
+            self.id, horizontal_candidates.len(), vertical_candidates.len());
         false
     }
 
