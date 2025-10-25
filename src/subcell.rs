@@ -783,7 +783,8 @@ pub fn calculate_optimal_boundary(
             }
         }
         None => {
-            // No reservation: Move to current sub-cell center IF it's closer to destination
+            // No reservation: Move toward destination to trigger reservation attempt
+            // Return a point in the destination direction (within current sub-cell)
             let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
                 cell_width,
                 cell_height,
@@ -791,21 +792,21 @@ pub fn calculate_optimal_boundary(
                 offset_y,
             );
 
-            // Calculate distances
-            let actor_to_dest_dx = dest_screen_x - actor_pos_x;
-            let actor_to_dest_dy = dest_screen_y - actor_pos_y;
-            let actor_to_dest_dist = (actor_to_dest_dx * actor_to_dest_dx + actor_to_dest_dy * actor_to_dest_dy).sqrt();
+            // Calculate direction toward destination
+            let dir_x = dest_screen_x - actor_pos_x;
+            let dir_y = dest_screen_y - actor_pos_y;
+            let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
 
-            let center_to_dest_dx = dest_screen_x - center_x;
-            let center_to_dest_dy = dest_screen_y - center_y;
-            let center_to_dest_dist = (center_to_dest_dx * center_to_dest_dx + center_to_dest_dy * center_to_dest_dy).sqrt();
-
-            if center_to_dest_dist < actor_to_dest_dist {
-                // Center is closer to destination - move toward it
-                (center_x, center_y)
-            } else {
-                // Actor's current position is closer (or equal) - stay in place
+            if dir_len < 0.001 {
+                // Already at destination
                 (actor_pos_x, actor_pos_y)
+            } else {
+                // Move a small step toward destination (enough to trigger reservation)
+                let step_size = (cell_width / 4.0).min(cell_height / 4.0);
+                let norm_dir_x = dir_x / dir_len;
+                let norm_dir_y = dir_y / dir_len;
+
+                (actor_pos_x + norm_dir_x * step_size, actor_pos_y + norm_dir_y * step_size)
             }
         }
     }
