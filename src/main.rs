@@ -1813,6 +1813,9 @@ async fn main() {
                         state.filter_backward_moves,
                         state.basic3_fallback_enabled,
                         track_movement,
+                        config.subcell.reservation_threshold_distance,
+                        config.subcell.reservation_eagerness,
+                        config.subcell.release_eagerness,
                     )
                 } else {
                     // Use standard sub-cell movement

@@ -1,5 +1,38 @@
 use serde::Deserialize;
 use std::fs;
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReservationEagerness {
+    Center,
+    Round,
+}
+
+impl fmt::Display for ReservationEagerness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReservationEagerness::Center => write!(f, "Center"),
+            ReservationEagerness::Round => write!(f, "Round"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReleaseEagerness {
+    Center,
+    Round,
+}
+
+impl fmt::Display for ReleaseEagerness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReleaseEagerness::Center => write!(f, "Center"),
+            ReleaseEagerness::Round => write!(f, "Round"),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -57,6 +90,12 @@ pub struct SubcellConfig {
     pub early_reservation_enabled: bool,
     #[serde(default = "default_offset")]
     pub offset: String,
+    #[serde(default = "default_reservation_threshold_distance")]
+    pub reservation_threshold_distance: f32,
+    #[serde(default = "default_reservation_eagerness")]
+    pub reservation_eagerness: ReservationEagerness,
+    #[serde(default = "default_release_eagerness")]
+    pub release_eagerness: ReleaseEagerness,
 }
 
 #[derive(Debug, Deserialize)]
@@ -107,6 +146,9 @@ fn default_observer_y() -> i32 { 20 }
 fn default_display_mode() -> String { "none".to_string() }
 fn default_reservation_mode() -> String { "Square".to_string() }
 fn default_offset() -> String { "None".to_string() }
+fn default_reservation_threshold_distance() -> f32 { 0.1 }
+fn default_reservation_eagerness() -> ReservationEagerness { ReservationEagerness::Center }
+fn default_release_eagerness() -> ReleaseEagerness { ReleaseEagerness::Center }
 fn default_actor_speed() -> f32 { 120.0 }
 fn default_size_ratio() -> f32 { 0.9 }
 fn default_collision_radius_ratio() -> f32 { 0.3 }
@@ -150,6 +192,9 @@ impl Default for SubcellConfig {
             reservation_mode: default_reservation_mode(),
             early_reservation_enabled: false,
             offset: default_offset(),
+            reservation_threshold_distance: default_reservation_threshold_distance(),
+            reservation_eagerness: default_reservation_eagerness(),
+            release_eagerness: default_release_eagerness(),
         }
     }
 }
@@ -215,6 +260,14 @@ impl Config {
                 match toml::from_str(&contents) {
                     Ok(config) => {
                         println!("Loaded configuration from config.toml");
+
+                        // Validate eagerness combination
+                        if let Err(e) = Self::validate_eagerness(&config) {
+                            eprintln!("Warning: Invalid eagerness configuration: {}", e);
+                            eprintln!("Using default configuration");
+                            return Config::default();
+                        }
+
                         config
                     }
                     Err(e) => {
@@ -229,5 +282,19 @@ impl Config {
                 Config::default()
             }
         }
+    }
+
+    /// Validate that eagerness combination is valid
+    /// Forbidden combination: ROUND reservation + CENTER release
+    fn validate_eagerness(config: &Config) -> Result<(), String> {
+        let res_eagerness = config.subcell.reservation_eagerness;
+        let rel_eagerness = config.subcell.release_eagerness;
+
+        if res_eagerness == ReservationEagerness::Round && rel_eagerness == ReleaseEagerness::Center {
+            return Err("Forbidden combination: ROUND reservation with CENTER release. \
+                       ROUND reservation requires ROUND release to maintain consistency.".to_string());
+        }
+
+        Ok(())
     }
 }

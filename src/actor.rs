@@ -653,6 +653,190 @@ impl Actor {
         false
     }
 
+    /// Check if we should attempt reservation based on eagerness mode
+    ///
+    /// CENTER mode: Reserve when destination subcell center is within threshold distance
+    /// ROUND mode: Reserve when destination subcell center is closer than all currently reserved subcells
+    fn should_attempt_reservation(
+        &self,
+        reservation_eagerness: crate::config::ReservationEagerness,
+        reservation_threshold_distance: f32,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
+    ) -> bool {
+        use crate::config::ReservationEagerness;
+
+        // Calculate destination subcell
+        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+            dest_screen_x,
+            dest_screen_y,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        let (dest_sc_x, dest_sc_y) = dest_subcell.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        let dx = dest_sc_x - self.fpos_x;
+        let dy = dest_sc_y - self.fpos_y;
+        let dist_to_dest_sc = (dx * dx + dy * dy).sqrt();
+
+        match reservation_eagerness {
+            ReservationEagerness::Center => {
+                // Reserve when within threshold distance of destination subcell center
+                dist_to_dest_sc <= reservation_threshold_distance
+            },
+            ReservationEagerness::Round => {
+                // Reserve when destination subcell is closer than all currently reserved subcells
+                // Check current subcell
+                if let Some(current_sc) = self.current_subcell {
+                    let (curr_x, curr_y) = current_sc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dx_curr = curr_x - self.fpos_x;
+                    let dy_curr = curr_y - self.fpos_y;
+                    let dist_to_curr = (dx_curr * dx_curr + dy_curr * dy_curr).sqrt();
+
+                    if dist_to_dest_sc >= dist_to_curr {
+                        return false; // Current is closer or equal, don't reserve yet
+                    }
+                }
+
+                // Check reserved subcell
+                if let Some(reserved_sc) = self.reserved_subcell {
+                    let (res_x, res_y) = reserved_sc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dx_res = res_x - self.fpos_x;
+                    let dy_res = res_y - self.fpos_y;
+                    let dist_to_res = (dx_res * dx_res + dy_res * dy_res).sqrt();
+
+                    if dist_to_dest_sc >= dist_to_res {
+                        return false; // Reserved is closer or equal, don't reserve yet
+                    }
+                }
+
+                // Check extra reserved subcells
+                for extra_sc in &self.extra_reserved_subcells {
+                    let (extra_x, extra_y) = extra_sc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dx_extra = extra_x - self.fpos_x;
+                    let dy_extra = extra_y - self.fpos_y;
+                    let dist_to_extra = (dx_extra * dx_extra + dy_extra * dy_extra).sqrt();
+
+                    if dist_to_dest_sc >= dist_to_extra {
+                        return false; // Extra is closer or equal, don't reserve yet
+                    }
+                }
+
+                // Destination subcell is closer than all currently reserved subcells
+                true
+            }
+        }
+    }
+
+    /// Check if we should release a subcell based on release eagerness mode
+    ///
+    /// CENTER mode: Release when actor has reached the center of the target subcell
+    /// ROUND mode: Release when the release point (old subcell center) is closer than the redundant subcell
+    fn should_release_redundant(
+        &self,
+        redundant_sc: &SubCellCoord,
+        release_eagerness: crate::config::ReleaseEagerness,
+    ) -> bool {
+        use crate::config::ReleaseEagerness;
+
+        match release_eagerness {
+            ReleaseEagerness::Center => {
+                // For CENTER mode, release immediately (already at target)
+                // The switching logic already handles this by checking distance to boundary
+                true
+            },
+            ReleaseEagerness::Round => {
+                // Release when redundant subcell center is closer to actor than current position allows
+                // Actually, the spec says: release when release point is closer than redundant subcell
+                // The "release point" is where we're leaving from (the redundant subcell center itself)
+
+                // Since we're checking at the moment of switching, we want to release when
+                // the actor is closer to the NEW position than to the redundant position
+                let (redundant_x, redundant_y) = redundant_sc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+
+                let dx_redundant = redundant_x - self.fpos_x;
+                let dy_redundant = redundant_y - self.fpos_y;
+                let dist_to_redundant = (dx_redundant * dx_redundant + dy_redundant * dy_redundant).sqrt();
+
+                // For ROUND release, we check if the actor has moved far enough from redundant
+                // that keeping it reserved is no longer beneficial
+                // The spec says "when release point is closer than redundant subcell"
+                // At switching time, if we're moving away from redundant, we should release it
+
+                // Since we're at the boundary between current and reserved, we want to check:
+                // Is the redundant subcell the furthest one? If yes, release it.
+
+                // Check distance to current subcell
+                if let Some(current_sc) = self.current_subcell {
+                    let (curr_x, curr_y) = current_sc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dx_curr = curr_x - self.fpos_x;
+                    let dy_curr = curr_y - self.fpos_y;
+                    let dist_to_curr = (dx_curr * dx_curr + dy_curr * dy_curr).sqrt();
+
+                    // Release if redundant is further than current
+                    if dist_to_redundant > dist_to_curr {
+                        return true;
+                    }
+                }
+
+                // Also check reserved subcell
+                if let Some(reserved_sc) = self.reserved_subcell {
+                    let (res_x, res_y) = reserved_sc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dx_res = res_x - self.fpos_x;
+                    let dy_res = res_y - self.fpos_y;
+                    let dist_to_res = (dx_res * dx_res + dy_res * dy_res).sqrt();
+
+                    // Release if redundant is further than reserved
+                    if dist_to_redundant > dist_to_res {
+                        return true;
+                    }
+                }
+
+                // Don't release yet - redundant is still one of the closest
+                false
+            }
+        }
+    }
+
     /// Try to reserve a mirror triangle for continuous boundary movement
     /// Returns Some(MirrorTriangleInfo) if successful, None if mirror couldn't be reserved
     fn try_reserve_mirror_triangle(
@@ -1214,6 +1398,9 @@ impl Actor {
         filter_backward: bool,
         basic3_fallback_enabled: bool,
         track_movement: bool,
+        reservation_threshold_distance: f32,
+        reservation_eagerness: crate::config::ReservationEagerness,
+        release_eagerness: crate::config::ReleaseEagerness,
     ) -> bool {
         // ALWAYS log first 100 frames for actor 0 to debug GUI freeze
         static mut FRAME_COUNT: u32 = 0;
@@ -1414,8 +1601,17 @@ impl Actor {
                     );
 
                     if let Some(info) = mirror_info {
-                        // Mirror succeeded! Release ONLY the redundant subcell
-                        release_redundant(&info.redundant, self.id, reservation_manager);
+                        // Mirror succeeded! Check if we should release the redundant subcell
+                        if self.should_release_redundant(&info.redundant, release_eagerness) {
+                            release_redundant(&info.redundant, self.id, reservation_manager);
+                            if self.id == 0 && track_movement {
+                                println!("  [MIRROR] Released redundant: {:?}", info.redundant);
+                            }
+                        } else {
+                            if self.id == 0 && track_movement {
+                                println!("  [MIRROR] Keeping redundant (ROUND release not ready): {:?}", info.redundant);
+                            }
+                        }
 
                         // Update PSC to the reserved diagonal (we've crossed into it)
                         self.current_subcell = Some(reserved);
@@ -1486,25 +1682,33 @@ impl Actor {
                     );
 
                     if current != dest_subcell {
-                        // Attempt reservation with previous position for anti-cross check
-                        // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-                        if !self.try_reserve_diagonal_with_anchor(
-                            &current,
-                            Some(&previous_current),
-                            dx_to_dest,
-                            dy_to_dest,
-                            reservation_manager,
-                            enable_anti_cross,
-                            track_movement,
+                        // Check eagerness before attempting early reservation
+                        if self.should_attempt_reservation(
+                            reservation_eagerness,
+                            reservation_threshold_distance,
+                            dest_screen_x,
+                            dest_screen_y,
                         ) {
-                            // Diagonal failed, try H/V
-                            self.try_reserve_horizontal_vertical(
+                            // Attempt reservation with previous position for anti-cross check
+                            // DestinationDirect: Try diagonal+anchor first, fallback to H/V
+                            if !self.try_reserve_diagonal_with_anchor(
                                 &current,
+                                Some(&previous_current),
                                 dx_to_dest,
                                 dy_to_dest,
                                 reservation_manager,
+                                enable_anti_cross,
                                 track_movement,
-                            );
+                            ) {
+                                // Diagonal failed, try H/V
+                                self.try_reserve_horizontal_vertical(
+                                    &current,
+                                    dx_to_dest,
+                                    dy_to_dest,
+                                    reservation_manager,
+                                    track_movement,
+                                );
+                            }
                         }
                     }
                 }
@@ -1512,7 +1716,20 @@ impl Actor {
                 return false;
             }
         } else {
-            // No reservation - try to reserve next sub-cell
+            // No reservation - check if we should attempt reservation based on eagerness
+            if !self.should_attempt_reservation(
+                reservation_eagerness,
+                reservation_threshold_distance,
+                dest_screen_x,
+                dest_screen_y,
+            ) {
+                if self.id == 0 && track_movement {
+                    println!("  NOT READY TO RESERVE: eagerness check failed");
+                }
+                return false;
+            }
+
+            // Try to reserve next sub-cell
             // DestinationDirect: Try diagonal+anchor first, fallback to H/V
             if self.id == 0 && track_movement {
                 println!("  NO RESERVATION: Attempting diagonal+anchor");
