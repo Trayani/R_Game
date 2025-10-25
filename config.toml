@@ -64,7 +64,7 @@ show_markers = false
 #   "Basic3AntiCross"  - Basic3 + anti-cross checking (most restrictive)
 # Default: "Square"
 # Toggle at runtime: Q key (cycles through all modes)
-reservation_mode = "Basic3AntiCross"
+reservation_mode = "DestinationDirect"
 
 # Early reservation system
 # When enabled, actors reserve their next sub-cell immediately upon reaching current sub-cell

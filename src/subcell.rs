@@ -628,13 +628,38 @@ pub fn is_within_rectangle(
     pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
 }
 
-/// Calculate the point on a triangle edge closest to the destination
+/// Check if a point is inside a triangle using barycentric coordinates
+fn point_in_triangle(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32, cx: f32, cy: f32) -> bool {
+    let v0x = cx - ax;
+    let v0y = cy - ay;
+    let v1x = bx - ax;
+    let v1y = by - ay;
+    let v2x = px - ax;
+    let v2y = py - ay;
+
+    let dot00 = v0x * v0x + v0y * v0y;
+    let dot01 = v0x * v1x + v0y * v1y;
+    let dot02 = v0x * v2x + v0y * v2y;
+    let dot11 = v1x * v1x + v1y * v1y;
+    let dot12 = v1x * v2x + v1y * v2y;
+
+    let inv_denom = 1.0 / (dot00 * dot11 - dot01 * dot01);
+    let u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
+    let v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
+
+    (u >= 0.0) && (v >= 0.0) && (u + v <= 1.0)
+}
+
+/// Calculate the target position within triangle for destination-direct movement
+///
+/// If destination direction intersects triangle interior: move toward destination
+/// If destination direction goes outside triangle: move toward triangle edge closest to destination
 ///
 /// Triangle is formed by: current sub-cell, reserved sub-cell, and anchor sub-cell
-/// Returns the point on the triangle boundary that is closest to destination
 ///
 /// # Parameters
 /// - `current`, `reserved`, `anchor`: The 3 vertices of the triangle (screen coordinates)
+/// - `actor_x`, `actor_y`: Current actor position
 /// - `dest_x`, `dest_y`: Destination position
 pub fn calculate_triangle_boundary_target(
     current_x: f32,
@@ -643,54 +668,48 @@ pub fn calculate_triangle_boundary_target(
     reserved_y: f32,
     anchor_x: f32,
     anchor_y: f32,
+    actor_x: f32,
+    actor_y: f32,
     dest_x: f32,
     dest_y: f32,
 ) -> (f32, f32) {
-    // Triangle has 3 edges:
-    // Edge 1: current → reserved (the diagonal)
-    // Edge 2: current → anchor (H or V)
-    // Edge 3: reserved → anchor (the opposite side)
+    // Calculate direction from actor to destination
+    let dir_x = dest_x - actor_x;
+    let dir_y = dest_y - actor_y;
+    let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
 
-    let edges = [
-        ((current_x, current_y), (reserved_x, reserved_y)),
-        ((current_x, current_y), (anchor_x, anchor_y)),
-        ((reserved_x, reserved_y), (anchor_x, anchor_y)),
-    ];
+    if dir_len < 0.0001 {
+        // Already at destination, stay in place
+        return (actor_x, actor_y);
+    }
 
-    let mut best_point = (dest_x, dest_y);
-    let mut best_distance = f32::MAX;
+    let norm_dir_x = dir_x / dir_len;
+    let norm_dir_y = dir_y / dir_len;
 
-    // For each edge, find the closest point on that edge to the destination
-    for ((x1, y1), (x2, y2)) in &edges {
-        // Parametric line: P = A + t * (B - A), where t ∈ [0, 1]
-        let dx = x2 - x1;
-        let dy = y2 - y1;
-        let len_sq = dx * dx + dy * dy;
+    // Find the farthest point along the destination direction that's still inside the triangle
+    // Use binary search to find intersection with triangle boundary
+    let mut t_min = 0.0;
+    let mut t_max = dir_len * 2.0; // Search beyond destination
 
-        if len_sq < 0.0001 {
-            continue; // Degenerate edge
-        }
+    // Binary search for boundary intersection
+    for _ in 0..20 {
+        let t_mid = (t_min + t_max) / 2.0;
+        let test_x = actor_x + norm_dir_x * t_mid;
+        let test_y = actor_y + norm_dir_y * t_mid;
 
-        // Find t that minimizes distance to destination
-        let t = ((dest_x - x1) * dx + (dest_y - y1) * dy) / len_sq;
-        let t_clamped = t.clamp(0.0, 1.0);
-
-        // Calculate point on edge
-        let point_x = x1 + t_clamped * dx;
-        let point_y = y1 + t_clamped * dy;
-
-        // Distance from point to destination
-        let dist_dx = dest_x - point_x;
-        let dist_dy = dest_y - point_y;
-        let distance = (dist_dx * dist_dx + dist_dy * dist_dy).sqrt();
-
-        if distance < best_distance {
-            best_distance = distance;
-            best_point = (point_x, point_y);
+        if point_in_triangle(test_x, test_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y) {
+            t_min = t_mid; // Point is inside, search farther
+        } else {
+            t_max = t_mid; // Point is outside, search closer
         }
     }
 
-    best_point
+    // Use the boundary point (slightly inside to avoid edge cases)
+    let boundary_t = t_min * 0.99;
+    let target_x = actor_x + norm_dir_x * boundary_t;
+    let target_y = actor_y + norm_dir_y * boundary_t;
+
+    (target_x, target_y)
 }
 
 /// Calculate the optimal target position for destination-direct movement
@@ -739,6 +758,7 @@ pub fn calculate_optimal_boundary(
                         curr_x, curr_y,
                         res_x, res_y,
                         anc_x, anc_y,
+                        actor_pos_x, actor_pos_y,
                         dest_screen_x, dest_screen_y,
                     )
                 } else {
