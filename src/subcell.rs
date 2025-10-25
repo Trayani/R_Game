@@ -689,24 +689,26 @@ pub fn calculate_triangle_boundary_target(
     // Check if actor is currently inside the triangle
     let actor_in_triangle = point_in_triangle(actor_x, actor_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y);
 
-    if !actor_in_triangle {
-        // Actor is outside the triangle! This happens when the actor moved past the triangle boundary.
-        // Return the triangle center so the actor moves back into the triangle
+    // Determine the starting point for ray-casting toward destination
+    let (ray_start_x, ray_start_y) = if actor_in_triangle {
+        // Actor inside: start ray from actor's position
+        (actor_x, actor_y)
+    } else {
+        // Actor outside: start ray from triangle center
         let center_x = (current_x + reserved_x + anchor_x) / 3.0;
         let center_y = (current_y + reserved_y + anchor_y) / 3.0;
-        return (center_x, center_y);
-    }
+        (center_x, center_y)
+    };
 
-    // Find the farthest point along the destination direction that's still inside the triangle
-    // Use binary search to find intersection with triangle boundary
+    // Ray-cast from the starting point toward the destination to find triangle boundary
     let mut t_min = 0.0;
     let mut t_max = dir_len * 2.0; // Search beyond destination
 
     // Binary search for boundary intersection
     for _ in 0..20 {
         let t_mid = (t_min + t_max) / 2.0;
-        let test_x = actor_x + norm_dir_x * t_mid;
-        let test_y = actor_y + norm_dir_y * t_mid;
+        let test_x = ray_start_x + norm_dir_x * t_mid;
+        let test_y = ray_start_y + norm_dir_y * t_mid;
 
         if point_in_triangle(test_x, test_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y) {
             t_min = t_mid; // Point is inside, search farther
@@ -717,8 +719,8 @@ pub fn calculate_triangle_boundary_target(
 
     // Use the boundary point (slightly inside to avoid edge cases)
     let boundary_t = t_min * 0.99;
-    let target_x = actor_x + norm_dir_x * boundary_t;
-    let target_y = actor_y + norm_dir_y * boundary_t;
+    let target_x = ray_start_x + norm_dir_x * boundary_t;
+    let target_y = ray_start_y + norm_dir_y * boundary_t;
 
     (target_x, target_y)
 }

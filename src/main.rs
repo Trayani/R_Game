@@ -1788,17 +1788,6 @@ async fn main() {
 
         if state.subcell_movement_enabled {
             // Sub-cell movement mode - update all actors with sub-cell logic
-            static mut MAIN_LOOP_COUNT: u32 = 0;
-            let always_trace_main = unsafe {
-                MAIN_LOOP_COUNT += 1;
-                MAIN_LOOP_COUNT <= 100
-            };
-
-            if always_trace_main {
-                println!("[MAIN LOOP {}] subcell_movement_enabled=true, reservation_mode={:?}",
-                    unsafe { MAIN_LOOP_COUNT }, state.reservation_mode);
-            }
-
             let enable_square = state.reservation_mode == ReservationMode::Square;
             let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
             let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
@@ -1808,22 +1797,9 @@ async fn main() {
             let use_destination_direct = state.reservation_mode == ReservationMode::DestinationDirect;
             let track_movement = state.tracking_mode == TrackingMode::Tracking;
 
-            if always_trace_main {
-                println!("[MAIN LOOP {}] use_destination_direct={}",
-                    unsafe { MAIN_LOOP_COUNT }, use_destination_direct);
-            }
-
             for i in 0..state.actors.len() {
-                if always_trace_main && i == 0 {
-                    println!("[MAIN LOOP {}] About to update actor {}, use_destination_direct={}",
-                        unsafe { MAIN_LOOP_COUNT }, i, use_destination_direct);
-                }
                 let _reached = if use_destination_direct {
                     // Use destination-direct movement strategy
-                    if always_trace_main && i == 0 {
-                        println!("[MAIN LOOP {}] Calling update_subcell_destination_direct for actor {}",
-                            unsafe { MAIN_LOOP_COUNT }, i);
-                    }
                     state.actors[i].update_subcell_destination_direct(
                         delta_time,
                         &mut state.subcell_reservation_manager,

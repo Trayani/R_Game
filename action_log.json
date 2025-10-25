@@ -1,8 +1,12 @@
 [
-{"timestamp_ms":1096,"action":{"SpawnActor":{"x":502.0,"y":173.0}},"phase":"Start"},
-{"timestamp_ms":1096,"action":{"SpawnActor":{"x":502.0,"y":173.0}},"phase":"Finish"},
-{"timestamp_ms":1979,"action":{"SetActorDestination":{"x":10,"y":32,"actor_count":1}},"phase":"Start"},
-{"timestamp_ms":1980,"action":{"SetActorDestination":{"x":10,"y":32,"actor_count":1}},"phase":"Finish"}
+{"timestamp_ms":1575,"action":{"SpawnActor":{"x":465.0,"y":216.0}},"phase":"Start"},
+{"timestamp_ms":1575,"action":{"SpawnActor":{"x":465.0,"y":216.0}},"phase":"Finish"},
+{"timestamp_ms":2325,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":2325,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":1}},"phase":"Finish"},
+{"timestamp_ms":3025,"action":{"SetActorDestination":{"x":15,"y":32,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":3025,"action":{"SetActorDestination":{"x":15,"y":32,"actor_count":1}},"phase":"Finish"},
+{"timestamp_ms":4342,"action":{"SetActorDestination":{"x":16,"y":34,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":4342,"action":{"SetActorDestination":{"x":16,"y":34,"actor_count":1}},"phase":"Finish"}
 ]
 
 ]
