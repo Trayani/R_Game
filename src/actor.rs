@@ -576,6 +576,108 @@ impl Actor {
         false // No crossing
     }
 
+    /// Try to reserve diagonal sub-cell first, fallback to H/V if blocked
+    /// Returns true if reservation succeeded, false if all neighbors blocked
+    ///
+    /// This is specifically for DestinationDirect mode where diagonal movement
+    /// creates the optimal rectangular corridor toward destination.
+    ///
+    /// # Parameters
+    /// - `previous_current`: Optional previous position before current (for early reservation anti-cross check)
+    fn try_reserve_diagonal_first(
+        &mut self,
+        current: &SubCellCoord,
+        previous_current: Option<&SubCellCoord>,
+        dir_x: f32,
+        dir_y: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
+        track_movement: bool,
+    ) -> bool {
+        let neighbors = current.get_neighbors();
+
+        // STEP 1: Collect and sort diagonal candidates by alignment score
+        let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = neighbors
+            .iter()
+            .filter(|n| Self::is_diagonal_move(current, n))
+            .map(|n| {
+                let score = current.alignment_score(
+                    n,
+                    dir_x,
+                    dir_y,
+                    self.cell_width,
+                    self.cell_height,
+                );
+                (*n, score)
+            })
+            .collect();
+
+        // Sort by alignment score (highest first)
+        diagonal_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        // Try to reserve best diagonal
+        for (candidate, _score) in &diagonal_candidates {
+            // Anti-cross check if enabled
+            if enable_anti_cross {
+                // Check immediate move: current → candidate
+                if Self::check_anti_cross(current, candidate, reservation_manager, self.id) {
+                    continue; // Crossing detected
+                }
+                // Check previous transition if early reservation
+                if let Some(prev) = previous_current {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        continue;
+                    }
+                }
+            }
+
+            // Try to reserve diagonal
+            if reservation_manager.try_reserve(*candidate, self.id) {
+                self.reserved_subcell = Some(*candidate);
+                self.extra_reserved_subcells.clear();
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+                return true;
+            }
+        }
+
+        // STEP 2: Fallback to H/V if all diagonals blocked
+        // Collect horizontal/vertical candidates
+        let mut hv_candidates: Vec<(SubCellCoord, f32)> = neighbors
+            .iter()
+            .filter(|n| !Self::is_diagonal_move(current, n))
+            .map(|n| {
+                let score = current.alignment_score(
+                    n,
+                    dir_x,
+                    dir_y,
+                    self.cell_width,
+                    self.cell_height,
+                );
+                (*n, score)
+            })
+            .collect();
+
+        // Sort by alignment score
+        hv_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        // Try to reserve best H/V
+        for (candidate, _score) in &hv_candidates {
+            if reservation_manager.try_reserve(*candidate, self.id) {
+                self.reserved_subcell = Some(*candidate);
+                self.extra_reserved_subcells.clear();
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+                return true;
+            }
+        }
+
+        // No reservation possible
+        false
+    }
+
     /// Try to reserve next sub-cell toward destination
     /// Returns true if reservation succeeded, false if all candidates blocked
     ///
@@ -1139,23 +1241,15 @@ impl Actor {
         // If target is essentially current position (no reservation, not moving to center), stay still
         if dist_to_target < 0.1 {
             // Try to reserve next sub-cell if we don't have one
+            // DestinationDirect: prefer diagonal reservations
             if self.reserved_subcell.is_none() {
-                self.try_reserve_next_subcell(
+                self.try_reserve_diagonal_first(
                     &current,
                     None,
                     dx_to_dest,
                     dy_to_dest,
-                    dest_screen_x,
-                    dest_screen_y,
                     reservation_manager,
-                    enable_square_reservation,
-                    enable_diagonal_constraint,
-                    enable_no_diagonal,
                     enable_anti_cross,
-                    enable_basic3,
-                    enable_basic3_anti_cross,
-                    filter_backward,
-                    basic3_fallback_enabled,
                     track_movement,
                 );
             }
@@ -1236,22 +1330,14 @@ impl Actor {
 
                     if current != dest_subcell {
                         // Attempt reservation with previous position for anti-cross check
-                        self.try_reserve_next_subcell(
+                        // DestinationDirect: prefer diagonal reservations
+                        self.try_reserve_diagonal_first(
                             &current,
                             Some(&previous_current),
                             dx_to_dest,
                             dy_to_dest,
-                            dest_screen_x,
-                            dest_screen_y,
                             reservation_manager,
-                            enable_square_reservation,
-                            enable_diagonal_constraint,
-                            enable_no_diagonal,
                             enable_anti_cross,
-                            enable_basic3,
-                            enable_basic3_anti_cross,
-                            filter_backward,
-                            basic3_fallback_enabled,
                             track_movement,
                         );
                     }
@@ -1261,22 +1347,14 @@ impl Actor {
             }
         } else {
             // No reservation - try to reserve next sub-cell
-            self.try_reserve_next_subcell(
+            // DestinationDirect: prefer diagonal reservations
+            self.try_reserve_diagonal_first(
                 &current,
                 None,
                 dx_to_dest,
                 dy_to_dest,
-                dest_screen_x,
-                dest_screen_y,
                 reservation_manager,
-                enable_square_reservation,
-                enable_diagonal_constraint,
-                enable_no_diagonal,
                 enable_anti_cross,
-                enable_basic3,
-                enable_basic3_anti_cross,
-                filter_backward,
-                basic3_fallback_enabled,
                 track_movement,
             );
         }
