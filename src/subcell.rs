@@ -686,6 +686,17 @@ pub fn calculate_triangle_boundary_target(
     let norm_dir_x = dir_x / dir_len;
     let norm_dir_y = dir_y / dir_len;
 
+    // Check if actor is currently inside the triangle
+    let actor_in_triangle = point_in_triangle(actor_x, actor_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y);
+
+    if !actor_in_triangle {
+        // Actor is outside the triangle! This happens when the actor moved past the triangle boundary.
+        // Return the triangle center so the actor moves back into the triangle
+        let center_x = (current_x + reserved_x + anchor_x) / 3.0;
+        let center_y = (current_y + reserved_y + anchor_y) / 3.0;
+        return (center_x, center_y);
+    }
+
     // Find the farthest point along the destination direction that's still inside the triangle
     // Use binary search to find intersection with triangle boundary
     let mut t_min = 0.0;

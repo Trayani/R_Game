@@ -1,3 +1,8 @@
 [
+{"timestamp_ms":1096,"action":{"SpawnActor":{"x":502.0,"y":173.0}},"phase":"Start"},
+{"timestamp_ms":1096,"action":{"SpawnActor":{"x":502.0,"y":173.0}},"phase":"Finish"},
+{"timestamp_ms":1979,"action":{"SetActorDestination":{"x":10,"y":32,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":1980,"action":{"SetActorDestination":{"x":10,"y":32,"actor_count":1}},"phase":"Finish"}
+]
 
 ]
