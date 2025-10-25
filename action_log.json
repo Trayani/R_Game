@@ -1,20 +1,8 @@
 [
-{"timestamp_ms":2102,"action":{"SetActorDestination":{"x":12,"y":28,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":2103,"action":{"SetActorDestination":{"x":12,"y":28,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":13369,"action":{"SetActorDestination":{"x":16,"y":36,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":13369,"action":{"SetActorDestination":{"x":16,"y":36,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":24286,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":24286,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":34636,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":34636,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":46203,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":46203,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":58736,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":58737,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":71703,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":71703,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"},
-{"timestamp_ms":83870,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":83870,"action":{"SetActorDestination":{"x":16,"y":37,"actor_count":16}},"phase":"Finish"}
+{"timestamp_ms":1471,"action":{"SetActorDestination":{"x":15,"y":35,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":1471,"action":{"SetActorDestination":{"x":15,"y":35,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":23571,"action":{"SetActorDestination":{"x":15,"y":34,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":23571,"action":{"SetActorDestination":{"x":15,"y":34,"actor_count":16}},"phase":"Finish"}
 ]
 
 ]

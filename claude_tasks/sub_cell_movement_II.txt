@@ -1,0 +1,24 @@
+Sub cells and reservation work quite well Basic3AntiCross
+But primarily, actors need to move in the direction of of the destination, rather then in 3 allowed directions.
+So I need another version of sub-cell based navigation where the sub-cell's area is more important the it's center.
+The area defines an "allowed" field of movement. In the field, the actor moves directly to the destination.
+Ideally, the actor timely reserves a subcell that is naturally placed next to the current subcell  in the direction of the destination.
+a) Most of the times, that will be a diagonally placed subcell, where anti-crossing must still apply.
+b) But if only horizontal or vertical sub-cell is reserved, the actor will still move into the cell's coordinate
+that is the closes to the destination (most of the time, that is a corner, but can be also half of subcell with or height).
+This is called "optimal boundary".
+c) If no sub-cell was reserved in time, the actor will the least move the optimal boundary of he current.
+
+Here comes an issue: this allows actors to be placed extremely close to each other: vertically, horizontally or both.
+When actors approach different destination, they could could meet and practically merge positions on subcell boundary.
+Possible solution: be more strict and consider the free-movemnet area a rectangle between the current subcell and reserved subcell.
+Thus optimal boundary is a rectangle with current subcell and reserved subcell as edges.
+But the free-movement area applies only when the actor has diagonal reservation!
+For horizontal/vertical reservation: only horizontal/vertical movement is allowed (aiming to the reserved subcell' center .. so if
+the actor is not placed strictly at his current subcell center, he will not move stricly horizontally . That is
+fine and wanted).
+
+This has to be implemented next to the current solutions: do not change any current implementation, but add this as another
+reservation mode or a completely different navigation system altogether (depends on reusability of the subcell navigation).
+But some configurations may still apply: subcell offset, default speed, early reservation.
+Subcell configuration is stricly 2x2 in one cell.
