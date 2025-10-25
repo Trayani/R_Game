@@ -1,1 +1,8 @@
 [
+{"timestamp_ms":6986,"action":{"ToggleCell":{"x":7,"y":36}},"phase":"Start"},
+{"timestamp_ms":6987,"action":{"ToggleCell":{"x":7,"y":36}},"phase":"Finish"},
+{"timestamp_ms":9502,"action":{"SetActorDestination":{"x":6,"y":37,"actor_count":63}},"phase":"Start"},
+{"timestamp_ms":9502,"action":{"SetActorDestination":{"x":6,"y":37,"actor_count":63}},"phase":"Finish"}
+]
+
+]

@@ -44,6 +44,21 @@ impl ReservationMode {
         }
     }
 
+    fn from_string(s: &str) -> ReservationMode {
+        match s {
+            "Square" => ReservationMode::Square,
+            "Diagonal" => ReservationMode::Diagonal,
+            "NoDiagonal" => ReservationMode::NoDiagonal,
+            "AntiCross" => ReservationMode::AntiCross,
+            "Basic3" => ReservationMode::Basic3,
+            "Basic3AntiCross" => ReservationMode::Basic3AntiCross,
+            _ => {
+                eprintln!("Warning: Invalid reservation mode '{}', defaulting to Square", s);
+                ReservationMode::Square
+            }
+        }
+    }
+
     fn next(&self) -> ReservationMode {
         match self {
             ReservationMode::Square => ReservationMode::Diagonal,
@@ -237,8 +252,8 @@ impl VisState {
             subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
-            reservation_mode: ReservationMode::Square,  // Square by default
-            early_reservation_enabled: false,  // Disabled by default
+            reservation_mode: ReservationMode::from_string(&config.subcell.reservation_mode),
+            early_reservation_enabled: config.subcell.early_reservation_enabled,
             filter_backward_moves: true,  // Enabled by default
             basic3_fallback_enabled: false,  // Disabled by default (wait when blocked)
             highlighted_actors: HashSet::new(),

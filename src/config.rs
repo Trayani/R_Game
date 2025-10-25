@@ -51,6 +51,10 @@ pub struct SubcellConfig {
     pub movement_enabled: bool,
     #[serde(default)]
     pub show_markers: bool,
+    #[serde(default = "default_reservation_mode")]
+    pub reservation_mode: String,
+    #[serde(default)]
+    pub early_reservation_enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,6 +103,7 @@ fn default_cell_height() -> f32 { 15.0 }
 fn default_observer_x() -> i32 { 20 }
 fn default_observer_y() -> i32 { 20 }
 fn default_display_mode() -> String { "none".to_string() }
+fn default_reservation_mode() -> String { "Square".to_string() }
 fn default_actor_speed() -> f32 { 120.0 }
 fn default_size_ratio() -> f32 { 0.9 }
 fn default_collision_radius_ratio() -> f32 { 0.3 }
@@ -139,6 +144,8 @@ impl Default for SubcellConfig {
             display_mode: default_display_mode(),
             movement_enabled: false,
             show_markers: false,
+            reservation_mode: default_reservation_mode(),
+            early_reservation_enabled: false,
         }
     }
 }

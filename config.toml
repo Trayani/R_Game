@@ -5,8 +5,8 @@
 [grid]
 # Grid dimensions (number of cells)
 # Default: 40x40
-cols = 40
-rows = 40
+cols = 80
+rows = 80
 
 # Cell size in pixels
 # Default: 20.0 width, 15.0 height
@@ -53,6 +53,26 @@ movement_enabled = true
 # Default: false (hidden for cleaner view)
 # Toggle at runtime: B key
 show_markers = false
+
+# Default reservation mode for sub-cell collision avoidance
+# Possible values:
+#   "Square"           - Reserve 2×2 square in movement direction (max spacing)
+#   "Diagonal"         - Diagonal moves require H/V anchor reservation
+#   "NoDiagonal"       - Diagonal moves not allowed (grid-aligned only)
+#   "AntiCross"        - Prevent counter-diagonal crossing patterns
+#   "Basic3"           - Limit to 3 candidates (best + ±45°), enforce monotonic distance decrease
+#   "Basic3AntiCross"  - Basic3 + anti-cross checking (most restrictive)
+# Default: "Square"
+# Toggle at runtime: Q key (cycles through all modes)
+reservation_mode = "Square"
+
+# Early reservation system
+# When enabled, actors reserve their next sub-cell immediately upon reaching current sub-cell
+# instead of waiting to center on current position first
+# Possible values: true, false
+# Default: false
+# Toggle at runtime: E key
+early_reservation_enabled = false
 
 [actors]
 # Default actor speed in pixels per second
