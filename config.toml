@@ -83,7 +83,7 @@ early_reservation_enabled = true
 #   "XY"   - Offset by 0.5 sub-cells in both directions
 # Default: "None"
 # Toggle at runtime: T key (cycles None → X → Y → XY → None)
-offset = "None"
+offset = "XY"
 
 [actors]
 # Default actor speed in pixels per second

@@ -990,7 +990,14 @@ impl VisState {
             }
         }
 
-        for actor in &self.actors {
+        // Sort actors by Y position (lower Y = drawn first = appears behind)
+        let mut actor_indices: Vec<usize> = (0..self.actors.len()).collect();
+        actor_indices.sort_by(|&a, &b| {
+            self.actors[a].fpos_y.partial_cmp(&self.actors[b].fpos_y).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        for &actor_idx in &actor_indices {
+            let actor = &self.actors[actor_idx];
             // Draw movement track (walked path) if tracking is enabled
             if self.tracking_mode == TrackingMode::Tracking && !actor.movement_track.is_empty() {
                 // Draw thin black lines between consecutive tracked positions
