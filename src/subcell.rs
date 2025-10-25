@@ -628,15 +628,81 @@ pub fn is_within_rectangle(
     pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
 }
 
+/// Calculate the point on a triangle edge closest to the destination
+///
+/// Triangle is formed by: current sub-cell, reserved sub-cell, and anchor sub-cell
+/// Returns the point on the triangle boundary that is closest to destination
+///
+/// # Parameters
+/// - `current`, `reserved`, `anchor`: The 3 vertices of the triangle (screen coordinates)
+/// - `dest_x`, `dest_y`: Destination position
+pub fn calculate_triangle_boundary_target(
+    current_x: f32,
+    current_y: f32,
+    reserved_x: f32,
+    reserved_y: f32,
+    anchor_x: f32,
+    anchor_y: f32,
+    dest_x: f32,
+    dest_y: f32,
+) -> (f32, f32) {
+    // Triangle has 3 edges:
+    // Edge 1: current → reserved (the diagonal)
+    // Edge 2: current → anchor (H or V)
+    // Edge 3: reserved → anchor (the opposite side)
+
+    let edges = [
+        ((current_x, current_y), (reserved_x, reserved_y)),
+        ((current_x, current_y), (anchor_x, anchor_y)),
+        ((reserved_x, reserved_y), (anchor_x, anchor_y)),
+    ];
+
+    let mut best_point = (dest_x, dest_y);
+    let mut best_distance = f32::MAX;
+
+    // For each edge, find the closest point on that edge to the destination
+    for ((x1, y1), (x2, y2)) in &edges {
+        // Parametric line: P = A + t * (B - A), where t ∈ [0, 1]
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let len_sq = dx * dx + dy * dy;
+
+        if len_sq < 0.0001 {
+            continue; // Degenerate edge
+        }
+
+        // Find t that minimizes distance to destination
+        let t = ((dest_x - x1) * dx + (dest_y - y1) * dy) / len_sq;
+        let t_clamped = t.clamp(0.0, 1.0);
+
+        // Calculate point on edge
+        let point_x = x1 + t_clamped * dx;
+        let point_y = y1 + t_clamped * dy;
+
+        // Distance from point to destination
+        let dist_dx = dest_x - point_x;
+        let dist_dy = dest_y - point_y;
+        let distance = (dist_dx * dist_dx + dist_dy * dist_dy).sqrt();
+
+        if distance < best_distance {
+            best_distance = distance;
+            best_point = (point_x, point_y);
+        }
+    }
+
+    best_point
+}
+
 /// Calculate the optimal target position for destination-direct movement
 ///
 /// Returns the position the actor should move toward based on:
-/// - Diagonal reservation: Clamp destination to rectangle between current & reserved
+/// - Diagonal reservation with anchor: Move toward triangle boundary closest to destination
 /// - H/V reservation: Return reserved sub-cell center
 /// - No reservation: Return current sub-cell center IF closer to destination, else actor's current position
 pub fn calculate_optimal_boundary(
     current_subcell: &SubCellCoord,
     reserved_subcell: Option<&SubCellCoord>,
+    anchor_subcell: Option<&SubCellCoord>,
     dest_screen_x: f32,
     dest_screen_y: f32,
     actor_pos_x: f32,
@@ -657,20 +723,40 @@ pub fn calculate_optimal_boundary(
             let is_diagonal = (dx_cells > 0 || dx_subs > 0) && (dy_cells > 0 || dy_subs > 0);
 
             if is_diagonal {
-                // Diagonal reservation: Clamp destination to rectangle
-                let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds(
-                    current_subcell,
-                    reserved,
-                    cell_width,
-                    cell_height,
-                    offset_x,
-                    offset_y,
-                );
+                // Diagonal reservation with anchor: Use triangle boundary
+                if let Some(anchor) = anchor_subcell {
+                    let (curr_x, curr_y) = current_subcell.to_screen_center_with_offset(
+                        cell_width, cell_height, offset_x, offset_y
+                    );
+                    let (res_x, res_y) = reserved.to_screen_center_with_offset(
+                        cell_width, cell_height, offset_x, offset_y
+                    );
+                    let (anc_x, anc_y) = anchor.to_screen_center_with_offset(
+                        cell_width, cell_height, offset_x, offset_y
+                    );
 
-                let clamped_x = dest_screen_x.max(min_x).min(max_x);
-                let clamped_y = dest_screen_y.max(min_y).min(max_y);
+                    calculate_triangle_boundary_target(
+                        curr_x, curr_y,
+                        res_x, res_y,
+                        anc_x, anc_y,
+                        dest_screen_x, dest_screen_y,
+                    )
+                } else {
+                    // Fallback to rectangle if no anchor (shouldn't happen in DestinationDirect)
+                    let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds(
+                        current_subcell,
+                        reserved,
+                        cell_width,
+                        cell_height,
+                        offset_x,
+                        offset_y,
+                    );
 
-                (clamped_x, clamped_y)
+                    let clamped_x = dest_screen_x.max(min_x).min(max_x);
+                    let clamped_y = dest_screen_y.max(min_y).min(max_y);
+
+                    (clamped_x, clamped_y)
+                }
             } else {
                 // H/V reservation: Move directly to reserved sub-cell center
                 reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y)
