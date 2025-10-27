@@ -1,0 +1,27 @@
+Index: action_log.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[\n{\"timestamp_ms\":3904,\"action\":{\"SpawnActor\":{\"x\":468.0,\"y\":152.0}},\"phase\":\"Start\"},\n{\"timestamp_ms\":3904,\"action\":{\"SpawnActor\":{\"x\":468.0,\"y\":152.0}},\"phase\":\"Finish\"},\n{\"timestamp_ms\":5288,\"action\":{\"SetActorDestination\":{\"x\":10,\"y\":33,\"actor_count\":1}},\"phase\":\"Start\"},\n{\"timestamp_ms\":5288,\"action\":{\"SetActorDestination\":{\"x\":10,\"y\":33,\"actor_count\":1}},\"phase\":\"Finish\"}\n]\n\n]\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/action_log.json b/action_log.json
+--- a/action_log.json	(revision f669fe3731f9a1b894b9e1875c956441210fb2b3)
++++ b/action_log.json	(date 1761428921361)
+@@ -1,8 +1,12 @@
+ [
+-{"timestamp_ms":3904,"action":{"SpawnActor":{"x":468.0,"y":152.0}},"phase":"Start"},
+-{"timestamp_ms":3904,"action":{"SpawnActor":{"x":468.0,"y":152.0}},"phase":"Finish"},
+-{"timestamp_ms":5288,"action":{"SetActorDestination":{"x":10,"y":33,"actor_count":1}},"phase":"Start"},
+-{"timestamp_ms":5288,"action":{"SetActorDestination":{"x":10,"y":33,"actor_count":1}},"phase":"Finish"}
++{"timestamp_ms":1503,"action":{"SetActorDestination":{"x":16,"y":27,"actor_count":16}},"phase":"Start"},
++{"timestamp_ms":1503,"action":{"SetActorDestination":{"x":16,"y":27,"actor_count":16}},"phase":"Finish"},
++{"timestamp_ms":6386,"action":{"SetActorDestination":{"x":11,"y":28,"actor_count":16}},"phase":"Start"},
++{"timestamp_ms":6386,"action":{"SetActorDestination":{"x":11,"y":28,"actor_count":16}},"phase":"Finish"},
++{"timestamp_ms":11336,"action":{"SetActorDestination":{"x":13,"y":28,"actor_count":16}},"phase":"Start"},
++{"timestamp_ms":11336,"action":{"SetActorDestination":{"x":13,"y":28,"actor_count":16}},"phase":"Finish"},
++{"timestamp_ms":14119,"action":{"SetActorDestination":{"x":10,"y":28,"actor_count":16}},"phase":"Start"},
++{"timestamp_ms":14120,"action":{"SetActorDestination":{"x":10,"y":28,"actor_count":16}},"phase":"Finish"}
+ ]
+ 
+ ]

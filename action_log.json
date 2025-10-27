@@ -1,6 +1,8 @@
 [
-{"timestamp_ms":1308,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":16}},"phase":"Start"},
-{"timestamp_ms":1308,"action":{"SetActorDestination":{"x":14,"y":30,"actor_count":16}},"phase":"Finish"}
+{"timestamp_ms":2160,"action":{"SetActorDestination":{"x":9,"y":32,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":2160,"action":{"SetActorDestination":{"x":9,"y":32,"actor_count":16}},"phase":"Finish"},
+{"timestamp_ms":16810,"action":{"SetActorDestination":{"x":16,"y":35,"actor_count":16}},"phase":"Start"},
+{"timestamp_ms":16810,"action":{"SetActorDestination":{"x":16,"y":35,"actor_count":16}},"phase":"Finish"}
 ]
 
 ]

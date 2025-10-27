@@ -1,0 +1,162 @@
+Actor directing is a process of determining actors'  actor's position in the sub-cell grid.
+Directing happens when actor
+- gets assigned new destination cell
+- reaches target position (target is the currently approached position, an intermediary point between initial position and destination)
+
+
+The actor has to decide between 3 normalized directions out of 8 possible ones.
+Each direction can be expresed by a pair of subcell coordinate offset (x,y):
+- CARDINAL : NORTH(0,-1), SOUTH(0,1), WEST(-1,0), EAST(1,0)
+- ORDINAL: NORTH-EAST(1,-1), NORTH-WEST(-1,-1), SOUTH-EAST(1,1), SOUTH-WEST(-1,1)
+
+
+** RESERVATION AND TARGET ***
+For each direction, a target position (in float precision coordinates) must be determined.
+A direction can be followed only, if the needed subcell configuration has been successfully reserved.
+
+A) CARDINAL: reserved cell is only the one that represents the direction (NORTH / SOUTH / EAST / WEST). The reserved cell's center is the target
+
+B) ORDINAL: reserved cell is the diagonally placed cell (NORTH/SOUTH - EAST/WEST). But it also requires reservation of
+horizontal or vertical cell ("extra").
+Project a target position in the rectangle formed between actor's subcell and the diagonal subcell
+The target is calculated via line equation based on the position difference between subcell of actor and destination.
+The calculated target is  clamped by the rectangle's boundaries, so it can be placed either on the horizontal edge
+between vertical extra and the diagonal subcell OR vertical edge between horizontal extra and the diagonal subcell.
+
+
+It can loosely follow this code
+```
+def intersection(Ax, Ay, w, h, Bx, By):
+    # parametric t values
+    t_side = w / (Bx - Ax)
+    t_top = (-h) / (By - Ay)
+
+    # intersection points
+    y_side = Ay + t_side * (By - Ay)
+    x_top = Ax + t_top * (Bx - Ax)
+
+    # check which boundary is hit first
+    if t_side < t_top:
+        return (Ax + w, y_side)
+    else:
+        return (x_top, Ay - h)
+```
+This way, we get a precise target position and information, if it is on the vertical or horizontal boundary.
+
+if the target is on horizontal edge, reservation requires vertical extra and diagonal.
+If the target is on vertical edge, reservation requires horizontal extra and diagonal.
+it is also possible that the target is at the corner connecting both edges - in that case, any the variant works.
+
+*** CARDINAL AFFINITY ***
+So this further divides each diagonal direction into "horizontal-favoring" (VF) or "vertical-favoring" (HF).
+If an the optimal direction is VF, but that cannot be reserved, the immediate fallback is to try to reserve HF as a
+second-best direction, that comes before alternatives.
+
+
+** ALTERNATIVES **
+if an optimal direction cannot be reserved, alternatives have to be evaluated instead.
+An alternative is direction that follows immediately after turning the optimal direction clockwise or counter-clockwise.
+
+A) Optimal direction is CARDINAL
+A.1) EAST:  clockwise is SOUTH-EAST ; counter-clockwise is NORTH-EAST
+A.2) WEST:  clockwise is NORTH-WEST ; counter-clockwise is SOUTH-WEST
+A.3) SOUTH:  clockwise is SOUTH-WEST ; counter-clockwise is SOUTH-EAST
+A.4) NORTH:  clockwise is NORTH-EAST ; counter-clockwise is NORTH-WEST
+So each alternative is ORDINAL. If both of them are available, select the one, whose target is closer the the destination
+(base on precise float point euclidean distance).
+When the ORDINAL direction is evaluated, CARDINAL affinity is taken into account.
+
+This is example that merely portrays the principle (actual implementation may differ):
+
+```
+evaluate_diagonal_direction(...)  .... returns (available: bool, boundary_target: (x,y), normalized : bool)
+- this function evaluates both affinities and returns the best possible outcome
+- 'available' ...... true if the direction can be reserved; false if the direction is not available
+- 'normalized' ..... true if the target is placed on an intersection between the primary subcell and destination;
+                     false if the target is normalized to the center of the diagonal subcell center
+
+find_alternatives(cc: evaluate_diagonal_direction(clockwise) , ccw: evaluate_diagonal_direction(counter-clockwise))
+... cc.available == false  ->  return ccw
+... ccw.available == false  ->  return cc
+... distance_to_destination(cc.boundary_target) > ccw.boundary_target) -> ccw
+... else -> cc
+
+
+B) Optimal direction is ORDINAL
+At this point, ORDINAL directions are not available on neither affinities.
+So the alternatives are the CARDINAL directions that the ORDINAL is composed of.
+So the alternative is horizontal or vertical: depending on availability and distance (from their subcell center) to the
+destination.
+
+
+
+
+For each
+
+Based on the actor's relative position to the destination, the best possible direction has to picked.
+The direction is picked by successfully reserving required subcells
+- CARDINAL directions requires only one subcell offset by 1 horizontally or vertically. So with actor's primary subcell, that's 2 owned subcells.
+- ORDINAL direction requires reservation of 2 subcells (so it is 3 owned subcells). Ordinal subcells must include be in tro possible
+
+
+1 horizontally placed subcell, 1 vertically and 1 diagonally, so the 4 owned subcell form a rectangle
+where the primary subcell is on one edge and the diagonal subcell on the opposite edge (diagonally).
+E.g. NORTH-EAST reservation requires reservation of NORTH and EAST as well. SOUTH-WEST requires SOUTH and WEST.
+So this is the optimal direction.
+
+If the subcell configuration cannot be reserved, another 2 reservation attempts have to be made:
+If the optimal reservation was CARDINAL, try to reserve ORDINAL directions: one clockwise off the optimal CARDINAL,
+and one counter-clockwise. The priority depends on what subcell is closer to the destination (euclidean distance)
+
+
+
+
+
+1. destX == actorX:
+    1.1 destY < actorY:
+        optimal: NORTH (offset:
+        alternatives: NORTH-EAST, NORTH-WEST
+    1.2 destY > actorY:
+        optimal: SOUTH
+        alternatives: NORTH-EAST, NORTH-WEST
+
+2. destY == actorY:
+    2.1 destX < actorX:
+        optimal: EAST
+        alternatives: NORTH-EAST, SOUTH-EAST
+    2.2 destX > actorX:
+        optimal: WEST
+        alternatives: NORTH-WEST, SOUTH-WEST
+3.
+
+
+
+
+
+
+If the
+
+1 horizontal, 1 vertical and one
+
+ed
+However to, pick a direction, actor has to reserve
+
+
+Don't use dot product!
+
+The allowed directions are
+the vertical one and 2 diagonal directions (north or south depending on Y coordinate)
+The allowed directions are
+the vertical one and 2 diagonal directions (north or south depending on Y coordinate)
+
+
+
+if the destination is pla
+
+
+
+
+if the destination is
+
+- actor was just spawned and does not have any owned subcell.
+-
