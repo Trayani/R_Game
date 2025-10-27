@@ -89,74 +89,42 @@ So the alternative is horizontal or vertical: depending on availability and dist
 destination.
 
 
+General notes
+- Don't use dot product!
 
 
-For each
+**** TESTING ****
+AA: alternative A
+AB: alternative B
+dest: destination
+-H suffix: cardinal affinity: horizontal
+-V suffix: cardinal affinity: horizontal
 
-Based on the actor's relative position to the destination, the best possible direction has to picked.
-The direction is picked by successfully reserving required subcells
-- CARDINAL directions requires only one subcell offset by 1 horizontally or vertically. So with actor's primary subcell, that's 2 owned subcells.
-- ORDINAL direction requires reservation of 2 subcells (so it is 3 owned subcells). Ordinal subcells must include be in tro possible
+For each case of destination coordinate with fixed Actor primary subcell at:  X:5, Y:5, evaluate direction determination
 
-
-1 horizontally placed subcell, 1 vertically and 1 diagonally, so the 4 owned subcell form a rectangle
-where the primary subcell is on one edge and the diagonal subcell on the opposite edge (diagonally).
-E.g. NORTH-EAST reservation requires reservation of NORTH and EAST as well. SOUTH-WEST requires SOUTH and WEST.
-So this is the optimal direction.
-
-If the subcell configuration cannot be reserved, another 2 reservation attempts have to be made:
-If the optimal reservation was CARDINAL, try to reserve ORDINAL directions: one clockwise off the optimal CARDINAL,
-and one counter-clockwise. The priority depends on what subcell is closer to the destination (euclidean distance)
-
-
-
-
-
-1. destX == actorX:
-    1.1 destY < actorY:
-        optimal: NORTH (offset:
-        alternatives: NORTH-EAST, NORTH-WEST
-    1.2 destY > actorY:
-        optimal: SOUTH
-        alternatives: NORTH-EAST, NORTH-WEST
-
-2. destY == actorY:
-    2.1 destX < actorX:
-        optimal: EAST
-        alternatives: NORTH-EAST, SOUTH-EAST
-    2.2 destX > actorX:
-        optimal: WEST
-        alternatives: NORTH-WEST, SOUTH-WEST
-3.
+ALTERNATIVE COORDINATES (NORMALIZED)
+NORTH: 5X 4Y
+SOUTH: 5X 6Y
+EAST: 6X 5Y
+WEST: 4X 5Y
+NORTH-EAST: 6X 4Y
+NORTH-WEST: 4X 4Y
+SOUTH-EAST: 6X 6Y
+SOUTH-WEST: 4X 6Y
 
 
-
-
-
-
-If the
-
-1 horizontal, 1 vertical and one
-
-ed
-However to, pick a direction, actor has to reserve
-
-
-Don't use dot product!
-
-The allowed directions are
-the vertical one and 2 diagonal directions (north or south depending on Y coordinate)
-The allowed directions are
-the vertical one and 2 diagonal directions (north or south depending on Y coordinate)
-
-
-
-if the destination is pla
-
-
-
-
-if the destination is
-
-- actor was just spawned and does not have any owned subcell.
--
+dest X	dest Y	optimal	optimal target X	optimal target Y	best alternative	worse alternative	worst alternative
+5	4,3,2,1	NORTH	5	4	NORTH-WEST-V | NORTH-EAST-V	NORTH-WEST-V | NORTH-EAST-V
+5	6,7,8,9	SOUTH	5	6	SOUTH-WEST-V | SOUTH-EAST-V	SOUTH-WEST-V | SOUTH-EAST-V
+4,3,2,1	5	WEST	4	5	SOUTH-WEST-H | NORTH-WEST-H	SOUTH-WEST-V |  NORTH-WEST-V
+6,7,8,9	5	EAST	6	5	SOUTH-EAST-H | SOUTH-EAST-H	SOUTH-WEST-V | NORTH-WEST-V
+6	1	NORTH-EAST-V	5.25	4
+7	2	NORTH-EAST-V	5.666666667	4	NORTH-EAST-H	NORTH	EAST
+7	3	NORTH-EAST-V |  NORTH-EAST-H (equally optimal)	6	4	NORTH | EAST
+9	3	NORTH-EAST-H	6	4.5	NORTH-EAST-V	EAST	NORTH
+9	6	NORTH-EAST-H	6	5.25	NORTH-EAST-V	EAST	NORTH
+8	7	SOUTH-EAST-H	6	5.666666667	SOUTH-EAST-V	EAST	NORTH
+9	4	SOUTH-WEST-V	4.75	6	SOUTH-WEST-H	SOUTH	WEST
+0	6	NORT-WEST-H	4.8	4	NORT-WEST-V	WEST	NORTH
+3	3	NORT-WEST-H | NORT-WEST-V	4	4	NORTH | WEST
+2	1	NORTH-WEST-V	4.333333333	4	NORTH	WEST
