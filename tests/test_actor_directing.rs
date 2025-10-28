@@ -453,9 +453,10 @@ fn test_specific_diagonal_cases() {
     println!("\n=== Specific Diagonal Test Cases ===");
 
     // Test case from design doc Example 3 (near top edge)
+    // Using cell_width=1 to match coordinate system (5.3 means position 5.3)
     let mut actor = Actor::new(
-        0, 5.3, 4.1, 10.0, 100.0, 5.0,
-        100.0, 100.0, 2, 0.0, 0.0
+        0, 5.3, 4.1, 0.5, 100.0, 0.25,
+        1.0, 1.0, 2, 0.0, 0.0  // cell_width=1, cell_height=1
     );
     actor.use_directing_v2 = true;
 
