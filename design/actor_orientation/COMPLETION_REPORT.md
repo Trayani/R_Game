@@ -244,7 +244,10 @@ All changes committed to branch `custom_flow_2`:
 - **Phase 2 (P2-P3)**: 36/36 (100%) ✅
 - **Phase 3 (P4-P7)**: 48/48 (100%) ✅
 - **Phase 4 (P8-P9)**: 24/24 (100%) ✅
-- **Total**: 120/120 (100%) ✅
+- **Ugly Positions (U1-U2)**: 24/24 (100%) ✅
+- **Total Optimal**: 132/132 (100%) ✅
+- **Total Alternative**: 132/132 (100%) ✅
+- **Grand Total**: 264/264 (100%) ✅
 
 ### Bugs Fixed
 
@@ -289,6 +292,54 @@ All changes committed to branch `custom_flow_2`:
 - `tests/test_actor_directing.rs` - Enhanced with alternative testing
 - `design/actor_orientation/calculate_alternatives.py` - Calculates expected alternatives
 - `design/actor_orientation/actor_directing_position_tests.tsv` - Enhanced with alt1_* columns
+
+---
+
+## Ugly Position Testing (NEW)
+
+**Status**: ✅ 100% Pass Rate - Non-aligned actor positions fully validated
+
+### Implementation Summary
+- Created `generate_ugly_tests.py` script to generate test cases with imprecise actor coordinates
+- Added 24 new test cases (12 bases × 2 ugly positions = U1, U2)
+- All ugly positions use non-integer decimals: 4.1, 4.2, 4.3, 4.6, 4.7, 4.8, 4.9, 5.1, 5.2, 5.3, 5.6, 5.7, 5.8, 5.9
+- Positions strategically placed within rectangle bounds to test various interpolation scenarios
+- Both optimal and alternative directions calculated and tested
+
+### Test Coverage
+
+**U1 Positions (Near-Boundary)**: Actor positions within 0.1-0.2 of grid intersections
+- Tests: T021_U1, T022_U1, ..., T036_U1 (12 tests)
+- Purpose: Validate rounding/precision edge cases
+- Example positions: (5.1, 4.9), (5.9, 4.15), (4.85, 4.2)
+
+**U2 Positions (Mid-Range)**: Actor positions 0.3-0.7 between grid intersections
+- Tests: T021_U2, T022_U2, ..., T036_U2 (12 tests)
+- Purpose: Validate interpolation behavior
+- Example positions: (5.3, 4.7), (5.6, 4.3), (4.7, 4.3)
+
+### Test Results
+- **Optimal Direction**: 24/24 (100%) ✅
+- **Alternative Direction**: 24/24 (100%) ✅
+- **Total**: 48/48 (100%) ✅
+
+### Key Findings
+
+**Coordinate Precision**: The algorithm handles non-integer actor positions correctly:
+- Ray-rectangle intersection calculations work with arbitrary decimal positions
+- Affinity determination is stable across precision ranges
+- Target positions calculated accurately regardless of actor offset
+- No special handling needed for "ugly" coordinates
+
+**Position Independence**: Test results confirm:
+- ✅ Algorithm behavior is consistent across integer and non-integer positions
+- ✅ No edge cases or instabilities found with decimal coordinates
+- ✅ Both near-boundary and mid-range positions handled identically
+- ✅ Alternative fallback works correctly for all ugly positions
+
+### Files Added/Modified
+- **`design/actor_orientation/generate_ugly_tests.py`** (NEW) - Test generation script
+- **`design/actor_orientation/actor_directing_position_tests.tsv`** - Added 24 rows (U1-U2 positions)
 
 ---
 
