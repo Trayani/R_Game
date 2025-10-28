@@ -36,6 +36,7 @@ cargo test
 - **S key**: Toggle sub-cell movement mode
 - **Q key**: Cycle sub-cell reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Basic3 → Basic3AntiCross → Square)
 - **X key**: Toggle Basic3 fallback behavior (wait when blocked vs. allow backward moves when blocked)
+- **W key**: Toggle actor directing algorithm (V2 ray-rectangle intersection vs. V1 legacy alignment-based)
 - **Esc key**: Close window
 
 ### Grid Format for Copy/Paste
@@ -247,6 +248,46 @@ The raycasting system is based on a cone-tracing algorithm ported from C#. The a
   - Displays corners with color coding: white=interesting, yellow=non-interesting
   - Test helper functions for loading and flipping test data
   - Integration tests validate against JSON and standard format test data
+
+- **`actor.rs`**: Actor movement and pathfinding
+  - Actor struct with position, velocity, and pathfinding state
+  - Sub-cell based movement system for smooth diagonal pathfinding
+  - Two directing algorithms: v1 (legacy) and v2 (ray-rectangle intersection)
+
+### Actor Directing Algorithms
+
+The project supports two algorithms for directing actors during diagonal subcell movement:
+
+**Version 1 (Legacy - Alignment-Based)**
+- Uses simple alignment logic based on actor's position relative to subcell boundaries
+- Determines diagonal direction by comparing actor's offset from subcell center
+- Simpler implementation but less geometrically precise
+
+**Version 2 (Ray-Rectangle Intersection)** ⭐ DEFAULT
+- Uses ray-rectangle intersection to determine optimal diagonal direction
+- Casts ray from actor position toward destination
+- Calculates which edge of the rectangular area (PSC ↔ Diagonal) the ray exits through
+- Determines affinity (Horizontal, Vertical, or Both) based on which edge hits first
+- Selects anchor subcell based on affinity for more natural movement paths
+- Handles edge cases: actor on boundary, perpendicular rays, corner positions
+- See `design/actor_orientation/actor_directing_v2.txt` for full specification
+- Test coverage: 264 test cases (100% pass rate) + 4 simulation tests
+
+**Toggling Algorithms:**
+- Press **W key** in GUI to toggle between v1 and v2
+- All actors immediately switch to the selected algorithm
+- Useful for comparing behavior and validating improvements
+
+**Feature Flag:**
+```rust
+actor.use_directing_v2 = true;  // Use v2 (default)
+actor.use_directing_v2 = false; // Use v1 (legacy)
+```
+
+**Test Files:**
+- `tests/test_actor_directing.rs` - Comprehensive unit tests for v2 algorithm
+- `tests/test_direct_movement.rs` - Simulation tests validating movement quality
+- `design/actor_orientation/COMPLETION_REPORT.md` - Implementation documentation
 
 ### Test Data Format
 
