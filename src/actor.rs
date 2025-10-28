@@ -2195,15 +2195,15 @@ impl Actor {
         };
 
         // Log stuck status if tracing
-        if always_trace {
-            unsafe {
-                if STUCK_FRAMES > 0 {
-                    println!("[DestDirect ENTRY] Actor {} frame {} STUCK for {} frames", self.id, FRAME_COUNT, STUCK_FRAMES);
-                } else {
-                    println!("[DestDirect ENTRY] Actor {} frame {} moving", self.id, FRAME_COUNT);
-                }
-            }
-        }
+        // if always_trace {
+        //     unsafe {
+        //         if STUCK_FRAMES > 0 {
+        //             println!("[DestDirect ENTRY] Actor {} frame {} STUCK for {} frames", self.id, FRAME_COUNT, STUCK_FRAMES);
+        //         } else {
+        //             println!("[DestDirect ENTRY] Actor {} frame {} moving", self.id, FRAME_COUNT);
+        //         }
+        //     }
+        // }
 
         // Check if we have a destination
         let dest = match self.subcell_destination {
@@ -2364,16 +2364,17 @@ impl Actor {
                 let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
 
                 let switch = dist_to_target < dist_to_current_center;
-                if self.id == 0 && track_movement {
-                    println!("  EARLY CHECK: dist_to_boundary={:.2} dist_to_center={:.2} switch={}",
+                if always_trace || (self.id == 0 && track_movement) {
+                    println!("  [SWITCH CHECK] EARLY MODE: dist_boundary={:.4} < dist_center={:.4} = {}",
                         dist_to_target, dist_to_current_center, switch);
                 }
                 switch
             } else {
                 // Standard mode: Switch when at boundary (cannot move further)
                 let switch = dist_to_target < 0.5;
-                if self.id == 0 && track_movement {
-                    println!("  STANDARD CHECK: dist_to_boundary={:.2} < 0.5? switch={}", dist_to_target, switch);
+                if always_trace || (self.id == 0 && track_movement) {
+                    println!("  [SWITCH CHECK] STANDARD MODE: dist={:.4} < 0.5 = {}",
+                        dist_to_target, switch);
                 }
                 switch
             };
