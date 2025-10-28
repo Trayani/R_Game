@@ -181,9 +181,14 @@ impl SubCellCoord {
         offset_x: f32,
         offset_y: f32,
     ) -> bool {
-        // Current distances from actor to destination
-        let curr_dist_x = (dest_x - actor_x).abs();
-        let curr_dist_y = (dest_y - actor_y).abs();
+        // IMPORTANT: Check distance from CURRENT SUBCELL CENTER, not actor's floating position
+        // This prevents zigzagging where a move looks good from actor's position
+        // but would move in the wrong direction from the subcell center
+        let (curr_x, curr_y) = self.to_screen_center_with_offset(
+            cell_width, cell_height, offset_x, offset_y
+        );
+        let curr_dist_x = (dest_x - curr_x).abs();
+        let curr_dist_y = (dest_y - curr_y).abs();
 
         // New distances if we move to other
         let (other_x, other_y) = other.to_screen_center_with_offset(
