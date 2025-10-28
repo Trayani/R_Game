@@ -2363,9 +2363,9 @@ impl Actor {
                 let dy_to_curr = current_y - self.fpos_y;
                 let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
 
-                let switch = dist_to_target < dist_to_current_center;
+                let switch = dist_to_target <= dist_to_current_center;
                 if always_trace || (self.id == 0 && track_movement) {
-                    println!("  [SWITCH CHECK] EARLY MODE: dist_boundary={:.4} < dist_center={:.4} = {}",
+                    println!("  [SWITCH CHECK] EARLY MODE: dist_boundary={:.4} <= dist_center={:.4} = {}",
                         dist_to_target, dist_to_current_center, switch);
                 }
                 switch
