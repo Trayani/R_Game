@@ -1,0 +1,37 @@
+Actors have following states
+
+
+1) NO SUBCELL
+Actor owns no subcell, that would be primary subcell for him.
+In this state, the actor can receive destination for movement, but cannot move until a primary subcell is reserved.
+
+EVERY FRAME:  the actor tries to reserve a nearby subcell as a primary cell.
+This is limited to the four subcells whose centers form a rectangle around the actor's float-precise position.
+If more subcells are available, prioritize the closest one.
+If the actor was unable to reserve a subcell and is very close to the rectangle boundary (2px, but configurable) ,
+he can also try to reserve the neighboring rectangle's subcells (2 of which are shared by actor's rectangle and the neighbour
+in the close-by boundary). This applies both vertically, and horizontally.
+if the actor successfully reserved a subcell, he enters the PSC_ALIGNMENT state
+
+2) PRIMARY SUBCELL ALIGNMENT "PSC_ALIGNMENT"
+In this state, the actor has to place himself in the center on his primary subcell.
+EVERY FRAME: actor moves DIRECTLY to the subcell center until it is reached.
+A specific destination CAN be set to the actor, but he ignores it and moves to PSC center first.
+
+3) IDLE
+EVERY FRAME: if no destination is set, do nothing.
+Otherwise:  actor calculates the movement direction and target according to [actor_directing.txt] design file
+- if no direction was determined, try again in the next frame
+- if direction WAS determined, enter MOVE state
+
+4) MOVE
+EVERY FRAME: actor moves to the target position.
+Once the target has been reached, it depends
+- the target was a subcell center (was normalized): actor sets his primary cell to the target subcell and enters IDLE
+- the target was a rectangle boundary (not normalized): the boundary is defined by 2 subcells. The actor sets his
+primary cell the the closer subcell
+
+
+
+Upon successfully reserving a primary subcell, the actor must automatically start moving toward the subcell center
+as the destination. He

@@ -13,6 +13,9 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/actor_directing.txt" beforeDir="false" afterPath="$PROJECT_DIR$/design/actor_directing/actor_directing.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/actor_directing_tests.md" beforeDir="false" afterPath="$PROJECT_DIR$/design/actor_directing/actor_directing_tests.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/actor_directing_tests.tsv" beforeDir="false" afterPath="$PROJECT_DIR$/design/actor_directing/actor_directing_tests.tsv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
