@@ -153,6 +153,28 @@ impl<'a> CompactLogReader<'a> {
                 let message = String::from_utf8_lossy(&bytes);
                 format!("LOG: {}", message)
             }
+            18 => {
+                let aid = self.read_varint().ok()?;
+                let affinity_byte = self.read_u8().ok()?;
+                let affinity = match affinity_byte {
+                    0 => "Horizontal",
+                    1 => "Vertical",
+                    2 => "Both",
+                    _ => "Unknown",
+                };
+                let target_x = self.read_f32().ok()?;
+                let target_y = self.read_f32().ok()?;
+                let res_cx = self.read_i32().ok()?;
+                let res_cy = self.read_i32().ok()?;
+                let res_sx = self.read_i32().ok()?;
+                let res_sy = self.read_i32().ok()?;
+                let anc_cx = self.read_i32().ok()?;
+                let anc_cy = self.read_i32().ok()?;
+                let anc_sx = self.read_i32().ok()?;
+                let anc_sy = self.read_i32().ok()?;
+                format!("ActorDirecting(A{} affinity={} target=({:.1},{:.1}) reserved=({},{},{},{}) anchor=({},{},{},{}))",
+                    aid, affinity, target_x, target_y, res_cx, res_cy, res_sx, res_sy, anc_cx, anc_cy, anc_sx, anc_sy)
+            }
             _ => format!("Unknown(type={})", action_type),
         };
 

@@ -128,6 +128,41 @@ impl CompactLogWriter {
                 // Write message bytes
                 self.buffer.extend_from_slice(message.as_bytes());
             }
+            Action::ActorDirecting {
+                actor_id,
+                affinity,
+                target_x,
+                target_y,
+                reserved_cell_x,
+                reserved_cell_y,
+                reserved_sub_x,
+                reserved_sub_y,
+                anchor_cell_x,
+                anchor_cell_y,
+                anchor_sub_x,
+                anchor_sub_y,
+            } => {
+                self.buffer.push(18 | phase_bit);
+                self.write_varint(*actor_id as u64);
+                // Encode affinity as u8: 0=Horizontal, 1=Vertical, 2=Both
+                let affinity_byte = match affinity.as_str() {
+                    "Horizontal" => 0,
+                    "Vertical" => 1,
+                    "Both" => 2,
+                    _ => 2, // Default to Both
+                };
+                self.buffer.push(affinity_byte);
+                self.write_f32(*target_x);
+                self.write_f32(*target_y);
+                self.write_i32(*reserved_cell_x);
+                self.write_i32(*reserved_cell_y);
+                self.write_i32(*reserved_sub_x);
+                self.write_i32(*reserved_sub_y);
+                self.write_i32(*anchor_cell_x);
+                self.write_i32(*anchor_cell_y);
+                self.write_i32(*anchor_sub_x);
+                self.write_i32(*anchor_sub_y);
+            }
         }
 
         Ok(())

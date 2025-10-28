@@ -1,9 +1,9 @@
 [
-{"timestamp_ms":763,"action":{"SpawnActor":{"x":268.0,"y":268.0}},"phase":"Start"},
-{"timestamp_ms":763,"action":{"SpawnActor":{"x":268.0,"y":268.0}},"phase":"Finish"},
-{"timestamp_ms":763,"action":{"LogMessage":{"message":"Actor 0 spawned at (268.0, 268.0). Total actors: 1"}},"phase":"Finish"},
-{"timestamp_ms":1930,"action":{"SetActorDestination":{"x":16,"y":31,"actor_count":1}},"phase":"Start"},
-{"timestamp_ms":1930,"action":{"SetActorDestination":{"x":16,"y":31,"actor_count":1}},"phase":"Finish"}
+{"timestamp_ms":1190,"action":{"SpawnActor":{"x":219.0,"y":511.0}},"phase":"Start"},
+{"timestamp_ms":1190,"action":{"SpawnActor":{"x":219.0,"y":511.0}},"phase":"Finish"},
+{"timestamp_ms":1190,"action":{"LogMessage":{"message":"Actor 0 spawned at (219.0, 511.0). Total actors: 1"}},"phase":"Finish"},
+{"timestamp_ms":2290,"action":{"SetActorDestination":{"x":20,"y":30,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":2290,"action":{"SetActorDestination":{"x":20,"y":30,"actor_count":1}},"phase":"Finish"}
 ]
 
 ]

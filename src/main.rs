@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -1873,6 +1873,29 @@ async fn main() {
                     )
                 };
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
+
+                // Log directing decisions to action log
+                if let Some(directing_info) = state.actors[i].last_directing_info.take() {
+                    let affinity_str = match directing_info.affinity {
+                        Affinity::Horizontal => "Horizontal",
+                        Affinity::Vertical => "Vertical",
+                        Affinity::Both => "Both",
+                    };
+                    state.action_log.log_event(Action::ActorDirecting {
+                        actor_id: state.actors[i].id,
+                        affinity: affinity_str.to_string(),
+                        target_x: directing_info.target_x,
+                        target_y: directing_info.target_y,
+                        reserved_cell_x: directing_info.reserved.cell_x,
+                        reserved_cell_y: directing_info.reserved.cell_y,
+                        reserved_sub_x: directing_info.reserved.sub_x,
+                        reserved_sub_y: directing_info.reserved.sub_y,
+                        anchor_cell_x: directing_info.anchor.cell_x,
+                        anchor_cell_y: directing_info.anchor.cell_y,
+                        anchor_sub_x: directing_info.anchor.sub_x,
+                        anchor_sub_y: directing_info.anchor.sub_y,
+                    });
+                }
             }
         } else {
             // Normal pathfinding mode with NPV and collision checking

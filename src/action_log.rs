@@ -40,6 +40,21 @@ pub enum Action {
     ActorReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
     /// Log a text message
     LogMessage { message: String },
+    /// Actor directing decision (affinity, target, reserved subcell, anchor)
+    ActorDirecting {
+        actor_id: usize,
+        affinity: String, // "Horizontal", "Vertical", or "Both"
+        target_x: f32,
+        target_y: f32,
+        reserved_cell_x: i32,
+        reserved_cell_y: i32,
+        reserved_sub_x: i32,
+        reserved_sub_y: i32,
+        anchor_cell_x: i32,
+        anchor_cell_y: i32,
+        anchor_sub_x: i32,
+        anchor_sub_y: i32,
+    },
 }
 
 /// Logged action with timestamp and phase

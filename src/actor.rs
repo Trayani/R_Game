@@ -32,6 +32,16 @@ pub struct AffinityResult {
     pub t_horizontal: f32,
 }
 
+/// Directing information for logging - captures the complete state of a directing decision
+#[derive(Clone, Debug)]
+pub struct DirectingInfo {
+    pub affinity: Affinity,
+    pub target_x: f32,
+    pub target_y: f32,
+    pub reserved: SubCellCoord,
+    pub anchor: SubCellCoord,
+}
+
 /// Movement event for logging
 #[derive(Clone, Debug)]
 pub enum MovementEvent {
@@ -107,6 +117,8 @@ pub struct Actor {
     /// Use actor_directing_v2 ray-rectangle intersection algorithm (default: true)
     /// Set to false to revert to old alignment-based diagonal selection
     pub use_directing_v2: bool,
+    /// Last directing decision for logging - cleared after main.rs logs it
+    pub last_directing_info: Option<DirectingInfo>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -161,6 +173,7 @@ impl Actor {
             locked_target: None,
             locked_affinity: None,
             use_directing_v2: true,
+            last_directing_info: None,
         }
     }
 
@@ -1071,6 +1084,15 @@ impl Actor {
                 self.locked_target = Some((affinity_result.target_x, affinity_result.target_y));
                 self.locked_affinity = Some(affinity_result.affinity);
 
+                // Store directing info for logging
+                self.last_directing_info = Some(DirectingInfo {
+                    affinity: affinity_result.affinity,
+                    target_x: affinity_result.target_x,
+                    target_y: affinity_result.target_y,
+                    reserved: *diagonal,
+                    anchor: affinity_result.anchor,
+                });
+
                 if track_movement {
                     self.movement_track.push((self.fpos_x, self.fpos_y));
                 }
@@ -1102,8 +1124,18 @@ impl Actor {
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
+                    let flipped_affinity = self.flip_affinity(affinity_result.affinity);
                     self.locked_target = Some((diag_screen.0, diag_screen.1));
-                    self.locked_affinity = Some(self.flip_affinity(affinity_result.affinity));
+                    self.locked_affinity = Some(flipped_affinity);
+
+                    // Store directing info for logging (opposite affinity case)
+                    self.last_directing_info = Some(DirectingInfo {
+                        affinity: flipped_affinity,
+                        target_x: diag_screen.0,
+                        target_y: diag_screen.1,
+                        reserved: *diagonal,
+                        anchor: opposite_anchor,
+                    });
 
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
