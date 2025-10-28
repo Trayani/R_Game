@@ -3,6 +3,35 @@ use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
 use crate::mirror_triangle::{identify_mirror_triangle, try_reserve_mirror, release_redundant, MirrorTriangleInfo};
 
+/// Affinity for diagonal movement (actor_directing_v2.txt Section B)
+/// Determines which anchor subcell to reserve alongside diagonal subcell
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Affinity {
+    /// Horizontal-favoring: Ray hits vertical edge first, use horizontal anchor
+    Horizontal,
+    /// Vertical-favoring: Ray hits horizontal edge first, use vertical anchor
+    Vertical,
+    /// Both edges hit simultaneously (corner): Choose anchor based on actor position
+    Both,
+}
+
+/// Result of affinity calculation using ray-rectangle intersection
+/// (actor_directing_v2.txt Section B: Rectangle Intersection Formula)
+#[derive(Clone, Debug)]
+pub struct AffinityResult {
+    /// Calculated affinity (H/V/Both)
+    pub affinity: Affinity,
+    /// Target position on rectangle boundary (locked for movement)
+    pub target_x: f32,
+    pub target_y: f32,
+    /// Anchor subcell to reserve (determined by affinity)
+    pub anchor: SubCellCoord,
+    /// Parametric t value for vertical edge (debug/visualization)
+    pub t_vertical: f32,
+    /// Parametric t value for horizontal edge (debug/visualization)
+    pub t_horizontal: f32,
+}
+
 /// Movement event for logging
 #[derive(Clone, Debug)]
 pub enum MovementEvent {
@@ -68,6 +97,16 @@ pub struct Actor {
     pub subcell_destination: Option<Position>,
     /// Movement tracking - records positions at key events (reserve, release, reach center)
     pub movement_track: Vec<(f32, f32)>,
+
+    // Actor Directing V2 (ray-rectangle intersection)
+    /// Locked target position from affinity calculation (actor_directing_v2.txt Section B)
+    /// Set when diagonal reservation succeeds, cleared when reservation released
+    pub locked_target: Option<(f32, f32)>,
+    /// Locked affinity for current reservation (debug/visualization)
+    pub locked_affinity: Option<Affinity>,
+    /// Use actor_directing_v2 ray-rectangle intersection algorithm (default: true)
+    /// Set to false to revert to old alignment-based diagonal selection
+    pub use_directing_v2: bool,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -118,6 +157,10 @@ impl Actor {
             extra_reserved_subcells: Vec::new(),
             subcell_destination: None,
             movement_track: Vec::new(),
+            // Actor Directing V2 - default enabled
+            locked_target: None,
+            locked_affinity: None,
+            use_directing_v2: true,
         }
     }
 
@@ -577,6 +620,209 @@ impl Actor {
         false // No crossing
     }
 
+    /// Calculate affinity and target position using ray-rectangle intersection
+    /// Implements actor_directing_v2.txt Section B: Rectangle Intersection Formula
+    ///
+    /// # Parameters
+    /// - `actor_x`, `actor_y`: Actor's precise float position
+    /// - `psc`: Primary subcell (current logical position)
+    /// - `diagonal`: Diagonal subcell candidate
+    /// - `dest_x`, `dest_y`: Destination position (float coordinates)
+    ///
+    /// # Returns
+    /// `AffinityResult` containing affinity, target position, and anchor subcell
+    ///
+    /// # Algorithm
+    /// 1. Define rectangle bounds between PSC and diagonal (both at grid intersections)
+    /// 2. Cast ray from actor position toward destination
+    /// 3. Calculate where ray intersects rectangle boundary
+    /// 4. Affinity = which edge hits first (vertical → H, horizontal → V)
+    /// 5. Target = intersection point on boundary
+    /// 6. Anchor = horizontal or vertical neighbor based on affinity
+    fn calculate_affinity_and_target(
+        &self,
+        actor_x: f32,
+        actor_y: f32,
+        psc: &SubCellCoord,
+        diagonal: &SubCellCoord,
+        dest_x: f32,
+        dest_y: f32,
+    ) -> AffinityResult {
+        const EPSILON: f32 = 1e-6;
+
+        // Step 1: Define rectangle bounds
+        // Subcells are at grid intersections (0.0, 1.0, 2.0, ...)
+        let psc_screen = psc.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let diag_screen = diagonal.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+
+        let rect_min_x = psc_screen.0.min(diag_screen.0);
+        let rect_max_x = psc_screen.0.max(diag_screen.0);
+        let rect_min_y = psc_screen.1.min(diag_screen.1);
+        let rect_max_y = psc_screen.1.max(diag_screen.1);
+
+        // Step 2: Calculate ray direction
+        let dir_x = dest_x - actor_x;
+        let dir_y = dest_y - actor_y;
+        let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
+
+        // Handle edge case: actor already at destination
+        if dir_len < EPSILON {
+            // Choose anchor based on actor position offset from PSC
+            let offset_x = (actor_x - psc_screen.0).abs();
+            let offset_y = (actor_y - psc_screen.1).abs();
+            let anchor = if offset_x > offset_y {
+                Self::get_horizontal_anchor(psc, diagonal)
+            } else {
+                Self::get_vertical_anchor(psc, diagonal)
+            };
+            return AffinityResult {
+                affinity: Affinity::Both,
+                target_x: actor_x,
+                target_y: actor_y,
+                anchor,
+                t_vertical: 0.0,
+                t_horizontal: 0.0,
+            };
+        }
+
+        let ray_x = dir_x / dir_len;
+        let ray_y = dir_y / dir_len;
+
+        // Step 3: Ray-rectangle intersection (parametric t values)
+        let mut t_vertical = f32::INFINITY;
+        let mut t_horizontal = f32::INFINITY;
+
+        // Vertical edges (left and right)
+        if ray_x.abs() > EPSILON {
+            if ray_x > 0.0 {
+                // Moving right → check right edge
+                t_vertical = (rect_max_x - actor_x) / ray_x;
+            } else {
+                // Moving left → check left edge
+                t_vertical = (rect_min_x - actor_x) / ray_x;
+            }
+        }
+
+        // Horizontal edges (top and bottom)
+        if ray_y.abs() > EPSILON {
+            if ray_y > 0.0 {
+                // Moving down → check bottom edge
+                t_horizontal = (rect_max_y - actor_y) / ray_y;
+            } else {
+                // Moving up → check top edge
+                t_horizontal = (rect_min_y - actor_y) / ray_y;
+            }
+        }
+
+        // Handle edge case: actor on or past boundary (t ≤ 0)
+        if t_vertical <= EPSILON && t_horizontal <= EPSILON {
+            // Actor at corner or outside rectangle
+            let offset_x = (actor_x - psc_screen.0).abs();
+            let offset_y = (actor_y - psc_screen.1).abs();
+            let anchor = if offset_x > offset_y {
+                Self::get_horizontal_anchor(psc, diagonal)
+            } else {
+                Self::get_vertical_anchor(psc, diagonal)
+            };
+            return AffinityResult {
+                affinity: Affinity::Both,
+                target_x: actor_x.max(rect_min_x).min(rect_max_x),
+                target_y: actor_y.max(rect_min_y).min(rect_max_y),
+                anchor,
+                t_vertical,
+                t_horizontal,
+            };
+        } else if t_vertical <= EPSILON {
+            // Actor on vertical edge → use horizontal edge
+            t_vertical = f32::INFINITY;
+        } else if t_horizontal <= EPSILON {
+            // Actor on horizontal edge → use vertical edge
+            t_horizontal = f32::INFINITY;
+        }
+
+        // Step 4: Determine affinity and target based on which edge hits first
+        let affinity: Affinity;
+        let target_x: f32;
+        let target_y: f32;
+        let anchor: SubCellCoord;
+
+        if (t_vertical - t_horizontal).abs() < EPSILON {
+            // BOTH: Hits corner (both edges at same t)
+            affinity = Affinity::Both;
+            target_x = actor_x + ray_x * t_vertical;
+            target_y = actor_y + ray_y * t_vertical;
+
+            // Choose anchor based on actor's position offset from PSC
+            // If actor is more horizontally offset, use horizontal anchor
+            let offset_x = (actor_x - psc_screen.0).abs();
+            let offset_y = (actor_y - psc_screen.1).abs();
+            anchor = if offset_x > offset_y {
+                Self::get_horizontal_anchor(psc, diagonal)
+            } else {
+                Self::get_vertical_anchor(psc, diagonal)
+            };
+        } else if t_vertical < t_horizontal {
+            // H-affinity: Hits vertical edge first
+            affinity = Affinity::Horizontal;
+            target_x = actor_x + ray_x * t_vertical;
+            target_y = actor_y + ray_y * t_vertical;
+            anchor = Self::get_horizontal_anchor(psc, diagonal);
+        } else {
+            // V-affinity: Hits horizontal edge first
+            affinity = Affinity::Vertical;
+            target_x = actor_x + ray_x * t_horizontal;
+            target_y = actor_y + ray_y * t_horizontal;
+            anchor = Self::get_vertical_anchor(psc, diagonal);
+        }
+
+        // Clamp target to rectangle bounds (defensive)
+        let target_x = target_x.max(rect_min_x).min(rect_max_x);
+        let target_y = target_y.max(rect_min_y).min(rect_max_y);
+
+        AffinityResult {
+            affinity,
+            target_x,
+            target_y,
+            anchor,
+            t_vertical,
+            t_horizontal,
+        }
+    }
+
+    /// Get horizontal anchor for diagonal move (anchor is horizontal neighbor of PSC)
+    fn get_horizontal_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
+        // Horizontal anchor: same Y as PSC, X toward diagonal
+        SubCellCoord {
+            cell_x: psc.cell_x,
+            cell_y: psc.cell_y,
+            sub_x: diagonal.sub_x,
+            sub_y: psc.sub_y,
+            grid_size: psc.grid_size,
+        }
+    }
+
+    /// Get vertical anchor for diagonal move (anchor is vertical neighbor of PSC)
+    fn get_vertical_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
+        // Vertical anchor: same X as PSC, Y toward diagonal
+        SubCellCoord {
+            cell_x: psc.cell_x,
+            cell_y: psc.cell_y,
+            sub_x: psc.sub_x,
+            sub_y: diagonal.sub_y,
+            grid_size: psc.grid_size,
+        }
+    }
+
     /// Try to reserve diagonal sub-cell with H/V anchor (triangle formation)
     /// Returns true if reservation succeeded, false if blocked
     ///
@@ -588,6 +834,47 @@ impl Actor {
     /// # Parameters
     /// - `previous_current`: Optional previous position for anti-cross check
     fn try_reserve_diagonal_with_anchor(
+        &mut self,
+        current: &SubCellCoord,
+        previous_current: Option<&SubCellCoord>,
+        dir_x: f32,
+        dir_y: f32,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
+        track_movement: bool,
+    ) -> bool {
+        // Branch based on actor_directing_v2 feature flag
+        if self.use_directing_v2 {
+            // NEW: Use ray-rectangle intersection for affinity calculation
+            self.try_reserve_diagonal_with_affinity(
+                current,
+                previous_current,
+                dest_screen_x,
+                dest_screen_y,
+                reservation_manager,
+                enable_anti_cross,
+                track_movement,
+            )
+        } else {
+            // OLD: Use alignment score approach
+            self.try_reserve_diagonal_with_anchor_legacy(
+                current,
+                previous_current,
+                dir_x,
+                dir_y,
+                dest_screen_x,
+                dest_screen_y,
+                reservation_manager,
+                enable_anti_cross,
+                track_movement,
+            )
+        }
+    }
+
+    /// LEGACY: Try to reserve diagonal using alignment score (old algorithm)
+    fn try_reserve_diagonal_with_anchor_legacy(
         &mut self,
         current: &SubCellCoord,
         previous_current: Option<&SubCellCoord>,
@@ -683,6 +970,148 @@ impl Actor {
         println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: ALL BLOCKED (tried {} candidates)",
             self.id, diagonal_candidates.len());
         false
+    }
+
+    /// V2: Try to reserve diagonal using ray-rectangle intersection (actor_directing_v2.txt)
+    fn try_reserve_diagonal_with_affinity(
+        &mut self,
+        current: &SubCellCoord,
+        previous_current: Option<&SubCellCoord>,
+        dest_screen_x: f32,
+        dest_screen_y: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
+        track_movement: bool,
+    ) -> bool {
+        let neighbors = current.get_neighbors();
+
+        // Collect diagonal candidates with distance rule filter
+        let diagonal_candidates: Vec<SubCellCoord> = neighbors
+            .iter()
+            .filter(|n| Self::is_diagonal_move(current, n))
+            .filter(|n| {
+                // DESIGN DOC RULE: Filter candidates that would increase distance
+                !current.violates_distance_rule(
+                    n,
+                    self.fpos_x,
+                    self.fpos_y,
+                    dest_screen_x,
+                    dest_screen_y,
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                )
+            })
+            .copied()
+            .collect();
+
+        // Try each diagonal with affinity-calculated anchor
+        for diagonal in &diagonal_candidates {
+            // Anti-cross check for diagonal
+            if enable_anti_cross {
+                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                    continue;
+                }
+                if let Some(prev) = previous_current {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        continue;
+                    }
+                }
+            }
+
+            // Calculate affinity and target using ray-rectangle intersection
+            let affinity_result = self.calculate_affinity_and_target(
+                self.fpos_x,
+                self.fpos_y,
+                current,
+                diagonal,
+                dest_screen_x,
+                dest_screen_y,
+            );
+
+            // Try to reserve diagonal + calculated anchor
+            if reservation_manager.try_reserve_multiple(&[*diagonal, affinity_result.anchor], self.id) {
+                self.reserved_subcell = Some(*diagonal);
+                self.extra_reserved_subcells = vec![affinity_result.anchor];
+                // LOCK target position and affinity (actor_directing_v2.txt)
+                self.locked_target = Some((affinity_result.target_x, affinity_result.target_y));
+                self.locked_affinity = Some(affinity_result.affinity);
+
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+
+                println!("[RESERVE V2] Actor {} affinity={:?} target=({:.2},{:.2}) reserved={:?} anchor={:?}",
+                    self.id, affinity_result.affinity, affinity_result.target_x, affinity_result.target_y,
+                    diagonal, affinity_result.anchor);
+                return true;
+            }
+
+            // Phase 4: Try opposite affinity fallback (actor_directing_v2.txt Section C1)
+            if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, current, diagonal) {
+                if reservation_manager.try_reserve_multiple(&[*diagonal, opposite_anchor], self.id) {
+                    self.reserved_subcell = Some(*diagonal);
+                    self.extra_reserved_subcells = vec![opposite_anchor];
+
+                    // Recalculate target for opposite affinity
+                    // (Simplified: use diagonal's position as target for now)
+                    let diag_screen = diagonal.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    self.locked_target = Some((diag_screen.0, diag_screen.1));
+                    self.locked_affinity = Some(self.flip_affinity(affinity_result.affinity));
+
+                    if track_movement {
+                        self.movement_track.push((self.fpos_x, self.fpos_y));
+                    }
+
+                    println!("[RESERVE V2 OPPOSITE] Actor {} flipped affinity to opposite, reserved={:?} anchor={:?}",
+                        self.id, diagonal, opposite_anchor);
+                    return true;
+                }
+            }
+        }
+
+        println!("[RESERVE V2] Actor {} DIAGONAL+AFFINITY: ALL BLOCKED (tried {} candidates)",
+            self.id, diagonal_candidates.len());
+        false
+    }
+
+    /// Get opposite anchor for fallback (Section C1)
+    fn get_opposite_anchor(
+        &self,
+        original_affinity: &Affinity,
+        psc: &SubCellCoord,
+        diagonal: &SubCellCoord,
+    ) -> Option<SubCellCoord> {
+        match original_affinity {
+            Affinity::Horizontal => {
+                // Was H, try V anchor
+                Some(Self::get_vertical_anchor(psc, diagonal))
+            }
+            Affinity::Vertical => {
+                // Was V, try H anchor
+                Some(Self::get_horizontal_anchor(psc, diagonal))
+            }
+            Affinity::Both => {
+                // Already tried one based on actor position, could try other
+                // For now, return None (no fallback for BOTH)
+                None
+            }
+        }
+    }
+
+    /// Flip affinity for opposite anchor (debug/logging)
+    fn flip_affinity(&self, affinity: Affinity) -> Affinity {
+        match affinity {
+            Affinity::Horizontal => Affinity::Vertical,
+            Affinity::Vertical => Affinity::Horizontal,
+            Affinity::Both => Affinity::Both,
+        }
     }
 
     /// Test if a ray intersects a triangle using barycentric coordinates
@@ -848,6 +1277,9 @@ impl Actor {
             if reservation_manager.try_reserve(*sc, self.id) {
                 self.reserved_subcell = Some(*sc);
                 self.extra_reserved_subcells.clear();
+                // Clear locked values when changing reservation
+                self.locked_target = None;
+                self.locked_affinity = None;
                 if track_movement {
                     self.movement_track.push((self.fpos_x, self.fpos_y));
                 }
@@ -1176,6 +1608,9 @@ impl Actor {
                 if reservation_manager.try_reserve(*candidate, self.id) {
                     self.reserved_subcell = Some(*candidate);
                     self.extra_reserved_subcells.clear();
+                    // Clear locked values when changing reservation
+                    self.locked_target = None;
+                    self.locked_affinity = None;
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
                     }
@@ -1347,6 +1782,9 @@ impl Actor {
                     self.reserved_subcell = Some(*candidate);
                     // Clear extra reserved cells (single-cell only)
                     self.extra_reserved_subcells.clear();
+                    // Clear locked values when changing reservation
+                    self.locked_target = None;
+                    self.locked_affinity = None;
                     // Record position when reserving
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
@@ -1471,6 +1909,9 @@ impl Actor {
             self.current_subcell = Some(dest_subcell);
             self.subcell_destination = None;
             self.reserved_subcell = None;
+            // Clear locked values from affinity calculation
+            self.locked_target = None;
+            self.locked_affinity = None;
             return true;
         }
 
@@ -1757,26 +2198,35 @@ impl Actor {
             self.current_subcell = Some(dest_subcell);
             self.subcell_destination = None;
             self.reserved_subcell = None;
+            // Clear locked values from affinity calculation
+            self.locked_target = None;
+            self.locked_affinity = None;
             return true;
         }
 
         // Get anchor sub-cell (first extra reserved cell, if any)
         let anchor_subcell = self.extra_reserved_subcells.first();
 
-        // Calculate optimal target position based on reservation state
-        let (target_x, target_y) = crate::subcell::calculate_optimal_boundary(
-            &current,
-            self.reserved_subcell.as_ref(),
-            anchor_subcell,
-            dest_screen_x,
-            dest_screen_y,
-            self.fpos_x,
-            self.fpos_y,
-            self.cell_width,
-            self.cell_height,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
+        // Calculate target position: use locked target from affinity calc if available
+        let (target_x, target_y) = if let Some((locked_x, locked_y)) = self.locked_target {
+            // Use locked target from actor_directing_v2 ray-rectangle intersection
+            (locked_x, locked_y)
+        } else {
+            // Fallback: calculate optimal boundary (legacy or non-diagonal movement)
+            crate::subcell::calculate_optimal_boundary(
+                &current,
+                self.reserved_subcell.as_ref(),
+                anchor_subcell,
+                dest_screen_x,
+                dest_screen_y,
+                self.fpos_x,
+                self.fpos_y,
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            )
+        };
 
         // Calculate distance to target (used for both movement and switching)
         let dx_to_target = target_x - self.fpos_x;
@@ -1917,6 +2367,9 @@ impl Actor {
                     // Update current to reserved
                     self.current_subcell = Some(reserved);
                     self.reserved_subcell = None;
+                    // Clear locked values when changing reservation
+                    self.locked_target = None;
+                    self.locked_affinity = None;
 
                     // Register the new current subcell
                     reservation_manager.set_current(reserved, self.id);
