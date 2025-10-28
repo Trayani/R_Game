@@ -1,5 +1,9 @@
 [
-
+{"timestamp_ms":646,"action":{"SpawnActor":{"x":122.0,"y":359.0}},"phase":"Start"},
+{"timestamp_ms":646,"action":{"SpawnActor":{"x":122.0,"y":359.0}},"phase":"Finish"},
+{"timestamp_ms":646,"action":{"LogMessage":{"message":"Actor 0 spawned at (122.0, 359.0). Total actors: 1"}},"phase":"Finish"},
+{"timestamp_ms":1179,"action":{"SetActorDestination":{"x":11,"y":39,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":1179,"action":{"SetActorDestination":{"x":11,"y":39,"actor_count":1}},"phase":"Finish"}
 ]
 
 ]

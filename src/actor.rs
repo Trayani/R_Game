@@ -2389,9 +2389,10 @@ impl Actor {
                     }
                 }
 
-                // If early reservation enabled, immediately try to reserve next cell
+                // Always try to reserve next cell after switching
                 // (Only if mirror didn't already set up next reservation)
-                if enable_early_reservation && !mirror_reserved {
+                // This prevents stuttering at boundary crossings
+                if !mirror_reserved {
                     let current = reserved;
 
                     // Check if at destination sub-cell
@@ -2406,37 +2407,30 @@ impl Actor {
                     );
 
                     if current != dest_subcell {
-                        // Check eagerness before attempting early reservation
-                        if self.should_attempt_reservation(
-                            reservation_eagerness,
-                            reservation_threshold_distance,
+                        // Always attempt reservation after switching (no eagerness check)
+                        // Eagerness only applies to early reservations (next-next cell)
+                        // DestinationDirect: Try diagonal+anchor first, fallback to H/V
+                        if !self.try_reserve_diagonal_with_anchor(
+                            &current,
+                            Some(&previous_current),
+                            dx_to_dest,
+                            dy_to_dest,
                             dest_screen_x,
                             dest_screen_y,
+                            reservation_manager,
+                            enable_anti_cross,
+                            track_movement,
                         ) {
-                            // Attempt reservation with previous position for anti-cross check
-                            // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-                            if !self.try_reserve_diagonal_with_anchor(
+                            // Diagonal failed, try H/V
+                            self.try_reserve_horizontal_vertical(
                                 &current,
-                                Some(&previous_current),
                                 dx_to_dest,
                                 dy_to_dest,
                                 dest_screen_x,
                                 dest_screen_y,
                                 reservation_manager,
-                                enable_anti_cross,
                                 track_movement,
-                            ) {
-                                // Diagonal failed, try H/V
-                                self.try_reserve_horizontal_vertical(
-                                    &current,
-                                    dx_to_dest,
-                                    dy_to_dest,
-                                    dest_screen_x,
-                                    dest_screen_y,
-                                    reservation_manager,
-                                    track_movement,
-                                );
-                            }
+                            );
                         }
                     }
                 }
