@@ -2165,22 +2165,51 @@ impl Actor {
         release_eagerness: crate::config::ReleaseEagerness,
     ) -> bool {
         // ALWAYS log first 100 frames for actor 0 to debug GUI freeze
+        // ALSO log when actor is at critical moments (target reached, switching, etc.)
         static mut FRAME_COUNT: u32 = 0;
         static mut LOGGED_NO_DEST: bool = false;
+        static mut LAST_POS_X: f32 = 0.0;
+        static mut LAST_POS_Y: f32 = 0.0;
+        static mut STUCK_FRAMES: u32 = 0;
+
         let always_trace = unsafe {
             if self.id == 0 {
                 FRAME_COUNT += 1;
-                FRAME_COUNT <= 100
+
+                // Check if actor is stuck (not moving)
+                let moved = (self.fpos_x - LAST_POS_X).abs() > 0.001 || (self.fpos_y - LAST_POS_Y).abs() > 0.001;
+                LAST_POS_X = self.fpos_x;
+                LAST_POS_Y = self.fpos_y;
+
+                if !moved {
+                    STUCK_FRAMES += 1;
+                } else {
+                    STUCK_FRAMES = 0;
+                }
+
+                // Log if: first 100 frames, or stuck for 3+ consecutive frames
+                FRAME_COUNT <= 100 || STUCK_FRAMES >= 3
             } else {
                 false
             }
         };
 
+        // Log stuck status if tracing
+        if always_trace {
+            unsafe {
+                if STUCK_FRAMES > 0 {
+                    println!("[DestDirect ENTRY] Actor {} frame {} STUCK for {} frames", self.id, FRAME_COUNT, STUCK_FRAMES);
+                } else {
+                    println!("[DestDirect ENTRY] Actor {} frame {} moving", self.id, FRAME_COUNT);
+                }
+            }
+        }
+
         // Check if we have a destination
         let dest = match self.subcell_destination {
             Some(d) => {
                 if always_trace {
-                    println!("[DestDirect ENTRY] Actor {} frame, dest=({},{})", self.id, d.x, d.y);
+                    println!("[DestDirect] Destination: ({},{})", d.x, d.y);
                 }
                 unsafe { LOGGED_NO_DEST = false; } // Reset flag when destination is set
                 d
@@ -2318,6 +2347,9 @@ impl Actor {
 
         // Check if we should switch from reserved to current (triangle-based switching)
         if let Some(reserved) = self.reserved_subcell {
+            if always_trace || (self.id == 0 && track_movement) {
+                println!("  [STATE] Has reservation: {:?}", reserved);
+            }
             // Triangle-based movement: switch based on boundary proximity, not center proximity
             let should_switch = if enable_early_reservation {
                 // Early mode: Switch when closer to boundary than to current center
@@ -2347,8 +2379,8 @@ impl Actor {
             };
 
             if should_switch {
-                if self.id == 0 && track_movement {
-                    println!("  SWITCHING: current={:?} -> reserved={:?}", current, reserved);
+                if always_trace || (self.id == 0 && track_movement) {
+                    println!("  [SWITCH] Switching subcells: current={:?} -> reserved={:?}", current, reserved);
                 }
                 let previous_current = current;
 
@@ -2359,8 +2391,8 @@ impl Actor {
 
                 // If mirror failed or not applicable, fall back to standard switching
                 if !mirror_reserved {
-                    if self.id == 0 && track_movement {
-                        println!("  [FALLBACK] Standard switching (no mirror)");
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [SWITCH] Performing standard switch (mirror disabled)");
                     }
 
                     // Release old current sub-cell if different
@@ -2395,6 +2427,10 @@ impl Actor {
                 if !mirror_reserved {
                     let current = reserved;
 
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [SWITCH] After switching, current is now: {:?}", current);
+                    }
+
                     // Check if at destination sub-cell
                     let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
                         dest_screen_x,
@@ -2406,11 +2442,19 @@ impl Actor {
                         self.subcell_offset_y,
                     );
 
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [SWITCH] Checking if at destination subcell: current={:?} dest={:?} match={}",
+                            current, dest_subcell, current == dest_subcell);
+                    }
+
                     if current != dest_subcell {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [SWITCH] Not at destination, attempting to reserve next subcell");
+                        }
                         // Always attempt reservation after switching (no eagerness check)
                         // Eagerness only applies to early reservations (next-next cell)
                         // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-                        if !self.try_reserve_diagonal_with_anchor(
+                        let diag_success = self.try_reserve_diagonal_with_anchor(
                             &current,
                             Some(&previous_current),
                             dx_to_dest,
@@ -2420,9 +2464,14 @@ impl Actor {
                             reservation_manager,
                             enable_anti_cross,
                             track_movement,
-                        ) {
+                        );
+
+                        if !diag_success {
+                            if always_trace || (self.id == 0 && track_movement) {
+                                println!("  [SWITCH] Post-switch diagonal FAILED, trying H/V");
+                            }
                             // Diagonal failed, try H/V
-                            self.try_reserve_horizontal_vertical(
+                            let hv_success = self.try_reserve_horizontal_vertical(
                                 &current,
                                 dx_to_dest,
                                 dy_to_dest,
@@ -2431,16 +2480,35 @@ impl Actor {
                                 reservation_manager,
                                 track_movement,
                             );
+                            if always_trace || (self.id == 0 && track_movement) {
+                                if hv_success {
+                                    println!("  [SWITCH] Post-switch H/V SUCCEEDED");
+                                } else {
+                                    println!("  [SWITCH] Post-switch H/V FAILED - no reservation after switch!");
+                                }
+                            }
+                        } else if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [SWITCH] Post-switch diagonal SUCCEEDED");
                         }
+                    } else if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [SWITCH] At destination subcell, not reserving next");
                     }
                 }
 
                 return false;
+            } else if always_trace || (self.id == 0 && track_movement) {
+                println!("  [STATE] Has reservation but NOT switching yet (dist={:.2} threshold=0.5)", dist_to_target);
             }
         } else {
             // No reservation - always attempt to reserve when we have no reservation yet
             // The eagerness check applies to EARLY reservations (reserving next-next cell),
             // not to initial reservations (reserving the first next cell)
+
+            if always_trace || (self.id == 0 && track_movement) {
+                println!("  [STATE] NO RESERVATION - will attempt to reserve next subcell");
+                println!("  [STATE] Current subcell: {:?}", current);
+                println!("  [STATE] Direction to dest: dx={:.1} dy={:.1}", dx_to_dest, dy_to_dest);
+            }
 
             // Try to reserve next sub-cell
             // DestinationDirect: Try diagonal+anchor first, fallback to H/V
@@ -2463,10 +2531,10 @@ impl Actor {
 
             if !diagonal_success {
                 // Diagonal failed, try H/V
-                if self.id == 0 && track_movement {
-                    println!("  Diagonal failed, trying H/V");
+                if always_trace || (self.id == 0 && track_movement) {
+                    println!("  [RESERVE] Diagonal+anchor FAILED, trying H/V fallback");
                 }
-                self.try_reserve_horizontal_vertical(
+                let hv_success = self.try_reserve_horizontal_vertical(
                     &current,
                     dx_to_dest,
                     dy_to_dest,
@@ -2475,14 +2543,26 @@ impl Actor {
                     reservation_manager,
                     track_movement,
                 );
+
+                if always_trace || (self.id == 0 && track_movement) {
+                    if hv_success {
+                        println!("  [RESERVE] H/V fallback SUCCEEDED");
+                    } else {
+                        println!("  [RESERVE] H/V fallback FAILED - actor will stay in place (all directions blocked)");
+                        println!("  [RESERVE] Actor is STUCK with no available moves");
+                    }
+                }
                 // Note: If H/V also fails, actor will stay in place (all directions blocked)
                 // The any_available fallback should ONLY be used during initialization when
                 // actor has no primary subcell, not as a movement fallback.
-            } else if self.id == 0 && track_movement {
-                println!("  Diagonal+anchor SUCCESS");
+            } else if always_trace || (self.id == 0 && track_movement) {
+                println!("  [RESERVE] Diagonal+anchor SUCCEEDED");
             }
         }
 
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("  [RETURN] Returning false (not reached destination)");
+        }
         false
     }
 }
