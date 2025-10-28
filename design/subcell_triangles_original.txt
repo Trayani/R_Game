@@ -137,6 +137,29 @@ When reserving the mirror, the the rules are best illustrated with an extended t
     |------*A----*N------*E-----*I
    *B
 
+
+
+S... actor primary cell
+
+ *------E------D  <- diagonal alternative E+D (vertical, because horizontal is not possible ... C is blocked)
+ |\     |     /|
+ | \    |    / |
+ |  \   |   /  |
+ |   \  |  /   |
+ |    \ | /    |
+ |     \|/     |
+ *------S------C  <- OPTIMAL CARDINAL DIRECTION , BUT BLOCKED
+ |     /|\     |
+ |    / | \    |
+ |   /  |  \   |
+ |  /   |   \  |
+ | /    |    \ |
+ |/     |     \|
+ *------A------B  <- diagonal alternative A+B (vertical, because horizontal is not possible ... C is blocked)
+
+
+
+
      DD(SWV)
 
 In this example, the starting SC is still *.

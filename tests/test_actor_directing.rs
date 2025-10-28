@@ -154,58 +154,101 @@ fn run_alternative_test(
     // Set actor's current subcell to PSC
     let psc = SubCellCoord::new(test.psc_x, test.psc_y, 0, 0, 2);
 
+    // Calculate the actual diagonal SubCellCoord neighbor
+    // The test data gives design doc coordinates (grid intersections like 6,4)
+    // but we need the actual SubCellCoord neighbor from PSC
+    let diagonal = {
+        let dx_sign = (test.diag_x - test.psc_x).signum();
+        let dy_sign = (test.diag_y - test.psc_y).signum();
+
+        // From PSC (cell_x, cell_y, 0, 0), diagonal neighbor is:
+        // NE: (cell_x, cell_y-1, 1, 1) - crosses Y boundary
+        // SE: (cell_x, cell_y, 1, 1) - stays in same cell row
+        // SW: (cell_x-1, cell_y, 1, 1) - crosses X boundary
+        // NW: (cell_x-1, cell_y-1, 1, 1) - crosses both boundaries
+
+        let new_cell_x = if dx_sign > 0 { test.psc_x } else { test.psc_x - 1 };
+        let new_cell_y = if dy_sign > 0 { test.psc_y } else { test.psc_y - 1 };
+        SubCellCoord::new(new_cell_x, new_cell_y, 1, 1, 2)
+    };
+
+    println!("  Actual diagonal neighbor: ({},{},{},{})",
+        diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y);
+
     // Block the optimal direction FIRST, before setting up actor
     // Parse optimal direction to determine what to block
     let optimal_parts: Vec<&str> = test.optimal_dir.split('-').collect();
-    let optimal_base = optimal_parts[0];
-    let optimal_affinity = if optimal_parts.len() > 1 { optimal_parts[1] } else { "BOTH" };
+    let _optimal_base = optimal_parts[0]; // NE, SE, SW, NW
+    let optimal_has_affinity = optimal_parts.len() > 1;
+    let optimal_affinity_str = if optimal_has_affinity { optimal_parts[1] } else { "" };
 
-    // Determine which subcell to block to force alternative
-    let block_subcell = match (optimal_base, optimal_affinity) {
-        // Diagonal with H affinity: block the H anchor (diag_x, psc_y)
-        ("NE" | "SE" | "SW" | "NW", "H") => {
-            SubCellCoord::new(test.diag_x, test.psc_y, 0, 0, 2)
-        },
-        // Diagonal with V affinity: block the V anchor (psc_x, diag_y)
-        ("NE" | "SE" | "SW" | "NW", "V") => {
-            SubCellCoord::new(test.psc_x, test.diag_y, 0, 0, 2)
-        },
-        // Diagonal with BOTH: block the anchor based on position offset
-        ("NE" | "SE" | "SW" | "NW", "BOTH") => {
+    // Calculate anchors EXACTLY as the algorithm does in actor.rs
+    // Must match get_horizontal_anchor and get_vertical_anchor logic
+    let h_anchor = SubCellCoord {
+        cell_x: diagonal.cell_x,   // X from diagonal
+        cell_y: psc.cell_y,         // Y from PSC
+        sub_x: diagonal.sub_x,      // SUB X from diagonal
+        sub_y: psc.sub_y,           // SUB Y from PSC
+        grid_size: 2,
+    };
+
+    let v_anchor = SubCellCoord {
+        cell_x: psc.cell_x,         // X from PSC
+        cell_y: diagonal.cell_y,    // Y from diagonal
+        sub_x: psc.sub_x,           // SUB X from PSC
+        sub_y: diagonal.sub_y,      // SUB Y from diagonal
+        grid_size: 2,
+    };
+
+    // Determine which anchor to block based on optimal and expected alternative
+    let block_subcell = if !optimal_has_affinity {
+        // Case A: Optimal is "NE" (BOTH affinity)
+        // Block ONE anchor to force the OTHER affinity
+        println!("  Optimal has BOTH affinity - blocking anchor to force alt1={}", test.alt1_affinity);
+
+        if test.alt1_affinity == "V" {
+            // Force V affinity by blocking H anchor
+            h_anchor.clone()
+        } else if test.alt1_affinity == "H" {
+            // Force H affinity by blocking V anchor
+            v_anchor.clone()
+        } else {
+            // BOTH → block based on actor position offset
             let offset_x = (test.actor_x - test.psc_x as f32).abs();
             let offset_y = (test.actor_y - test.psc_y as f32).abs();
             if offset_x > offset_y {
-                SubCellCoord::new(test.diag_x, test.psc_y, 0, 0, 2) // H anchor
+                h_anchor.clone()
             } else {
-                SubCellCoord::new(test.psc_x, test.diag_y, 0, 0, 2) // V anchor
+                v_anchor.clone()
             }
-        },
-        // Cardinal direction: block the cardinal-offset subcell (the diagonal itself)
-        _ => {
-            SubCellCoord::new(test.diag_x, test.diag_y, 0, 0, 2)
+        }
+    } else {
+        // Case B: Optimal is "NE-H" or "NE-V" (specific affinity)
+        // Block that specific anchor to force opposite affinity
+        println!("  Optimal has {} affinity - blocking that anchor", optimal_affinity_str);
+
+        if optimal_affinity_str == "H" {
+            // Block H anchor to force V alternative
+            h_anchor.clone()
+        } else {
+            // Block V anchor to force H alternative
+            v_anchor.clone()
         }
     };
 
-    println!("  Blocking subcell: ({},{}) to force alternative", block_subcell.cell_x, block_subcell.cell_y);
+    println!("  Blocking ONLY anchor subcell: ({},{},{},{}) to force alternative",
+        block_subcell.cell_x, block_subcell.cell_y, block_subcell.sub_x, block_subcell.sub_y);
 
-    // Block all 4 sub-cells within the target cell to ensure the direction is fully blocked
-    for sub_x in 0..2 {
-        for sub_y in 0..2 {
-            let block_with_sub = SubCellCoord::new(
-                block_subcell.cell_x, block_subcell.cell_y, sub_x, sub_y, 2
-            );
-            let blocked = reservation_mgr.try_reserve(block_with_sub.clone(), 999);
-            println!("    Blocked ({},{},{},{}) with actor 999: {}",
-                block_with_sub.cell_x, block_with_sub.cell_y,
-                block_with_sub.sub_x, block_with_sub.sub_y, blocked);
+    // Block ONLY the specific anchor subcell, not all 4 in that cell!
+    // Blocking all 4 would also block the diagonal itself if they share the same cell.
+    let blocked = reservation_mgr.try_reserve(block_subcell.clone(), 999);
+    println!("    Blocked anchor: {}", blocked);
 
-            // Verify it's actually blocked
-            if let Some(owner) = reservation_mgr.get_owner(&block_with_sub) {
-                println!("      → Verified: owned by actor {}", owner);
-            } else {
-                println!("      → WARNING: Not actually reserved!");
-            }
-        }
+    // Verify it's actually blocked
+    if let Some(owner) = reservation_mgr.get_owner(&block_subcell) {
+        println!("      → Verified: anchor owned by actor {}", owner);
+    } else {
+        println!("      → WARNING: Anchor not actually reserved!");
     }
 
     // NOW set up the actor AFTER blocking
@@ -260,17 +303,17 @@ fn run_alternative_test(
         errors.push("No locked target - alternative reservation may have failed".to_string());
     }
 
-    // Check locked affinity (NOTE: algorithm may choose different alternative than expected
-    // since it tries ALL diagonals with all affinities, not just opposite affinity of same diagonal)
+    // Check locked affinity - STRICT validation now that we block correctly
     if let Some(locked_affinity) = actor.locked_affinity {
-        println!("  ✓ Alternative affinity chosen: {:?} (expected: {:?})",
-            locked_affinity, test.alt1_affinity);
-
-        // Just log the difference if it doesn't match, but don't fail the test
         let expected_affinity = parse_affinity(&test.alt1_affinity);
+
         if !affinity_matches(locked_affinity, expected_affinity) {
-            println!("    Note: Algorithm chose different alternative than Python script predicted");
-            println!("    This is OK - algorithm tries all diagonals, not just opposite affinity");
+            errors.push(format!(
+                "Alternative affinity mismatch: expected {:?}, got {:?}",
+                expected_affinity, locked_affinity
+            ));
+        } else {
+            println!("  ✓ Alternative affinity {:?} matches expected", locked_affinity);
         }
     } else {
         // Affinity might be None for some cases - check if alt1_affinity is empty
@@ -285,7 +328,9 @@ fn run_alternative_test(
             reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
 
         // Verify it's a diagonal move (not the PSC)
-        if reserved.cell_x == test.psc_x && reserved.cell_y == test.psc_y {
+        // Must check BOTH cell and subcell coordinates - SE diagonal from (5,5,0,0) is (5,5,1,1)
+        if reserved.cell_x == test.psc_x && reserved.cell_y == test.psc_y &&
+           reserved.sub_x == psc.sub_x && reserved.sub_y == psc.sub_y {
             errors.push("Actor reserved PSC instead of diagonal - alternative selection failed".to_string());
         }
     } else {
@@ -302,18 +347,14 @@ fn run_alternative_test(
 
     // Clean up reservations
     reservation_mgr.release(psc, 0);
-    // Release all 4 sub-cells that were blocked
-    for sub_x in 0..2 {
-        for sub_y in 0..2 {
-            let block_with_sub = SubCellCoord::new(
-                block_subcell.cell_x, block_subcell.cell_y, sub_x, sub_y, 2
-            );
-            reservation_mgr.release(block_with_sub, 999);
-        }
+    reservation_mgr.release(block_subcell, 999);
+
+    // Release the reserved diagonal and anchor if any
+    if let Some(reserved) = actor.reserved_subcell {
+        reservation_mgr.release(reserved, 0);
     }
-    if test.alt1_anchor_x != 0 || test.alt1_anchor_y != 0 {
-        let alt_anchor = SubCellCoord::new(test.alt1_anchor_x, test.alt1_anchor_y, 0, 0, 2);
-        reservation_mgr.release(alt_anchor, 0);
+    for extra in &actor.extra_reserved_subcells {
+        reservation_mgr.release(*extra, 0);
     }
 
     if errors.is_empty() {

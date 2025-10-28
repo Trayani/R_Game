@@ -64,7 +64,10 @@ impl SubCellCoord {
         self.to_screen_center_with_offset(cell_width, cell_height, 0.0, 0.0)
     }
 
-    /// Get screen position of sub-cell center with offset
+    /// Get screen position of sub-cell (at grid intersection, NOT center)
+    /// Subcells are positioned at grid line intersections with NO offset.
+    /// Example: SubCellCoord(5,5,0,0) with cell_width=1 → screen position (5.0, 5.0)
+    ///
     /// offset_x, offset_y: offset in sub-cell units (e.g., 0.5 means shift by half a sub-cell)
     pub fn to_screen_center_with_offset(
         &self,
@@ -76,9 +79,10 @@ impl SubCellCoord {
         let sub_cell_width = cell_width / self.grid_size as f32;
         let sub_cell_height = cell_height / self.grid_size as f32;
 
-        // Calculate base position (center of sub-cell without offset)
-        let base_x = self.cell_x as f32 * cell_width + (self.sub_x as f32 + 0.5) * sub_cell_width;
-        let base_y = self.cell_y as f32 * cell_height + (self.sub_y as f32 + 0.5) * sub_cell_height;
+        // Calculate base position at grid intersection (NO +0.5 offset)
+        // Subcells are at intersections, not centers
+        let base_x = self.cell_x as f32 * cell_width + self.sub_x as f32 * sub_cell_width;
+        let base_y = self.cell_y as f32 * cell_height + self.sub_y as f32 * sub_cell_height;
 
         // Apply offset (subtract because we're going from shifted coords back to screen coords)
         let screen_x = base_x - offset_x * sub_cell_width;

@@ -1027,14 +1027,21 @@ impl Actor {
             .collect();
 
         // Try each diagonal with affinity-calculated anchor
-        for diagonal in &diagonal_candidates {
+        println!("[RESERVE V2 DEBUG] Actor {} has {} diagonal candidates to try", self.id, diagonal_candidates.len());
+        for (idx, diagonal) in diagonal_candidates.iter().enumerate() {
+            println!("[RESERVE V2 DEBUG] Actor {} trying candidate {} / {}: diagonal=({},{},{},{})",
+                self.id, idx + 1, diagonal_candidates.len(),
+                diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y);
+
             // Anti-cross check for diagonal
             if enable_anti_cross {
                 if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                    println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
                     continue;
                 }
                 if let Some(prev) = previous_current {
                     if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
                         continue;
                     }
                 }
@@ -1050,7 +1057,13 @@ impl Actor {
                 dest_screen_y,
             );
 
+            println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor=({},{},{},{})",
+                affinity_result.affinity,
+                affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
+                affinity_result.anchor.sub_x, affinity_result.anchor.sub_y);
+
             // Try to reserve diagonal + calculated anchor
+            println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
             if reservation_manager.try_reserve_multiple(&[*diagonal, affinity_result.anchor], self.id) {
                 self.reserved_subcell = Some(*diagonal);
                 self.extra_reserved_subcells = vec![affinity_result.anchor];
@@ -1066,10 +1079,17 @@ impl Actor {
                     self.id, affinity_result.affinity, affinity_result.target_x, affinity_result.target_y,
                     diagonal, affinity_result.anchor);
                 return true;
+            } else {
+                println!("[RESERVE V2 DEBUG]   Primary reservation FAILED");
             }
 
             // Phase 4: Try opposite affinity fallback (actor_directing_v2.txt Section C1)
-            if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, current, diagonal) {
+            println!("[RESERVE V2 DEBUG]   Trying opposite affinity fallback...");
+            if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, current, diagonal, Some(&affinity_result.anchor)) {
+                println!("[RESERVE V2 DEBUG]   Opposite anchor=({},{},{},{})",
+                    opposite_anchor.cell_x, opposite_anchor.cell_y,
+                    opposite_anchor.sub_x, opposite_anchor.sub_y);
+                println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
                 if reservation_manager.try_reserve_multiple(&[*diagonal, opposite_anchor], self.id) {
                     self.reserved_subcell = Some(*diagonal);
                     self.extra_reserved_subcells = vec![opposite_anchor];
@@ -1092,7 +1112,11 @@ impl Actor {
                     println!("[RESERVE V2 OPPOSITE] Actor {} flipped affinity to opposite, reserved={:?} anchor={:?}",
                         self.id, diagonal, opposite_anchor);
                     return true;
+                } else {
+                    println!("[RESERVE V2 DEBUG]   Opposite reservation also FAILED");
                 }
+            } else {
+                println!("[RESERVE V2 DEBUG]   No opposite anchor available (affinity was BOTH)");
             }
         }
 
@@ -1107,6 +1131,7 @@ impl Actor {
         original_affinity: &Affinity,
         psc: &SubCellCoord,
         diagonal: &SubCellCoord,
+        tried_anchor: Option<&SubCellCoord>,
     ) -> Option<SubCellCoord> {
         match original_affinity {
             Affinity::Horizontal => {
@@ -1118,9 +1143,23 @@ impl Actor {
                 Some(Self::get_horizontal_anchor(psc, diagonal))
             }
             Affinity::Both => {
-                // Already tried one based on actor position, could try other
-                // For now, return None (no fallback for BOTH)
-                None
+                // For BOTH affinity, try the anchor we didn't try yet
+                // Compare tried_anchor with H and V anchors to determine which to try
+                if let Some(tried) = tried_anchor {
+                    let h_anchor = Self::get_horizontal_anchor(psc, diagonal);
+                    let v_anchor = Self::get_vertical_anchor(psc, diagonal);
+
+                    // If tried anchor was H, return V; if tried was V, return H
+                    if tried.cell_x == h_anchor.cell_x && tried.cell_y == h_anchor.cell_y &&
+                       tried.sub_x == h_anchor.sub_x && tried.sub_y == h_anchor.sub_y {
+                        Some(v_anchor)  // Tried H, return V
+                    } else {
+                        Some(h_anchor)  // Tried V (or unknown), return H
+                    }
+                } else {
+                    // No tried anchor info, default to H anchor
+                    Some(Self::get_horizontal_anchor(psc, diagonal))
+                }
             }
         }
     }

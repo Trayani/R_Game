@@ -228,33 +228,51 @@ All changes committed to branch `custom_flow_2`:
 
 ## Alternative Direction Testing (NEW)
 
-**Status**: ✅ 84% Pass Rate - Alternative direction fallback validated
+**Status**: ✅ 98.3% Pass Rate - Alternative direction fallback validated and fixed
 
 ### Implementation Summary
 - Created `calculate_alternatives.py` script to generate expected alternative directions
 - Enhanced TSV test data with 6 new columns: `alt1_dir`, `alt1_target_x`, `alt1_target_y`, `alt1_affinity`, `alt1_anchor_x`, `alt1_anchor_y`
 - Implemented `run_alternative_test()` function to test fallback behavior when optimal direction is blocked
 - Created Phase 1-4 alternative test functions
+- **Fixed** coordinate system bug: removed +0.5 offset from subcell positions (subcells are at grid intersections, not centers)
+- **Fixed** BOTH affinity fallback: algorithm now tries the alternative anchor when original anchor is blocked
 
 ### Test Results
 - **Phase 1 (P1)**: 12/12 (100%) ✅
-- **Comprehensive**: 91/108 (84.3%)
+- **Phase 2 (P2-P3)**: 35/36 (97.2%) ✅
+- **Phase 3 (P4-P7)**: 47/48 (97.9%) ✅
+- **Phase 4 (P8-P9)**: 24/24 (100%) ✅
+- **Total**: 118/120 (98.3%) ✅
+
+### Bugs Fixed
+
+**Bug 1: Subcell Coordinate System**
+- **Issue**: `to_screen_center_with_offset()` was adding +0.5 to subcell indices, treating them as cell centers
+- **Impact**: SubCellCoord(5,5,0,0) mapped to (5.25, 5.25) instead of (5.0, 5.0), breaking neighbor calculations
+- **Fix**: Removed +0.5 offset - subcells are now correctly positioned at grid intersections
+
+**Bug 2: BOTH Affinity Fallback**
+- **Issue**: When affinity was BOTH and the chosen anchor was blocked, `get_opposite_anchor()` returned `None`
+- **Impact**: No fallback available for BOTH affinity, alternative tests failed
+- **Fix**: Enhanced `get_opposite_anchor()` to compare tried anchor and return the other anchor for BOTH affinity
+
+**Bug 3: PSC Validation Check**
+- **Issue**: Validation only checked cell coordinates, not subcell coordinates, failing SE diagonal from (5,5,0,0) to (5,5,1,1)
+- **Impact**: Tests incorrectly reported "Actor reserved PSC instead of diagonal"
+- **Fix**: Added subcell coordinate comparison to validation logic
 
 ### Key Findings
 
-**Algorithm Behavior**: The alternative direction selection is more sophisticated than simple "opposite affinity":
-1. When optimal direction is blocked, algorithm tries ALL diagonals with ALL affinities
-2. Algorithm may choose a completely different diagonal (e.g., NW instead of NE) if available
-3. Opposite affinity is tried for each diagonal, but not exclusively
+**Algorithm Behavior**: The opposite affinity fallback (Section C1) works correctly:
+1. When H affinity anchor is blocked → algorithm tries V affinity anchor
+2. When V affinity anchor is blocked → algorithm tries H affinity anchor
+3. When BOTH affinity anchor is blocked → algorithm tries the alternative anchor (now fixed)
 
-**Example**: When NE-H is blocked:
-- Expected: NE-V (opposite affinity, same diagonal)
-- Actual: May choose NW-H (different diagonal, same affinity) if available first
-
-**Test Validation Strategy**:
-- ✅ Verify optimal direction is successfully blocked
-- ✅ Verify actor reserves SOME alternative diagonal
-- ⚠️ Cannot strictly validate WHICH alternative is chosen (algorithm explores all options)
+**Test Validation**: Strict validation confirms:
+- ✅ Optimal direction is successfully blocked
+- ✅ Actor reserves the expected alternative diagonal with correct affinity
+- ✅ Target position and anchor match expectations (within epsilon)
 
 ### Alternative Test Files
 - `tests/test_actor_directing.rs` - Enhanced with alternative testing
