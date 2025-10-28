@@ -1,0 +1,41 @@
+ID	dest_x	dest_y	optimal	target_x	target_y	affinity	anchor_x	anchor_y	alt1	alt2	alt3	notes
+T001	5	4	NORTH	5.0	4.0	N/A	N/A	N/A	NORTH-EAST-V	NORTH-WEST-V	-	Pure cardinal
+T002	5	3	NORTH	5.0	4.0	N/A	N/A	N/A	NORTH-EAST-V	NORTH-WEST-V	-	Pure cardinal
+T003	5	2	NORTH	5.0	4.0	N/A	N/A	N/A	NORTH-EAST-V	NORTH-WEST-V	-	Pure cardinal
+T004	5	1	NORTH	5.0	4.0	N/A	N/A	N/A	NORTH-EAST-V	NORTH-WEST-V	-	Pure cardinal
+T005	5	6	SOUTH	5.0	6.0	N/A	N/A	N/A	SOUTH-EAST-V	SOUTH-WEST-V	-	Pure cardinal
+T006	5	7	SOUTH	5.0	6.0	N/A	N/A	N/A	SOUTH-EAST-V	SOUTH-WEST-V	-	Pure cardinal
+T007	5	8	SOUTH	5.0	6.0	N/A	N/A	N/A	SOUTH-EAST-V	SOUTH-WEST-V	-	Pure cardinal
+T008	5	9	SOUTH	5.0	6.0	N/A	N/A	N/A	SOUTH-EAST-V	SOUTH-WEST-V	-	Pure cardinal
+T009	4	5	WEST	4.0	5.0	N/A	N/A	N/A	SOUTH-WEST-H	NORTH-WEST-H	-	Pure cardinal, fixed from line 119
+T010	3	5	WEST	4.0	5.0	N/A	N/A	N/A	SOUTH-WEST-H	NORTH-WEST-H	-	Pure cardinal
+T011	2	5	WEST	4.0	5.0	N/A	N/A	N/A	SOUTH-WEST-H	NORTH-WEST-H	-	Pure cardinal
+T012	1	5	WEST	4.0	5.0	N/A	N/A	N/A	SOUTH-WEST-H	NORTH-WEST-H	-	Pure cardinal
+T013	6	5	EAST	6.0	5.0	N/A	N/A	N/A	SOUTH-EAST-H	NORTH-EAST-H	-	Pure cardinal, fixed alternatives line 120
+T014	7	5	EAST	6.0	5.0	N/A	N/A	N/A	SOUTH-EAST-H	NORTH-EAST-H	-	Pure cardinal, fixed alternatives
+T015	8	5	EAST	6.0	5.0	N/A	N/A	N/A	SOUTH-EAST-H	NORTH-EAST-H	-	Pure cardinal, fixed alternatives
+T016	9	5	EAST	6.0	5.0	N/A	N/A	N/A	SOUTH-EAST-H	NORTH-EAST-H	-	Pure cardinal, fixed alternatives
+T017	6	4	NORTH-EAST	6.0	4.0	BOTH	6,5 or 5,4	-	NORTH	EAST	-	One subcell diagonal, t_side=t_top=1.0
+T018	4	4	NORTH-WEST	4.0	4.0	BOTH	4,5 or 5,4	-	NORTH	WEST	-	One subcell diagonal, t_side=t_top=1.0
+T019	6	6	SOUTH-EAST	6.0	6.0	BOTH	6,5 or 5,6	-	SOUTH	EAST	-	One subcell diagonal, t_side=t_top=1.0
+T020	4	6	SOUTH-WEST	4.0	6.0	BOTH	4,5 or 5,6	-	SOUTH	WEST	-	One subcell diagonal, t_side=t_top=1.0
+T021	6	1	NORTH-EAST-V	5.25	4.0	V	5	4	NORTH-EAST-H	NORTH	EAST	t_top=0.25 < t_side=1.0, hits horizontal first
+T022	7	2	NORTH-EAST-V	5.67	4.0	V	5	4	NORTH-EAST-H	NORTH	EAST	t_top=0.33 < t_side=0.5, hits horizontal first
+T023	7	3	NORTH-EAST	6.0	4.0	BOTH	6,5 or 5,4	-	NORTH	EAST	-	t_side=0.5, t_top=0.5, equal
+T024	8	3	NORTH-EAST-H	6.0	4.33	H	6	5	NORTH-EAST-V	EAST	NORTH	t_side=0.33 < t_top=0.5, hits vertical first
+T025	9	3	NORTH-EAST-H	6.0	4.50	H	6	5	NORTH-EAST-V	EAST	NORTH	t_side=0.25 < t_top=0.5, hits vertical first
+T026	9	4	NORTH-EAST-H	6.0	4.75	H	6	5	NORTH-EAST-V	EAST	NORTH	Fixed direction, t_side=0.25 < t_top=1.0
+T027	8	7	SOUTH-EAST-H	6.0	5.67	H	6	5	SOUTH-EAST-V	EAST	SOUTH	t_side=0.33 < t_top=0.5, hits vertical first
+T028	7	7	SOUTH-EAST	6.0	6.0	BOTH	6,5 or 5,6	-	SOUTH	EAST	-	t_side=0.5, t_top=0.5, equal
+T029	7	8	SOUTH-EAST-V	5.67	6.0	V	5	6	SOUTH-EAST-H	SOUTH	EAST	t_top=0.33 < t_side=0.5, hits horizontal first
+T030	3	7	SOUTH-WEST	4.0	6.0	BOTH	4,5 or 5,6	-	SOUTH	WEST	-	t_side=0.5, t_top=0.5, equal
+T031	2	7	SOUTH-WEST-H	4.0	5.67	H	4	5	SOUTH-WEST-V	WEST	SOUTH	t_side=0.33 < t_top=0.5, hits vertical first
+T032	1	7	SOUTH-WEST-H	4.0	5.50	H	4	5	SOUTH-WEST-V	WEST	SOUTH	t_side=0.25 < t_top=0.5, hits vertical first
+T033	3	3	NORTH-WEST	4.0	4.0	BOTH	4,5 or 5,4	-	NORTH	WEST	-	t_side=0.5, t_top=0.5, equal
+T034	2	3	NORTH-WEST-H	4.0	4.33	H	4	5	NORTH-WEST-V	WEST	NORTH	t_side=0.33 < t_top=0.5, hits vertical first
+T035	2	1	NORTH-WEST-V	4.25	4.0	V	5	4	NORTH-WEST-H	NORTH	WEST	t_top=0.25 < t_side=0.33, hits horizontal first
+T036	1	2	NORTH-WEST-H	4.0	4.25	H	4	5	NORTH-WEST-V	WEST	NORTH	t_side=0.25 < t_top=0.33, hits vertical first
+T037	5	5	NONE	5.0	5.0	N/A	N/A	N/A	-	-	-	At destination, no movement needed
+T038	10	10	SOUTH-EAST	6.0	6.0	BOTH	6,5 or 5,6	-	SOUTH	EAST	-	Far diagonal, t_side=t_top=0.2, 45° angle
+T039	0	0	NORTH-WEST	4.0	4.0	BOTH	4,5 or 5,4	-	NORTH	WEST	-	Far diagonal, t_side=t_top=0.2, 45° angle
+T040	8	2	NORTH-EAST	6.0	4.0	BOTH	6,5 or 5,4	-	NORTH	EAST	-	t_side=t_top=0.33, 45° angle
