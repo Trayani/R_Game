@@ -38,6 +38,8 @@ pub enum Action {
     ActorReachedWaypoint { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32, next_cell_x: i32, next_cell_y: i32, next_cell_id: i32 },
     /// Actor reached final destination (actor_id, cell_x, cell_y, cell_id)
     ActorReachedDestination { actor_id: usize, cell_x: i32, cell_y: i32, cell_id: i32 },
+    /// Log a text message
+    LogMessage { message: String },
 }
 
 /// Logged action with timestamp and phase
@@ -129,6 +131,12 @@ impl ActionLog {
     /// Use this for events that don't need start/finish pairs to reduce log size
     pub fn log_event(&mut self, action: Action) {
         self.log(action, ActionPhase::Finish);
+    }
+
+    /// Log a text message
+    /// Convenience method for logging arbitrary text messages
+    pub fn log_message(&mut self, message: impl Into<String>) {
+        self.log_event(Action::LogMessage { message: message.into() });
     }
 
     /// Get all logged actions

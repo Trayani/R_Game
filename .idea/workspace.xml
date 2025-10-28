@@ -13,15 +13,15 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/design/actor_orientation/add_all_tests_to_json.py" beforeDir="false" afterPath="$PROJECT_DIR$/design/actor_orientation/add_all_tests_to_json.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/design/actor_orientation/test_visualization_data.json" beforeDir="false" afterPath="$PROJECT_DIR$/design/actor_orientation/test_visualization_data.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gui_output.log" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:test" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:dev" />
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
@@ -67,7 +67,7 @@
   "keyToString": {
     "Cargo.Run rustgame3.executor": "Debug",
     "Cargo.Test ray.executor": "Debug",
-    "Cargo.Test test_actor_directing.executor": "Run",
+    "Cargo.Test test_actor_directing.executor": "Debug",
     "Cargo.Test test_save_state_simulation.executor": "Run",
     "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
@@ -105,7 +105,7 @@
       <command value="cargo test" />
     </option>
   </component>
-  <component name="RunManager" selected="Cargo.Test test_actor_directing">
+  <component name="RunManager" selected="Cargo.Run rustgame3">
     <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="buildProfileId" value="dev" />
       <option name="command" value="run --package rustgame3 --bin rustgame3" />
@@ -196,9 +196,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Cargo.Run rustgame3" />
         <item itemvalue="Cargo.Test test_actor_directing" />
         <item itemvalue="Cargo.Test test_save_state_simulation" />
-        <item itemvalue="Cargo.Run rustgame3" />
         <item itemvalue="Cargo.Test ray" />
         <item itemvalue="Cargo.test" />
       </list>

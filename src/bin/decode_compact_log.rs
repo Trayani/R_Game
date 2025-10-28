@@ -6,6 +6,7 @@
 use std::env;
 use std::fs;
 use std::io;
+use std::io::Read;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -143,6 +144,13 @@ impl<'a> CompactLogReader<'a> {
                 let fy = self.read_f32().ok()?;
                 let blocker = self.read_varint().ok()?;
                 format!("ActorBlocked(A{} @({:.1},{:.1}) by=A{})", aid, fx, fy, blocker)
+            }
+            17 => {
+                let len = self.read_varint().ok()? as usize;
+                let mut bytes = vec![0u8; len];
+                self.data.read_exact(&mut bytes).ok()?;
+                let message = String::from_utf8_lossy(&bytes);
+                format!("LOG: {}", message)
             }
             _ => format!("Unknown(type={})", action_type),
         };

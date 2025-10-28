@@ -121,6 +121,13 @@ impl CompactLogWriter {
                 self.write_i32(*cell_y);
                 self.write_i32(*cell_id);
             }
+            Action::LogMessage { message } => {
+                self.buffer.push(17 | phase_bit);
+                // Write message length as varint
+                self.write_varint(message.len() as u64);
+                // Write message bytes
+                self.buffer.extend_from_slice(message.as_bytes());
+            }
         }
 
         Ok(())
