@@ -1,0 +1,109 @@
+test_id	base	position	actor_x	actor_y	PSC_x	PSC_y	diag_x	diag_y	dest_x	dest_y	target_x	target_y	affinity	anchor_x	anchor_y	optimal_dir	notes
+T021_P1	T021	PSC_Center	5.0	5.0	5	5	6	4	6	1	5.25	4.0	V	5	4	NE-V	Baseline match
+T021_P2	T021	Rect_Center	5.5	4.5	5	5	6	4	6	1	5.54	4.0	V	5	4	NE-V	t_h=0.182 < t_v=0.909
+T021_P3	T021	Diag_Corner	6.0	4.0	5	5	6	4	6	1	6.0	4.0	BOTH	5-4	-	NE	At diagonal
+T021_P4	T021	Top_Edge	5.5	4.0	5	5	6	4	6	1	5.5	4.0	BOTH	5-4	-	NE	On top edge
+T021_P5	T021	Bottom_Edge	5.5	5.0	5	5	6	4	6	1	5.63	4.0	V	5	4	NE-V	t_h=4.032 < t_v=1.008 (corrected)
+T021_P6	T021	Left_Edge	5.0	4.5	5	5	6	4	6	1	5.14	4.0	V	5	4	NE-V	t_h=0.520 < t_v=3.640 (corrected)
+T021_P7	T021	Right_Edge	6.0	4.5	5	5	6	4	6	1	6.0	4.0	H	6	5	NE-H	At right edge, t_v=0
+T021_P8	T021	BL_Corner	5.0	5.0	5	5	6	4	6	1	5.25	4.0	V	5	4	NE-V	Same as P1
+T021_P9	T021	BR_Corner	6.0	5.0	5	5	6	4	6	1	6.0	4.0	H	6	5	NE-H	At anchor corner
+T022_P1	T022	PSC_Center	5.0	5.0	5	5	6	4	7	2	5.67	4.0	V	5	4	NE-V	Baseline match
+T022_P2	T022	Rect_Center	5.5	4.5	5	5	6	4	7	2	5.83	4.0	V	5	4	NE-V	t_h=0.25 < t_v=0.313
+T022_P3	T022	Diag_Corner	6.0	4.0	5	5	6	4	7	2	6.0	4.0	BOTH	5-4	-	NE	At diagonal
+T022_P4	T022	Top_Edge	5.5	4.0	5	5	6	4	7	2	5.5	4.0	BOTH	5-4	-	NE	On top edge
+T022_P5	T022	Bottom_Edge	5.5	5.0	5	5	6	4	7	2	6.0	4.33	H	6	5	NE-H	t_v=0.25 < t_h=0.333
+T022_P6	T022	Left_Edge	5.0	4.5	5	5	6	4	7	2	5.8	4.0	V	5	4	NE-V	t_h=0.4 < t_v=0.667
+T022_P7	T022	Right_Edge	6.0	4.5	5	5	6	4	7	2	6.0	4.0	H	6	5	NE-H	At right edge
+T022_P8	T022	BL_Corner	5.0	5.0	5	5	6	4	7	2	5.67	4.0	V	5	4	NE-V	Same as P1
+T022_P9	T022	BR_Corner	6.0	5.0	5	5	6	4	7	2	6.0	4.5	H	6	5	NE-H	At anchor corner
+T024_P1	T024	PSC_Center	5.0	5.0	5	5	6	4	8	3	6.0	4.33	H	6	5	NE-H	Baseline match
+T024_P2	T024	Rect_Center	5.5	4.5	5	5	6	4	8	3	6.0	4.2	H	6	5	NE-H	t_v=0.2 < t_h=0.286
+T024_P3	T024	Diag_Corner	6.0	4.0	5	5	6	4	8	3	6.0	4.0	BOTH	6-5	-	NE	At diagonal
+T024_P4	T024	Top_Edge	5.5	4.0	5	5	6	4	8	3	5.5	4.0	BOTH	5-4	-	NE	On top edge
+T024_P5	T024	Bottom_Edge	5.5	5.0	5	5	6	4	8	3	6.0	4.6	H	6	5	NE-H	t_v=0.286 < t_h=0.5
+T024_P6	T024	Left_Edge	5.0	4.5	5	5	6	4	8	3	6.0	4.17	H	6	5	NE-H	t_v=0.4 < t_h=0.667
+T024_P7	T024	Right_Edge	6.0	4.5	5	5	6	4	8	3	6.0	4.5	H	6	5	NE-H	At right edge, t_v=0
+T024_P8	T024	BL_Corner	5.0	5.0	5	5	6	4	8	3	6.0	4.33	H	6	5	NE-H	Same as P1
+T024_P9	T024	BR_Corner	6.0	5.0	5	5	6	4	8	3	6.0	5.0	H	6	5	NE-H	At anchor, minimal move
+T025_P1	T025	PSC_Center	5.0	5.0	5	5	6	4	9	3	6.0	4.5	H	6	5	NE-H	Baseline match
+T025_P2	T025	Rect_Center	5.5	4.5	5	5	6	4	9	3	6.0	4.36	H	6	5	NE-H	t_v=0.143 < t_h=0.182
+T025_P3	T025	Diag_Corner	6.0	4.0	5	5	6	4	9	3	6.0	4.0	BOTH	6-5	-	NE	At diagonal
+T025_P4	T025	Top_Edge	5.5	4.0	5	5	6	4	9	3	5.5	4.0	BOTH	5-4	-	NE	On top edge
+T025_P5	T025	Bottom_Edge	5.5	5.0	5	5	6	4	9	3	6.0	4.71	H	6	5	NE-H	t_v=0.2 < t_h=0.333
+T025_P6	T025	Left_Edge	5.0	4.5	5	5	6	4	9	3	6.0	4.25	H	6	5	NE-H	t_v=0.308 < t_h=0.5
+T025_P7	T025	Right_Edge	6.0	4.5	5	5	6	4	9	3	6.0	4.5	H	6	5	NE-H	At right edge, t_v=0
+T025_P8	T025	BL_Corner	5.0	5.0	5	5	6	4	9	3	6.0	4.5	H	6	5	NE-H	Same as P1
+T025_P9	T025	BR_Corner	6.0	5.0	5	5	6	4	9	3	6.0	5.0	H	6	5	NE-H	At anchor, minimal move
+T026_P1	T026	PSC_Center	5.0	5.0	5	5	6	4	9	4	6.0	4.75	H	6	5	NE-H	Baseline match
+T026_P2	T026	Rect_Center	5.5	4.5	5	5	6	4	9	4	6.0	4.64	H	6	5	NE-H	t_v=0.125 < t_h=0.167
+T026_P3	T026	Diag_Corner	6.0	4.0	5	5	6	4	9	4	6.0	4.0	BOTH	6-5	-	NE	At diagonal
+T026_P4	T026	Top_Edge	5.5	4.0	5	5	6	4	9	4	5.5	4.0	BOTH	5-4	-	NE	On top edge
+T026_P5	T026	Bottom_Edge	5.5	5.0	5	5	6	4	9	4	6.0	4.875	H	6	5	NE-H	t_v=0.143 < t_h=1.0
+T026_P6	T026	Left_Edge	5.0	4.5	5	5	6	4	9	4	6.0	4.375	H	6	5	NE-H	t_v=0.231 < t_h=0.333
+T026_P7	T026	Right_Edge	6.0	4.5	5	5	6	4	9	4	6.0	4.5	H	6	5	NE-H	At right edge, t_v=0
+T026_P8	T026	BL_Corner	5.0	5.0	5	5	6	4	9	4	6.0	4.75	H	6	5	NE-H	Same as P1
+T026_P9	T026	BR_Corner	6.0	5.0	5	5	6	4	9	4	6.0	5.0	H	6	5	NE-H	At anchor, minimal move
+T027_P1	T027	PSC_Center	5.0	5.0	5	5	6	6	8	7	6.0	5.67	H	6	5	SE-H	Baseline match
+T027_P2	T027	Rect_Center	5.5	5.5	5	5	6	6	8	7	6.0	5.8	H	6	5	SE-H	t_v=0.2 < t_h=0.286
+T027_P3	T027	Diag_Corner	6.0	6.0	5	5	6	6	8	7	6.0	6.0	BOTH	6-5	-	SE	At diagonal
+T027_P4	T027	Top_Edge	5.5	5.0	5	5	6	6	8	7	6.0	5.4	H	6	5	SE-H	t_v=0.286 < t_h=0.5
+T027_P5	T027	Bottom_Edge	5.5	6.0	5	5	6	6	8	7	5.5	6.0	BOTH	5-6	-	SE	On bottom edge
+T027_P6	T027	Left_Edge	5.0	5.5	5	5	6	6	8	7	6.0	5.83	H	6	5	SE-H	t_v=0.4 < t_h=0.667
+T027_P7	T027	Right_Edge	6.0	5.5	5	5	6	6	8	7	6.0	5.5	H	6	5	SE-H	At right edge, t_v=0
+T027_P8	T027	BL_Corner	5.0	5.0	5	5	6	6	8	7	6.0	5.67	H	6	5	SE-H	Same as P1
+T027_P9	T027	BR_Corner	6.0	5.0	5	5	6	6	8	7	6.0	5.0	H	6	5	SE-H	At anchor, minimal move
+T029_P1	T029	PSC_Center	5.0	5.0	5	5	6	6	7	8	5.67	6.0	V	5	6	SE-V	Baseline match
+T029_P2	T029	Rect_Center	5.5	5.5	5	5	6	6	7	8	5.83	6.0	V	5	6	SE-V	t_h=0.25 < t_v=0.313
+T029_P3	T029	Diag_Corner	6.0	6.0	5	5	6	6	7	8	6.0	6.0	BOTH	5-6	-	SE	At diagonal
+T029_P4	T029	Top_Edge	5.5	5.0	5	5	6	6	7	8	6.0	5.67	H	6	5	SE-H	t_v=0.25 < t_h=0.333
+T029_P5	T029	Bottom_Edge	5.5	6.0	5	5	6	6	7	8	5.5	6.0	BOTH	5-6	-	SE	On bottom edge
+T029_P6	T029	Left_Edge	5.0	5.5	5	5	6	6	7	8	5.8	6.0	V	5	6	SE-V	t_h=0.4 < t_v=0.667
+T029_P7	T029	Right_Edge	6.0	5.5	5	5	6	6	7	8	6.0	6.0	H	6	5	SE-H	At right edge
+T029_P8	T029	BL_Corner	5.0	5.0	5	5	6	6	7	8	5.67	6.0	V	5	6	SE-V	Same as P1
+T029_P9	T029	BR_Corner	6.0	5.0	5	5	6	6	7	8	6.0	5.5	H	6	5	SE-H	At anchor corner
+T031_P1	T031	PSC_Center	5.0	5.0	5	5	4	6	2	7	4.0	5.67	H	4	5	SW-H	Baseline match
+T031_P2	T031	Rect_Center	4.5	5.5	5	5	4	6	2	7	4.0	5.8	H	4	5	SW-H	t_v=0.2 < t_h=0.286
+T031_P3	T031	Diag_Corner	4.0	6.0	5	5	4	6	2	7	4.0	6.0	BOTH	4-5	-	SW	At diagonal
+T031_P4	T031	Top_Edge	4.5	5.0	5	5	4	6	2	7	4.0	5.4	H	4	5	SW-H	t_v=0.286 < t_h=0.5
+T031_P5	T031	Bottom_Edge	4.5	6.0	5	5	4	6	2	7	4.5	6.0	BOTH	5-6	-	SW	On bottom edge
+T031_P6	T031	Left_Edge	4.0	5.5	5	5	4	6	2	7	4.0	5.5	H	4	5	SW-H	At left edge, t_v=0
+T031_P7	T031	Right_Edge	5.0	5.5	5	5	4	6	2	7	4.0	5.83	H	4	5	SW-H	t_v=0.4 < t_h=0.667
+T031_P8	T031	BL_Corner	5.0	5.0	5	5	4	6	2	7	4.0	5.67	H	4	5	SW-H	Same as P1
+T031_P9	T031	BR_Corner	5.0	6.0	5	5	4	6	2	7	4.5	6.0	H	4	5	SW-H	At anchor corner
+T032_P1	T032	PSC_Center	5.0	5.0	5	5	4	6	1	7	4.0	5.5	H	4	5	SW-H	Baseline match
+T032_P2	T032	Rect_Center	4.5	5.5	5	5	4	6	1	7	4.0	5.64	H	4	5	SW-H	t_v=0.143 < t_h=0.182
+T032_P3	T032	Diag_Corner	4.0	6.0	5	5	4	6	1	7	4.0	6.0	BOTH	4-5	-	SW	At diagonal
+T032_P4	T032	Top_Edge	4.5	5.0	5	5	4	6	1	7	4.0	5.29	H	4	5	SW-H	t_v=0.2 < t_h=0.333
+T032_P5	T032	Bottom_Edge	4.5	6.0	5	5	4	6	1	7	4.5	6.0	BOTH	5-6	-	SW	On bottom edge
+T032_P6	T032	Left_Edge	4.0	5.5	5	5	4	6	1	7	4.0	5.5	H	4	5	SW-H	At left edge, t_v=0
+T032_P7	T032	Right_Edge	5.0	5.5	5	5	4	6	1	7	4.0	5.75	H	4	5	SW-H	t_v=0.308 < t_h=0.5
+T032_P8	T032	BL_Corner	5.0	5.0	5	5	4	6	1	7	4.0	5.5	H	4	5	SW-H	Same as P1
+T032_P9	T032	BR_Corner	5.0	6.0	5	5	4	6	1	7	4.25	6.0	H	4	5	SW-H	At anchor corner
+T034_P1	T034	PSC_Center	5.0	5.0	5	5	4	4	2	3	4.0	4.33	H	4	5	NW-H	Baseline match
+T034_P2	T034	Rect_Center	4.5	4.5	5	5	4	4	2	3	4.0	4.2	H	4	5	NW-H	t_v=0.2 < t_h=0.286
+T034_P3	T034	Diag_Corner	4.0	4.0	5	5	4	4	2	3	4.0	4.0	BOTH	4-5	-	NW	At diagonal
+T034_P4	T034	Top_Edge	4.5	4.0	5	5	4	4	2	3	4.5	4.0	BOTH	5-4	-	NW	On top edge
+T034_P5	T034	Bottom_Edge	4.5	5.0	5	5	4	4	2	3	4.0	4.6	H	4	5	NW-H	t_v=0.286 < t_h=0.5
+T034_P6	T034	Left_Edge	4.0	4.5	5	5	4	4	2	3	4.0	4.5	H	4	5	NW-H	At left edge, t_v=0
+T034_P7	T034	Right_Edge	5.0	4.5	5	5	4	4	2	3	4.0	4.17	H	4	5	NW-H	t_v=0.4 < t_h=0.667
+T034_P8	T034	BL_Corner	5.0	5.0	5	5	4	4	2	3	4.0	4.33	H	4	5	NW-H	Same as P1
+T034_P9	T034	BR_Corner	5.0	4.0	5	5	4	4	2	3	4.5	4.0	H	4	5	NW-H	At anchor corner
+T035_P1	T035	PSC_Center	5.0	5.0	5	5	4	4	2	1	4.25	4.0	V	5	4	NW-V	Baseline match
+T035_P2	T035	Rect_Center	4.5	4.5	5	5	4	4	2	1	4.17	4.0	V	5	4	NW-V	t_h=0.25 < t_h=0.313
+T035_P3	T035	Diag_Corner	4.0	4.0	5	5	4	4	2	1	4.0	4.0	BOTH	5-4	-	NW	At diagonal
+T035_P4	T035	Top_Edge	4.5	4.0	5	5	4	4	2	1	4.5	4.0	BOTH	5-4	-	NW	On top edge
+T035_P5	T035	Bottom_Edge	4.5	5.0	5	5	4	4	2	1	4.0	4.33	H	4	5	NW-H	t_v=0.25 < t_h=0.333
+T035_P6	T035	Left_Edge	4.0	4.5	5	5	4	4	2	1	4.0	4.0	V	5	4	NW-V	At left edge
+T035_P7	T035	Right_Edge	5.0	4.5	5	5	4	4	2	1	4.2	4.0	V	5	4	NW-V	t_h=0.4 < t_v=0.667
+T035_P8	T035	BL_Corner	5.0	5.0	5	5	4	4	2	1	4.25	4.0	V	5	4	NW-V	Same as P1
+T035_P9	T035	BR_Corner	5.0	4.0	5	5	4	4	2	1	4.5	4.0	V	5	4	NW-V	At anchor corner
+T036_P1	T036	PSC_Center	5.0	5.0	5	5	4	4	1	2	4.0	4.25	H	4	5	NW-H	Baseline match
+T036_P2	T036	Rect_Center	4.5	4.5	5	5	4	4	1	2	4.0	4.36	H	4	5	NW-H	t_v=0.143 < t_h=0.182
+T036_P3	T036	Diag_Corner	4.0	4.0	5	5	4	4	1	2	4.0	4.0	BOTH	4-5	-	NW	At diagonal
+T036_P4	T036	Top_Edge	4.5	4.0	5	5	4	4	1	2	4.5	4.0	BOTH	5-4	-	NW	On top edge
+T036_P5	T036	Bottom_Edge	4.5	5.0	5	5	4	4	1	2	4.0	4.71	H	4	5	NW-H	t_v=0.2 < t_h=0.333
+T036_P6	T036	Left_Edge	4.0	4.5	5	5	4	4	1	2	4.0	4.5	H	4	5	NW-H	At left edge, t_v=0
+T036_P7	T036	Right_Edge	5.0	4.5	5	5	4	4	1	2	4.0	4.25	H	4	5	NW-H	t_v=0.308 < t_h=0.5
+T036_P8	T036	BL_Corner	5.0	5.0	5	5	4	4	1	2	4.0	4.25	H	4	5	NW-H	Same as P1
+T036_P9	T036	BR_Corner	5.0	4.0	5	5	4	4	1	2	4.75	4.0	H	4	5	NW-H	At anchor corner

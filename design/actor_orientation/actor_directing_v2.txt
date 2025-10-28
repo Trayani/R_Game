@@ -1,0 +1,489 @@
+# Actor Directing Algorithm - Version 2
+## Position-Aware Diagonal Reservation
+
+### Core Principle
+
+**Affinity and target position are determined (locked) once diagonal is reserved, based on actor's precise float position.**
+
+The primary subcell (PSC) merely determines possible directions. If the direction is DIAGONAL, the affinity is decided by the intersection of the ray from `actor.position` to `destination.position` with the reservation rectangle.
+
+---
+
+## A) Direction Selection and Reservation
+
+### A1) Cardinal Directions (NORTH, SOUTH, EAST, WEST)
+
+**When**: Destination is aligned with actor's PSC on one axis
+- Same X → NORTH or SOUTH
+- Same Y → EAST or WEST
+
+**Target**: Center of adjacent subcell in that direction
+**Affinity**: N/A (no diagonal, no anchor needed)
+**Reservation**: Single adjacent subcell
+
+**Example**:
+```
+PSC = (5, 5)
+Actor position = (5.2, 4.8) - anywhere in PSC
+Destination = (5, 2) - same X coordinate
+
+Direction: NORTH
+Target: (5.0, 4.0) - center of (5, 4)
+Reservation: subcell (5, 4)
+```
+
+---
+
+### A2) Diagonal Directions (NORTH-EAST, NORTH-WEST, SOUTH-EAST, SOUTH-WEST)
+
+**When**: Destination requires movement in both X and Y from PSC
+
+**Process**:
+1. Identify diagonal subcell candidate (one of 4 diagonal neighbors)
+2. Calculate affinity and target using **Rectangle Intersection Formula** (see Section B)
+3. Reserve diagonal subcell + anchor subcell
+
+**Affinity Suffix Notation**:
+- `NORTH-EAST-V`: Vertical-favoring (hits horizontal edge first)
+- `NORTH-EAST-H`: Horizontal-favoring (hits vertical edge first)
+- `NORTH-EAST`: Both (hits corner exactly)
+
+---
+
+## B) Rectangle Intersection Formula
+
+### Purpose
+Calculate where the ray from actor's position toward destination intersects the rectangle formed by PSC and diagonal subcell.
+
+### Inputs
+- **Actor Position (AP)**: `(Ax, Ay)` - precise float coordinates
+- **Primary Subcell (PSC)**: `(PSC_x, PSC_y)` - current logical subcell
+- **Diagonal Subcell (D)**: `(D_x, D_y)` - candidate diagonal subcell
+- **Destination (Dest)**: `(Bx, By)` - destination point as subcell integer coordinates directly (e.g., (6, 1) = point at (6.0, 1.0))
+
+### Step 1: Define Rectangle Bounds
+
+The rectangle is formed between PSC and diagonal subcell positions (at grid line intersections):
+
+```python
+# Subcells are positioned at grid line intersections (no offset)
+PSC_x = PSC_x  # e.g., subcell (5, 5) is at position (5.0, 5.0)
+PSC_y = PSC_y
+D_x = D_x      # e.g., subcell (6, 4) is at position (6.0, 4.0)
+D_y = D_y
+
+rect_min_x = min(PSC_x, D_x)
+rect_max_x = max(PSC_x, D_x)
+rect_min_y = min(PSC_y, D_y)
+rect_max_y = max(PSC_y, D_y)
+```
+
+**Note**: Subcells are at grid intersections, not cell centers. No +0.5 offset is applied.
+
+### Step 2: Calculate Ray Direction
+
+```python
+dir_x = Bx - Ax
+dir_y = By - Ay
+dir_len = sqrt(dir_x² + dir_y²)
+
+# Normalized ray direction
+ray_x = dir_x / dir_len
+ray_y = dir_y / dir_len
+```
+
+**Important**: Since destination is always a subcell center (whole number), and actor is within PSC bounds, the ray will never be exactly horizontal or vertical when moving diagonally.
+
+### Step 3: Ray-Rectangle Intersection
+
+Calculate parametric t values for each edge:
+
+```python
+# Vertical edges (left and right)
+if ray_x > 0:
+    t_right = (rect_max_x - Ax) / ray_x
+    t_left = INF
+else if ray_x < 0:
+    t_left = (rect_min_x - Ax) / ray_x
+    t_right = INF
+else:
+    # ray_x == 0: moving purely vertical (NEVER happens for diagonal destinations)
+    t_vertical_edge = INF
+
+# Horizontal edges (top and bottom)
+if ray_y > 0:
+    t_bottom = (rect_max_y - Ay) / ray_y
+    t_top = INF
+else if ray_y < 0:
+    t_top = (rect_min_y - Ay) / ray_y
+    t_bottom = INF
+else:
+    # ray_y == 0: moving purely horizontal (NEVER happens for diagonal destinations)
+    t_horizontal_edge = INF
+
+# Find closest edge
+t_vertical_edge = min(t_left, t_right)
+t_horizontal_edge = min(t_top, t_bottom)
+```
+
+### Step 4: Determine Affinity and Target
+
+```python
+epsilon = 1e-6  # Tolerance for floating-point comparison
+
+if abs(t_vertical_edge - t_horizontal_edge) < epsilon:
+    # Hits corner (both edges at same t)
+    target_x = Ax + ray_x * t_vertical_edge
+    target_y = Ay + ray_y * t_vertical_edge
+    affinity = BOTH
+    anchor_subcell = either_horizontal_or_vertical  # Implementation choice
+
+else if t_vertical_edge < t_horizontal_edge:
+    # Hits vertical edge first → H-affinity
+    # (Moving primarily horizontally to reach vertical edge)
+    target_x = Ax + ray_x * t_vertical_edge
+    target_y = Ay + ray_y * t_vertical_edge
+    affinity = H
+    anchor_subcell = horizontal_neighbor_of_PSC
+
+else:
+    # t_horizontal_edge < t_vertical_edge
+    # Hits horizontal edge first → V-affinity
+    # (Moving primarily vertically to reach horizontal edge)
+    target_x = Ax + ray_x * t_horizontal_edge
+    target_y = Ay + ray_y * t_horizontal_edge
+    affinity = V
+    anchor_subcell = vertical_neighbor_of_PSC
+```
+
+### Step 5: Anchor Determination
+
+**For H-affinity (horizontal-favoring)**:
+- Anchor is the horizontal neighbor of PSC
+- Actor moves horizontally toward diagonal, then adjusts vertically
+- Example: PSC=(5,5), Diagonal=(6,4) → Anchor=(6,5)
+
+**For V-affinity (vertical-favoring)**:
+- Anchor is the vertical neighbor of PSC
+- Actor moves vertically toward diagonal, then adjusts horizontally
+- Example: PSC=(5,5), Diagonal=(6,4) → Anchor=(5,4)
+
+**For BOTH affinity**:
+- Either anchor works (implementation can choose)
+- Common choice: prefer the anchor that aligns with larger destination component
+
+### Step 6: Lock Values
+
+**Once reservation succeeds**:
+- ✅ **Locked target position**: `(target_x, target_y)`
+- ✅ **Locked affinity**: `H`, `V`, or `BOTH`
+- ✅ **Locked anchor subcell**: `anchor_subcell`
+
+**These values do NOT change until reservation is released.**
+
+The actor moves toward the locked target position. When the target is reached (or PSC changes), the reservation is released and a new evaluation occurs.
+
+---
+
+## C) Alternative Direction Fallback
+
+### C1) Affinity-Based Fallback
+
+If the optimal diagonal with calculated affinity cannot be reserved:
+
+1. **Try opposite affinity** for the SAME diagonal
+   - If optimal was `NORTH-EAST-H`, try `NORTH-EAST-V`
+   - Requires recalculating as if actor position yields opposite affinity
+   - **Question**: How to force opposite affinity? Options:
+     - a) Use alternate anchor preemptively
+     - b) Skip this fallback (not worth complexity)
+
+2. **Try alternative diagonals**
+   - Clockwise diagonal (±45°)
+   - Counter-clockwise diagonal (±45°)
+   - Each with its own affinity calculation
+
+### C2) Cardinal Fallback
+
+If all diagonal options fail:
+
+1. **Try dominant cardinal direction**
+   - If `|dest_x - PSC_x| > |dest_y - PSC_y|`: Try EAST or WEST first
+   - Otherwise: Try NORTH or SOUTH first
+
+2. **Try secondary cardinal direction**
+   - The other cardinal component
+
+3. **Try any available subcell in current cell**
+   - Last resort before waiting
+
+---
+
+## D) Edge Cases and Special Handling
+
+### D1) Actor Already at Boundary
+
+```python
+# Actor at (6.0, 4.5) - exactly on right edge of rectangle
+# Ray toward (8, 2)
+# t_right = 0 (already on the edge)
+
+if t_vertical_edge == 0 or t_horizontal_edge == 0:
+    # Actor is already at or past the boundary
+    # Target = actor's current position (already optimal)
+    target_x = Ax
+    target_y = Ay
+    # Affinity based on which edge actor is on
+```
+
+### D2) Actor Outside Rectangle (Defensive)
+
+This should NEVER happen in normal operation, but for robustness:
+
+```python
+# Clamp actor position to rectangle before calculations
+Ax_clamped = clamp(Ax, rect_min_x, rect_max_x)
+Ay_clamped = clamp(Ay, rect_min_y, rect_max_y)
+
+# Log warning if clamping occurred
+if Ax != Ax_clamped or Ay != Ay_clamped:
+    warn("Actor outside reservation rectangle - clamped")
+```
+
+### D3) At Destination
+
+```python
+# Actor's PSC == Destination subcell
+if PSC == Destination:
+    # No movement needed
+    direction = NONE
+    target = current_position
+    reservation = none
+```
+
+---
+
+## E) Examples with Different Actor Positions
+
+### Example 1: PSC Center Position
+
+```
+PSC = (5, 5)
+Actor = (5.0, 5.0) - exactly at PSC center
+Destination = (8, 2)
+
+Rectangle: [5.0-6.0, 4.0-5.0]
+Ray: from (5.0, 5.0) toward (8, 2)
+  dir = (3, -3)
+  ray = (0.707, -0.707) normalized
+
+Intersections:
+  t_right = (6.0 - 5.0) / 0.707 = 1.414
+  t_top = (4.0 - 5.0) / (-0.707) = 1.414
+
+Result: t_vertical == t_horizontal
+  → BOTH affinity
+  → Target: (6.0, 4.0) - corner
+  → Anchor: either (6,5) or (5,4)
+```
+
+### Example 2: Rectangle Center Position
+
+```
+PSC = (5, 5)
+Actor = (5.5, 4.5) - rectangle center
+Destination = (8, 2)
+
+Rectangle: [5.0-6.0, 4.0-5.0]
+Ray: from (5.5, 4.5) toward (8, 2)
+  dir = (2.5, -2.5)
+  ray = (0.707, -0.707) normalized
+
+Intersections:
+  t_right = (6.0 - 5.5) / 0.707 = 0.707
+  t_top = (4.0 - 4.5) / (-0.707) = 0.707
+
+Result: t_vertical == t_horizontal
+  → BOTH affinity
+  → Target: (6.0, 4.0) - corner
+  → Anchor: either (6,5) or (5,4)
+```
+
+### Example 3: Near Top Edge
+
+```
+PSC = (5, 5)
+Actor = (5.3, 4.1) - near top edge
+Destination = (8, 2)
+
+Rectangle: [5.0-6.0, 4.0-5.0]
+Ray: from (5.3, 4.1) toward (8, 2)
+  dir = (2.7, -2.1)
+  len = 3.42
+  ray = (0.789, -0.614) normalized
+
+Intersections:
+  t_right = (6.0 - 5.3) / 0.789 = 0.887
+  t_top = (4.0 - 4.1) / (-0.614) = 0.163
+
+Result: t_horizontal < t_vertical (0.163 < 0.887)
+  → V affinity (hits horizontal edge first)
+  → Target: (5.3 + 0.789*0.163, 4.1 - 0.614*0.163)
+           = (5.43, 4.0)
+  → Anchor: (5, 4) - vertical neighbor
+```
+
+### Example 4: Near Right Edge
+
+```
+PSC = (5, 5)
+Actor = (5.9, 4.6) - near right edge
+Destination = (8, 2)
+
+Rectangle: [5.0-6.0, 4.0-5.0]
+Ray: from (5.9, 4.6) toward (8, 2)
+  dir = (2.1, -2.6)
+  len = 3.34
+  ray = (0.629, -0.778) normalized
+
+Intersections:
+  t_right = (6.0 - 5.9) / 0.629 = 0.159
+  t_top = (4.0 - 4.6) / (-0.778) = 0.771
+
+Result: t_vertical < t_horizontal (0.159 < 0.771)
+  → H affinity (hits vertical edge first)
+  → Target: (5.9 + 0.629*0.159, 4.6 - 0.778*0.159)
+           = (6.0, 4.48)
+  → Anchor: (6, 5) - horizontal neighbor
+```
+
+---
+
+## F) Test Strategy
+
+### F1) Baseline Tests (40 tests)
+
+Actor always at PSC center (5.0, 5.0):
+- Pure cardinal: 16 tests
+- Diagonal with affinity: 20 tests
+- Special cases: 4 tests
+
+**File**: `actor_directing_tests.md`
+
+### F2) Position-Variant Tests (180 tests)
+
+For each of the 20 diagonal test cases, test with 9 actor positions:
+
+**9 Actor Positions** (within rectangle formed by PSC and diagonal):
+1. **PSC center**: e.g., (5.0, 5.0)
+2. **Rectangle center**: e.g., (5.5, 4.5)
+3. **Diagonal corner**: e.g., (6.0, 4.0)
+4. **Top edge center**: e.g., (5.5, 4.0)
+5. **Bottom edge center**: e.g., (5.5, 5.0)
+6. **Left edge center**: e.g., (5.0, 4.5)
+7. **Right edge center**: e.g., (6.0, 4.5)
+8. **Bottom-left corner**: Same as PSC center for most cases
+9. **Bottom-right/anchor corner**: e.g., (6.0, 5.0)
+
+**Test ID Format**: `T{base}_{position}`
+- Example: T021_P1 through T021_P9
+
+**Expected Behavior**:
+- Affinity may differ based on actor position
+- Target position will differ based on actor position
+- All targets should lie on rectangle boundary
+- Movement should be perfectly direct from actor position toward destination
+
+**File**: `actor_directing_position_tests.md` (generated separately)
+
+---
+
+## G) Implementation Notes
+
+### G1) Reservation Timing
+
+**When to calculate affinity/target**:
+- ✅ At reservation time (when `try_reserve_diagonal_with_anchor()` is called)
+- ❌ NOT during movement update loop
+- ❌ NOT when evaluating direction candidates
+
+### G2) Subcell Offset Handling
+
+For 2x2 subcell grids:
+- Subcell (i, j) has center at `(i + 0.5, j + 0.5)`
+- Rectangle width/height = 1.0 (distance between adjacent subcell centers)
+
+For 3x3 subcell grids:
+- Subcell (i, j) has center at `(i + 1.0, j + 1.0)` if using center subcell
+- Offset depends on which subcell within the 3x3 grid
+
+**Recommendation**: Document subcell-to-screen coordinate conversion clearly.
+
+### G3) Floating-Point Precision
+
+- Use epsilon tolerance for t-value comparisons: `epsilon = 1e-6`
+- Clamp final target coordinates to rectangle bounds (defensive)
+- Avoid exact equality checks for float coordinates
+
+### G4) Performance Considerations
+
+- Rectangle intersection calculation is O(1)
+- No iteration or search required
+- Can be computed once at reservation time
+- Cache locked values (target, affinity, anchor) with reservation
+
+---
+
+## H) Differences from Version 1
+
+### Changed:
+1. **Intersection origin**: From PSC center → Actor's actual float position
+2. **Affinity determination**: Now depends on actor position, not just destination
+3. **Target calculation**: Exact intersection point from actor position
+4. **Test coverage**: 40 baseline + 180 position-variant = 220 total tests
+
+### Unchanged:
+1. Affinity is still locked at reservation time
+2. Cardinal directions still move to adjacent subcell centers
+3. Fallback hierarchy still prioritizes optimal → alternatives → cardinals
+4. Reservation lifecycle (reserve → lock → move → release) unchanged
+
+### Benefits:
+- ✅ Perfectly direct movement from any position within rectangle
+- ✅ No artificial jitter or oscillation
+- ✅ Actor can resume movement from any interrupted position
+- ✅ Works correctly after collision adjustments or partial movements
+
+---
+
+## I) Open Questions
+
+### I1) BOTH Affinity Anchor Selection
+
+When affinity is BOTH (hitting corner), which anchor to choose?
+
+**Options**:
+- a) Always prefer H anchor (horizontal neighbor)
+- b) Always prefer V anchor (vertical neighbor)
+- c) Choose based on larger destination component
+- d) Try both (reserve 3 subcells total)
+
+**Recommendation**: Option (c) - prefer anchor aligned with dominant movement direction.
+
+### I2) Affinity Fallback Implementation
+
+Should we implement "try opposite affinity for same diagonal"?
+
+**Complexity**: Would require forcing a different actor position or anchor choice
+**Value**: Provides one more alternative before abandoning diagonal
+
+**Recommendation**: Skip for initial implementation. Clockwise/counter-clockwise alternatives provide sufficient fallback.
+
+### I3) Distance Rule Integration
+
+How does "distance must never increase" rule interact with position-based targeting?
+
+**Current behavior**: Filter candidates that increase Euclidean distance
+**Question**: Should filtering happen before or after affinity calculation?
+
+**Recommendation**: Filter BEFORE affinity calculation. Don't waste computation on invalid candidates.

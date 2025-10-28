@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actor Directing Test Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 320px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            color: #81c784;
+        }
+
+        .test-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .test-item:hover {
+            background: #37373d;
+            border-color: #007acc;
+        }
+
+        .test-item.active {
+            background: #094771;
+            border-color: #007acc;
+        }
+
+        .test-id {
+            font-weight: bold;
+            color: #4fc3f7;
+            margin-bottom: 4px;
+        }
+
+        .test-info {
+            font-size: 12px;
+            color: #cccccc;
+        }
+
+        .test-affinity {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .affinity-H {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .affinity-V {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .affinity-BOTH {
+            background: #ffe66d;
+            color: #333;
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1e1e1e;
+        }
+
+        canvas {
+            border: 2px solid #3e3e42;
+            border-radius: 8px;
+            background: #2d2d30;
+        }
+
+        #info-panel {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+
+        .info-label {
+            color: #858585;
+        }
+
+        .info-value {
+            color: #e0e0e0;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        #filter-controls {
+            margin: 15px 0;
+            padding: 12px;
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+        }
+
+        select, input {
+            background: #3c3c3c;
+            color: #e0e0e0;
+            border: 1px solid #3e3e42;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        label {
+            display: block;
+            margin: 8px 0 4px 0;
+            font-size: 13px;
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Test Cases</h1>
+
+        <div id="filter-controls">
+            <label>Filter by Base Test:</label>
+            <select id="base-filter">
+                <option value="all">All Tests</option>
+            </select>
+
+            <label>Filter by Position:</label>
+            <select id="position-filter">
+                <option value="all">All Positions</option>
+                <option value="PSC_Center">PSC Center (P1)</option>
+                <option value="Rect_Center">Rectangle Center (P2)</option>
+                <option value="Diag_Corner">Diagonal Corner (P3)</option>
+                <option value="Top_Edge">Top Edge (P4)</option>
+                <option value="Bottom_Edge">Bottom Edge (P5)</option>
+                <option value="Left_Edge">Left Edge (P6)</option>
+                <option value="Right_Edge">Right Edge (P7)</option>
+                <option value="BL_Corner">Bottom-Left Corner (P8)</option>
+                <option value="BR_Corner">Bottom-Right Corner (P9)</option>
+            </select>
+
+            <label>Filter by Affinity:</label>
+            <select id="affinity-filter">
+                <option value="all">All Affinities</option>
+                <option value="H">Horizontal (H)</option>
+                <option value="V">Vertical (V)</option>
+                <option value="BOTH">Both</option>
+            </select>
+        </div>
+
+        <div id="test-list">
+            <!-- Test items will be populated here -->
+        </div>
+    </div>
+
+    <div id="main">
+        <canvas id="canvas" width="1200" height="1200"></canvas>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4fc3f7;"></div>
+                <span>Actor Position</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #81c784;"></div>
+                <span>PSC Center</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Diagonal Subcell</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffe66d;"></div>
+                <span>Anchor Subcell</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ba68c8;"></div>
+                <span>Destination</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #000000;"></div>
+                <span>Target Position</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255, 255, 255, 0.3); border: 1px solid #fff;"></div>
+                <span>Reservation Rectangle</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: transparent; border: 1px dashed #4fc3f7;"></div>
+                <span>Ray to Destination</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: transparent; border: 1px solid #ff9800;"></div>
+                <span>Movement Vector</span>
+            </div>
+        </div>
+
+        <div id="info-panel">
+            <div class="info-row">
+                <span class="info-label">Test ID:</span>
+                <span class="info-value" id="info-id">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Position:</span>
+                <span class="info-value" id="info-position">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Actor:</span>
+                <span class="info-value" id="info-actor">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Target:</span>
+                <span class="info-value" id="info-target">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Destination:</span>
+                <span class="info-value" id="info-destination">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Affinity:</span>
+                <span class="info-value" id="info-affinity">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Optimal Direction:</span>
+                <span class="info-value" id="info-optimal">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Notes:</span>
+                <span class="info-value" id="info-notes">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Scale for visualization (pixels per subcell unit)
+        const SCALE = 90;  // Increased from 60 for better resolution
+        const OFFSET_X = 150;
+        const OFFSET_Y = 150;
+
+        // Current test data
+        let testData = null;
+        let allTests = [];
+        let filteredTests = [];
+        let currentTestIndex = 0;
+
+        // Convert subcell coordinates to canvas coordinates
+        function toCanvas(x, y) {
+            return [
+                OFFSET_X + x * SCALE,
+                OFFSET_Y + y * SCALE
+            ];
+        }
+
+        // Draw grid
+        function drawGrid() {
+            // Draw subcell grid lines (lighter)
+            ctx.strokeStyle = '#4a4a52';
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i <= 10; i++) {
+                // Vertical lines
+                const [x, y] = toCanvas(i, 0);
+                const [, y2] = toCanvas(i, 10);
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y2);
+                ctx.stroke();
+
+                // Horizontal lines
+                const [x1, yi] = toCanvas(0, i);
+                const [x2, ] = toCanvas(10, i);
+                ctx.beginPath();
+                ctx.moveTo(x1, yi);
+                ctx.lineTo(x2, yi);
+                ctx.stroke();
+            }
+
+            // Draw grid labels (brighter)
+            ctx.fillStyle = '#b0b0b0';
+            ctx.font = 'bold 12px monospace';
+            for (let i = 0; i <= 10; i++) {
+                const [x, y] = toCanvas(i, 0);
+                ctx.fillText(i.toString(), x - 5, y - 10);
+
+                const [x2, y2] = toCanvas(0, i);
+                ctx.fillText(i.toString(), x2 - 25, y2 + 4);
+            }
+        }
+
+        // Draw subcell center (at grid line intersection)
+        function drawSubcellCenter(x, y, color) {
+            const [cx, cy] = toCanvas(x, y);
+
+            // Draw center point with better visibility
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Add outline for contrast
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Draw point at precise position
+        function drawPoint(x, y, color, radius) {
+            const [cx, cy] = toCanvas(x, y);
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Add white outline for visibility
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // Draw rectangle with optional highlighting
+        function drawRectangle(x1, y1, x2, y2, highlight = false) {
+            const [cx1, cy1] = toCanvas(x1, y1);
+            const [cx2, cy2] = toCanvas(x2, y2);
+
+            const width = Math.abs(cx2 - cx1);
+            const height = Math.abs(cy2 - cy1);
+
+            if (highlight) {
+                // Active reservation rectangle - brighter and thicker
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 3;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            } else {
+                // Inactive rectangles - dimmer
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.lineWidth = 1;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            }
+
+            ctx.strokeRect(Math.min(cx1, cx2), Math.min(cy1, cy2), width, height);
+            ctx.fillRect(Math.min(cx1, cx2), Math.min(cy1, cy2), width, height);
+        }
+
+        // Draw all 4 possible rectangles from PSC to each diagonal neighbor
+        function drawAllRectangles(actorPos, pscPos, diagPos) {
+            // PSC position (at grid line intersection)
+            const pscX = pscPos[0];
+            const pscY = pscPos[1];
+
+            // Define all 4 diagonal neighbors relative to PSC
+            const diagonals = [
+                { dx: 1, dy: -1, name: 'NE' },  // North-East
+                { dx: -1, dy: -1, name: 'NW' }, // North-West
+                { dx: 1, dy: 1, name: 'SE' },   // South-East
+                { dx: -1, dy: 1, name: 'SW' }   // South-West
+            ];
+
+            // Determine which diagonal is active in this test
+            const diagDx = diagPos[0] - pscPos[0];
+            const diagDy = diagPos[1] - pscPos[1];
+            let activeDiag = null;
+            if (diagDx > 0 && diagDy < 0) activeDiag = 'NE';
+            else if (diagDx < 0 && diagDy < 0) activeDiag = 'NW';
+            else if (diagDx > 0 && diagDy > 0) activeDiag = 'SE';
+            else if (diagDx < 0 && diagDy > 0) activeDiag = 'SW';
+
+            // Draw all 4 rectangles from PSC to each diagonal subcell (at grid intersections)
+            diagonals.forEach(diag => {
+                const diagSubcellX = pscPos[0] + diag.dx;
+                const diagSubcellY = pscPos[1] + diag.dy;
+                const isActive = (diag.name === activeDiag);
+                drawRectangle(pscX, pscY, diagSubcellX, diagSubcellY, isActive);
+            });
+        }
+
+        // Draw line
+        function drawLine(x1, y1, x2, y2, color, width, dashed = false) {
+            const [cx1, cy1] = toCanvas(x1, y1);
+            const [cx2, cy2] = toCanvas(x2, y2);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+
+            if (dashed) {
+                ctx.setLineDash([5, 5]);
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(cx1, cy1);
+            ctx.lineTo(cx2, cy2);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+        }
+
+        // Draw arrow
+        function drawArrow(x1, y1, x2, y2, color, width) {
+            const [cx1, cy1] = toCanvas(x1, y1);
+            const [cx2, cy2] = toCanvas(x2, y2);
+
+            // Draw line
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(cx1, cy1);
+            ctx.lineTo(cx2, cy2);
+            ctx.stroke();
+
+            // Draw arrowhead
+            const angle = Math.atan2(cy2 - cy1, cx2 - cx1);
+            const headLength = 12;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(cx2, cy2);
+            ctx.lineTo(
+                cx2 - headLength * Math.cos(angle - Math.PI / 6),
+                cy2 - headLength * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                cx2 - headLength * Math.cos(angle + Math.PI / 6),
+                cy2 - headLength * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Visualize test case
+        function visualizeTest(test) {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            drawGrid();
+
+            // Calculate subcell centers
+            const pscCenter = [test.psc[0] + 0.5, test.psc[1] + 0.5];
+            const diagCenter = [test.diagonal[0] + 0.5, test.diagonal[1] + 0.5];
+
+            // Draw all 4 rectangles around actor (active one will be highlighted)
+            drawAllRectangles(test.actor, test.psc, test.diagonal);
+
+            // Draw ray from actor to destination (dashed)
+            drawLine(test.actor[0], test.actor[1], test.destination[0], test.destination[1],
+                     '#4fc3f7', 2, true);
+
+            // Draw movement vector from actor to target (solid arrow)
+            drawArrow(test.actor[0], test.actor[1], test.target[0], test.target[1],
+                      '#ff9800', 4);
+
+            // Draw all points (no labels)
+            // PSC center - green
+            drawSubcellCenter(test.psc[0], test.psc[1], '#81c784');
+
+            // Diagonal subcell center - red
+            drawSubcellCenter(test.diagonal[0], test.diagonal[1], '#ff6b6b');
+
+            // Destination - purple
+            drawPoint(test.destination[0], test.destination[1], '#ba68c8', 10);
+
+            // Target position - pitch black
+            drawPoint(test.target[0], test.target[1], '#000000', 10);
+
+            // Actor position (on top) - cyan/blue
+            drawPoint(test.actor[0], test.actor[1], '#4fc3f7', 12);
+
+            // Anchor subcell center - yellow (drawn last so it's on top)
+            if (test.anchor && !Array.isArray(test.anchor[0])) {
+                drawSubcellCenter(test.anchor[0], test.anchor[1], '#ffe66d');
+            }
+
+            // Update info panel
+            document.getElementById('info-id').textContent = test.id;
+            document.getElementById('info-position').textContent = test.position;
+            document.getElementById('info-actor').textContent =
+                `(${test.actor[0].toFixed(2)}, ${test.actor[1].toFixed(2)})`;
+            document.getElementById('info-target').textContent =
+                `(${test.target[0].toFixed(2)}, ${test.target[1].toFixed(2)})`;
+            document.getElementById('info-destination').textContent =
+                `(${test.destination[0]}, ${test.destination[1]})`;
+            document.getElementById('info-affinity').textContent = test.affinity;
+            document.getElementById('info-optimal').textContent = test.optimal_dir;
+            document.getElementById('info-notes').textContent = test.notes;
+        }
+
+        // Populate test list
+        function populateTestList(tests) {
+            const testList = document.getElementById('test-list');
+            testList.innerHTML = '';
+
+            filteredTests = tests;
+
+            tests.forEach((test, index) => {
+                const item = document.createElement('div');
+                item.className = 'test-item';
+                if (index === 0) item.classList.add('active');
+
+                item.innerHTML = `
+                    <div class="test-id">${test.id}</div>
+                    <div class="test-info">${test.position}</div>
+                    <div class="test-info">Dest: (${test.destination[0]}, ${test.destination[1]})</div>
+                    <span class="test-affinity affinity-${test.affinity}">${test.affinity}</span>
+                `;
+
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.test-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    visualizeTest(test);
+                    currentTestIndex = index;
+                });
+
+                testList.appendChild(item);
+            });
+
+            if (tests.length > 0) {
+                visualizeTest(tests[0]);
+            }
+        }
+
+        // Filter tests
+        function filterTests() {
+            const baseFilter = document.getElementById('base-filter').value;
+            const positionFilter = document.getElementById('position-filter').value;
+            const affinityFilter = document.getElementById('affinity-filter').value;
+
+            let filtered = allTests;
+
+            if (baseFilter !== 'all') {
+                filtered = filtered.filter(t => t.base === baseFilter);
+            }
+
+            if (positionFilter !== 'all') {
+                filtered = filtered.filter(t => t.position === positionFilter);
+            }
+
+            if (affinityFilter !== 'all') {
+                filtered = filtered.filter(t => t.affinity === affinityFilter);
+            }
+
+            populateTestList(filtered);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                currentTestIndex = (currentTestIndex + 1) % filteredTests.length;
+                const items = document.querySelectorAll('.test-item');
+                items.forEach((el, i) => {
+                    el.classList.toggle('active', i === currentTestIndex);
+                });
+                if (items[currentTestIndex]) {
+                    items[currentTestIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                visualizeTest(filteredTests[currentTestIndex]);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                currentTestIndex = (currentTestIndex - 1 + filteredTests.length) % filteredTests.length;
+                const items = document.querySelectorAll('.test-item');
+                items.forEach((el, i) => {
+                    el.classList.toggle('active', i === currentTestIndex);
+                });
+                if (items[currentTestIndex]) {
+                    items[currentTestIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                visualizeTest(filteredTests[currentTestIndex]);
+            }
+        });
+
+        // Load test data
+        fetch('test_visualization_data.json')
+            .then(response => response.json())
+            .then(data => {
+                allTests = data.tests;
+
+                // Populate base filter dropdown
+                const bases = [...new Set(allTests.map(t => t.base))].sort();
+                const baseFilter = document.getElementById('base-filter');
+                bases.forEach(base => {
+                    const option = document.createElement('option');
+                    option.value = base;
+                    option.textContent = base;
+                    baseFilter.appendChild(option);
+                });
+
+                // Set up filter listeners
+                document.getElementById('base-filter').addEventListener('change', filterTests);
+                document.getElementById('position-filter').addEventListener('change', filterTests);
+                document.getElementById('affinity-filter').addEventListener('change', filterTests);
+
+                // Initial population
+                populateTestList(allTests);
+            })
+            .catch(error => {
+                console.error('Error loading test data:', error);
+                document.getElementById('test-list').innerHTML =
+                    '<div style="color: #ff6b6b; padding: 20px;">Error loading test data. Please ensure test_visualization_data.json is in the same directory.</div>';
+            });
+    </script>
+</body>
+</html>

@@ -27,11 +27,8 @@ Otherwise:  actor calculates the movement direction and target according to [act
 4) MOVE
 EVERY FRAME: actor moves to the target position.
 Once the target has been reached, it depends
-- the target was a subcell center (was normalized): actor sets his primary cell to the target subcell and enters IDLE
+- the target was a subcell center (was normalized): actor sets his primary cell to the target subcell and enters IDLE. If the
+target was the same as destination, unassign the destination value (the actor reached destination and should stay until new destination is set)
 - the target was a rectangle boundary (not normalized): the boundary is defined by 2 subcells. The actor sets his
-primary cell the the closer subcell
+primary cell to the closer subcell and enters IDLE
 
-
-
-Upon successfully reserving a primary subcell, the actor must automatically start moving toward the subcell center
-as the destination. He

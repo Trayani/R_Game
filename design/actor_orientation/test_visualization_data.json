@@ -1,0 +1,3472 @@
+{
+  "metadata": {
+    "title": "Actor Directing Position-Aware Tests",
+    "description": "Visualization data for position-variant diagonal reservation tests",
+    "version": "2.0",
+    "subcell_grid_size": 2,
+    "subcell_offset": 0.0,
+    "coordinate_system": {
+      "subcells": "Positioned at grid line intersections (no offset). E.g., subcell (5,5) is at point (5.0, 5.0)",
+      "destinations": "Integer coordinates directly represent points. E.g., destination (6,1) is point at (6.0, 1.0)",
+      "actors": "Float coordinates for precise positioning within rectangles"
+    }
+  },
+  "tests": [
+    {
+      "id": "T021_P1",
+      "base": "T021",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.25,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T021_P2",
+      "base": "T021",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.57,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "CORRECTED: was (5.54, 4.0), now (5.57, 4.0)"
+    },
+    {
+      "id": "T021_P3",
+      "base": "T021",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T021_P4",
+      "base": "T021",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T021_P5",
+      "base": "T021",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.62,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "t_h=4.032 < t_v=1.008 (corrected)"
+    },
+    {
+      "id": "T021_P6",
+      "base": "T021",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.14,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "t_h=0.520 < t_v=3.640 (corrected)"
+    },
+    {
+      "id": "T021_P7",
+      "base": "T021",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At right edge, t_v=0"
+    },
+    {
+      "id": "T021_P8",
+      "base": "T021",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        5.25,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T021_P9",
+      "base": "T021",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6,
+        1
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At anchor corner"
+    },
+    {
+      "id": "T022_P1",
+      "base": "T022",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        5.67,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T022_P2",
+      "base": "T022",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        5.8,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "CORRECTED: was (5.83, 4.0), now (5.8, 4.0)"
+    },
+    {
+      "id": "T022_P3",
+      "base": "T022",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T022_P4",
+      "base": "T022",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        5.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T022_P5",
+      "base": "T022",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.33), now (6.0, 4.0)"
+    },
+    {
+      "id": "T022_P6",
+      "base": "T022",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        5.4,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "CORRECTED: was (5.8, 4.0), now (5.4, 4.0)"
+    },
+    {
+      "id": "T022_P7",
+      "base": "T022",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.0), now (6.0, 4.5)"
+    },
+    {
+      "id": "T022_P8",
+      "base": "T022",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        5.67,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T022_P9",
+      "base": "T022",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7,
+        2
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.5), now (6.0, 5.0)"
+    },
+    {
+      "id": "T024_P1",
+      "base": "T024",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.33
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T024_P2",
+      "base": "T024",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.2
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "t_v=0.2 < t_h=0.286"
+    },
+    {
+      "id": "T024_P3",
+      "base": "T024",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T024_P4",
+      "base": "T024",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        5.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T024_P5",
+      "base": "T024",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.6
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "t_v=0.286 < t_h=0.5"
+    },
+    {
+      "id": "T024_P6",
+      "base": "T024",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.17), now (6.0, 4.0)"
+    },
+    {
+      "id": "T024_P7",
+      "base": "T024",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At right edge, t_v=0"
+    },
+    {
+      "id": "T024_P8",
+      "base": "T024",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        4.33
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T024_P9",
+      "base": "T024",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8,
+        3
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T025_P1",
+      "base": "T025",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T025_P2",
+      "base": "T025",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.29
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.36), now (6.0, 4.29)"
+    },
+    {
+      "id": "T025_P3",
+      "base": "T025",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T025_P4",
+      "base": "T025",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        5.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T025_P5",
+      "base": "T025",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.71
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "t_v=0.2 < t_h=0.333"
+    },
+    {
+      "id": "T025_P6",
+      "base": "T025",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.12
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.25), now (6.0, 4.12)"
+    },
+    {
+      "id": "T025_P7",
+      "base": "T025",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At right edge, t_v=0"
+    },
+    {
+      "id": "T025_P8",
+      "base": "T025",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T025_P9",
+      "base": "T025",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        3
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T026_P1",
+      "base": "T026",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.75
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T026_P2",
+      "base": "T026",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.43
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.64), now (6.0, 4.43)"
+    },
+    {
+      "id": "T026_P3",
+      "base": "T026",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T026_P4",
+      "base": "T026",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE",
+      "notes": "CORRECTED: was (5.5, 4.0), now (6.0, 4.0)"
+    },
+    {
+      "id": "T026_P5",
+      "base": "T026",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.86
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (6.0, 4.875), now (6.0, 4.86)"
+    },
+    {
+      "id": "T026_P6",
+      "base": "T026",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.38
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "t_v=0.231 < t_h=0.333"
+    },
+    {
+      "id": "T026_P7",
+      "base": "T026",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At right edge, t_v=0"
+    },
+    {
+      "id": "T026_P8",
+      "base": "T026",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        4.75
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T026_P9",
+      "base": "T026",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9,
+        4
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T027_P1",
+      "base": "T027",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.67
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T027_P2",
+      "base": "T027",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.8
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "t_v=0.2 < t_h=0.286"
+    },
+    {
+      "id": "T027_P3",
+      "base": "T027",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T027_P4",
+      "base": "T027",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.4
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "t_v=0.286 < t_h=0.5"
+    },
+    {
+      "id": "T027_P5",
+      "base": "T027",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        5.5,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE",
+      "notes": "On bottom edge"
+    },
+    {
+      "id": "T027_P6",
+      "base": "T027",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "CORRECTED: was (6.0, 5.83), now (6.0, 6.0)"
+    },
+    {
+      "id": "T027_P7",
+      "base": "T027",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "At right edge, t_v=0"
+    },
+    {
+      "id": "T027_P8",
+      "base": "T027",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.67
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T027_P9",
+      "base": "T027",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8,
+        7
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T029_P1",
+      "base": "T029",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        5.67,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T029_P2",
+      "base": "T029",
+      "position": "Rect_Center",
+      "actor": [
+        5.5,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        5.8,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "CORRECTED: was (5.83, 6.0), now (5.8, 6.0)"
+    },
+    {
+      "id": "T029_P3",
+      "base": "T029",
+      "position": "Diag_Corner",
+      "actor": [
+        6.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        6.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SE",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T029_P4",
+      "base": "T029",
+      "position": "Top_Edge",
+      "actor": [
+        5.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        6.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "CORRECTED: was (6.0, 5.67), now (6.0, 6.0)"
+    },
+    {
+      "id": "T029_P5",
+      "base": "T029",
+      "position": "Bottom_Edge",
+      "actor": [
+        5.5,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        5.5,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE",
+      "notes": "On bottom edge"
+    },
+    {
+      "id": "T029_P6",
+      "base": "T029",
+      "position": "Left_Edge",
+      "actor": [
+        5.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        5.4,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "CORRECTED: was (5.8, 6.0), now (5.4, 6.0)"
+    },
+    {
+      "id": "T029_P7",
+      "base": "T029",
+      "position": "Right_Edge",
+      "actor": [
+        6.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        6.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "CORRECTED: was (6.0, 6.0), now (6.0, 5.5)"
+    },
+    {
+      "id": "T029_P8",
+      "base": "T029",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        5.67,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T029_P9",
+      "base": "T029",
+      "position": "BR_Corner",
+      "actor": [
+        6.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7,
+        8
+      ],
+      "target": [
+        6.0,
+        5.0
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "CORRECTED: was (6.0, 5.5), now (6.0, 5.0)"
+    },
+    {
+      "id": "T031_P1",
+      "base": "T031",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        5.67
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T031_P2",
+      "base": "T031",
+      "position": "Rect_Center",
+      "actor": [
+        4.5,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        5.8
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "t_v=0.2 < t_h=0.286"
+    },
+    {
+      "id": "T031_P3",
+      "base": "T031",
+      "position": "Diag_Corner",
+      "actor": [
+        4.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SW",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T031_P4",
+      "base": "T031",
+      "position": "Top_Edge",
+      "actor": [
+        4.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        5.4
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "t_v=0.286 < t_h=0.5"
+    },
+    {
+      "id": "T031_P5",
+      "base": "T031",
+      "position": "Bottom_Edge",
+      "actor": [
+        4.5,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.5,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SW",
+      "notes": "On bottom edge"
+    },
+    {
+      "id": "T031_P6",
+      "base": "T031",
+      "position": "Left_Edge",
+      "actor": [
+        4.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "At left edge, t_v=0"
+    },
+    {
+      "id": "T031_P7",
+      "base": "T031",
+      "position": "Right_Edge",
+      "actor": [
+        5.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "CORRECTED: was (4.0, 5.83), now (4.0, 6.0)"
+    },
+    {
+      "id": "T031_P8",
+      "base": "T031",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        4.0,
+        5.67
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T031_P9",
+      "base": "T031",
+      "position": "BR_Corner",
+      "actor": [
+        5.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2,
+        7
+      ],
+      "target": [
+        5.0,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "CORRECTED: was (4.5, 6.0), now (5.0, 6.0)"
+    },
+    {
+      "id": "T032_P1",
+      "base": "T032",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T032_P2",
+      "base": "T032",
+      "position": "Rect_Center",
+      "actor": [
+        4.5,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.71
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "CORRECTED: was (4.0, 5.64), now (4.0, 5.71)"
+    },
+    {
+      "id": "T032_P3",
+      "base": "T032",
+      "position": "Diag_Corner",
+      "actor": [
+        4.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        6.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "SW",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T032_P4",
+      "base": "T032",
+      "position": "Top_Edge",
+      "actor": [
+        4.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.29
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "t_v=0.2 < t_h=0.333"
+    },
+    {
+      "id": "T032_P5",
+      "base": "T032",
+      "position": "Bottom_Edge",
+      "actor": [
+        4.5,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.5,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SW",
+      "notes": "On bottom edge"
+    },
+    {
+      "id": "T032_P6",
+      "base": "T032",
+      "position": "Left_Edge",
+      "actor": [
+        4.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "At left edge, t_v=0"
+    },
+    {
+      "id": "T032_P7",
+      "base": "T032",
+      "position": "Right_Edge",
+      "actor": [
+        5.0,
+        5.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.88
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "CORRECTED: was (4.0, 5.75), now (4.0, 5.88)"
+    },
+    {
+      "id": "T032_P8",
+      "base": "T032",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        4.0,
+        5.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T032_P9",
+      "base": "T032",
+      "position": "BR_Corner",
+      "actor": [
+        5.0,
+        6.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1,
+        7
+      ],
+      "target": [
+        5.0,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SW-H",
+      "notes": "CORRECTED: was (4.25, 6.0), now (5.0, 6.0)"
+    },
+    {
+      "id": "T034_P1",
+      "base": "T034",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.33
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T034_P2",
+      "base": "T034",
+      "position": "Rect_Center",
+      "actor": [
+        4.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.2
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "t_v=0.2 < t_h=0.286"
+    },
+    {
+      "id": "T034_P3",
+      "base": "T034",
+      "position": "Diag_Corner",
+      "actor": [
+        4.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NW",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T034_P4",
+      "base": "T034",
+      "position": "Top_Edge",
+      "actor": [
+        4.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T034_P5",
+      "base": "T034",
+      "position": "Bottom_Edge",
+      "actor": [
+        4.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.6
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "t_v=0.286 < t_h=0.5"
+    },
+    {
+      "id": "T034_P6",
+      "base": "T034",
+      "position": "Left_Edge",
+      "actor": [
+        4.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "At left edge, t_v=0"
+    },
+    {
+      "id": "T034_P7",
+      "base": "T034",
+      "position": "Right_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.0, 4.17), now (4.0, 4.0)"
+    },
+    {
+      "id": "T034_P8",
+      "base": "T034",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        4.0,
+        4.33
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T034_P9",
+      "base": "T034",
+      "position": "BR_Corner",
+      "actor": [
+        5.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        3
+      ],
+      "target": [
+        5.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.5, 4.0), now (5.0, 4.0)"
+    },
+    {
+      "id": "T035_P1",
+      "base": "T035",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.25,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T035_P2",
+      "base": "T035",
+      "position": "Rect_Center",
+      "actor": [
+        4.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.14,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "CORRECTED: was (4.17, 4.0), now (4.14, 4.0)"
+    },
+    {
+      "id": "T035_P3",
+      "base": "T035",
+      "position": "Diag_Corner",
+      "actor": [
+        4.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NW",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T035_P4",
+      "base": "T035",
+      "position": "Top_Edge",
+      "actor": [
+        4.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T035_P5",
+      "base": "T035",
+      "position": "Bottom_Edge",
+      "actor": [
+        4.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.0,
+        4.2
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.0, 4.33), now (4.0, 4.2)"
+    },
+    {
+      "id": "T035_P6",
+      "base": "T035",
+      "position": "Left_Edge",
+      "actor": [
+        4.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "CORRECTED: was (4.0, 4.0), now (4.0, 4.5)"
+    },
+    {
+      "id": "T035_P7",
+      "base": "T035",
+      "position": "Right_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.57,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "CORRECTED: was (4.2, 4.0), now (4.57, 4.0)"
+    },
+    {
+      "id": "T035_P8",
+      "base": "T035",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        4.25,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T035_P9",
+      "base": "T035",
+      "position": "BR_Corner",
+      "actor": [
+        5.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2,
+        1
+      ],
+      "target": [
+        5.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "CORRECTED: was (4.5, 4.0), now (5.0, 4.0)"
+    },
+    {
+      "id": "T036_P1",
+      "base": "T036",
+      "position": "PSC_Center",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.25
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Baseline match"
+    },
+    {
+      "id": "T036_P2",
+      "base": "T036",
+      "position": "Rect_Center",
+      "actor": [
+        4.5,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.14
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.0, 4.36), now (4.0, 4.14)"
+    },
+    {
+      "id": "T036_P3",
+      "base": "T036",
+      "position": "Diag_Corner",
+      "actor": [
+        4.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NW",
+      "notes": "At diagonal"
+    },
+    {
+      "id": "T036_P4",
+      "base": "T036",
+      "position": "Top_Edge",
+      "actor": [
+        4.5,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.5,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW",
+      "notes": "On top edge"
+    },
+    {
+      "id": "T036_P5",
+      "base": "T036",
+      "position": "Bottom_Edge",
+      "actor": [
+        4.5,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.57
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.0, 4.71), now (4.0, 4.57)"
+    },
+    {
+      "id": "T036_P6",
+      "base": "T036",
+      "position": "Left_Edge",
+      "actor": [
+        4.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.5
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "At left edge, t_v=0"
+    },
+    {
+      "id": "T036_P7",
+      "base": "T036",
+      "position": "Right_Edge",
+      "actor": [
+        5.0,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.2,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.0, 4.25), now (4.2, 4.0)"
+    },
+    {
+      "id": "T036_P8",
+      "base": "T036",
+      "position": "BL_Corner",
+      "actor": [
+        5.0,
+        5.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        4.0,
+        4.25
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Same as P1"
+    },
+    {
+      "id": "T036_P9",
+      "base": "T036",
+      "position": "BR_Corner",
+      "actor": [
+        5.0,
+        4.0
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1,
+        2
+      ],
+      "target": [
+        5.0,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.75, 4.0), now (5.0, 4.0)"
+    }
+  ]
+}
