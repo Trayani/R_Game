@@ -1921,11 +1921,11 @@ impl Actor {
             }
         };
 
-        // Get destination screen position
-        // Destination is always at cell level (center of cell)
+        // Get destination screen position at grid intersection
+        // Destinations are at grid intersections (no +0.5 offset)
         // Sub-cells are ONLY used for intermediate movement, not final destinations
-        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
-        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+        let dest_screen_x = dest.x as f32 * self.cell_width;
+        let dest_screen_y = dest.y as f32 * self.cell_height;
 
         // Check if we've reached the destination
         let dx_to_dest = dest_screen_x - self.fpos_x;
@@ -2215,9 +2215,9 @@ impl Actor {
             }
         };
 
-        // Get destination screen position (cell level)
-        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
-        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+        // Get destination screen position at grid intersection (no +0.5 offset)
+        let dest_screen_x = dest.x as f32 * self.cell_width;
+        let dest_screen_y = dest.y as f32 * self.cell_height;
 
         // Check if we've reached the destination
         let dx_to_dest = dest_screen_x - self.fpos_x;

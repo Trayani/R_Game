@@ -228,7 +228,7 @@ All changes committed to branch `custom_flow_2`:
 
 ## Alternative Direction Testing (NEW)
 
-**Status**: ✅ 98.3% Pass Rate - Alternative direction fallback validated and fixed
+**Status**: ✅ 100% Pass Rate - Alternative direction fallback fully validated!
 
 ### Implementation Summary
 - Created `calculate_alternatives.py` script to generate expected alternative directions
@@ -237,13 +237,14 @@ All changes committed to branch `custom_flow_2`:
 - Created Phase 1-4 alternative test functions
 - **Fixed** coordinate system bug: removed +0.5 offset from subcell positions (subcells are at grid intersections, not centers)
 - **Fixed** BOTH affinity fallback: algorithm now tries the alternative anchor when original anchor is blocked
+- **Fixed** destination coordinate bug: removed +0.5 offset from destination calculations (destinations at grid intersections)
 
 ### Test Results
 - **Phase 1 (P1)**: 12/12 (100%) ✅
-- **Phase 2 (P2-P3)**: 35/36 (97.2%) ✅
-- **Phase 3 (P4-P7)**: 47/48 (97.9%) ✅
+- **Phase 2 (P2-P3)**: 36/36 (100%) ✅
+- **Phase 3 (P4-P7)**: 48/48 (100%) ✅
 - **Phase 4 (P8-P9)**: 24/24 (100%) ✅
-- **Total**: 118/120 (98.3%) ✅
+- **Total**: 120/120 (100%) ✅
 
 ### Bugs Fixed
 
@@ -261,6 +262,16 @@ All changes committed to branch `custom_flow_2`:
 - **Issue**: Validation only checked cell coordinates, not subcell coordinates, failing SE diagonal from (5,5,0,0) to (5,5,1,1)
 - **Impact**: Tests incorrectly reported "Actor reserved PSC instead of diagonal"
 - **Fix**: Added subcell coordinate comparison to validation logic
+
+**Bug 4: Destination Coordinate System** ⭐ CRITICAL FIX
+- **Issue**: Destination calculations added `+ self.cell_width / 2.0` to convert cell to cell center
+- **Impact**:
+  - Destination (2,3) mapped to (2.5, 3.5) instead of (2.0, 3.0)
+  - Created 45° diagonal rays that hit both edges simultaneously (BOTH affinity)
+  - Edge case actor positions (4.0, 4.0) didn't trigger movement due to incorrect distance calculations
+  - Tests T034_P3 and T034_P6 failed
+- **Fix**: Removed +0.5 offset in `update_subcell_movement()` (line ~1927) and `update_subcell_destination_direct()` (line ~2219)
+- **Result**: All 120 tests now pass (100%)
 
 ### Key Findings
 
