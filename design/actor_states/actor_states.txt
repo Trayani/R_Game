@@ -120,7 +120,16 @@ When target is reached, actor enters **IDLE** state. The following occur:
    - If target was a rectangle boundary: primary subcell = **subcell whose center is closest to actor's final position**
 3. **Clear destination** (if target position matched destination): Actor has reached destination and should remain idle until new destination is set
 
-**Expected Emergent Behavior**: An actor can travel directly to destination in a fluid path if all subcells along the direct trajectory are free for reservation. The actor will move through multiple boundary intersection points without stopping at subcell centers.
+**Expected Emergent Behavior**: An actor can travel directly to destination in a fluid path if all subcells along the direct trajectory are free for reservation. The actor will move through multiple boundary intersection points in a continuous path without physically stopping (velocity remains constant).
+
+**Clarification on "Without Stopping"**: Technically, the actor transitions `MOVE → IDLE → MOVE` at each boundary point, but these state transitions occur within a **single frame**, creating seamless uninterrupted movement from the user's perspective. The actor never drops velocity to zero.
+
+**Same-Frame Processing**: When actor reaches a boundary target:
+- Frame N: Actor position reaches target in MOVE state
+- Frame N (same frame): Transitions to IDLE, releases additional reservations, updates primary subcell
+- Frame N (same frame): Recalculates direction based on new primary subcell (per actor_directing_v2.txt)
+- Frame N (same frame): If direction determined, immediately enters MOVE with new target
+- Result: Actor maintains constant velocity through the entire path (no visible pause)
 
 ---
 
@@ -284,6 +293,117 @@ When an actor enters **MOVE** state, the following values are calculated (per ac
 - MOVE: Actor has reserved subcells and is executing locked trajectory; collision interference would break the subcell reservation model
 
 **Alternative Interpretation**: "No collision" may also mean "other actors avoid these actors but these actors follow their path". Implementation choice depends on collision system design.
+
+---
+
+### 7.5 Multi-Boundary Fluid Movement (Emergent Behavior Example)
+
+This example demonstrates the same-frame `MOVE → IDLE → MOVE` cycle that creates uninterrupted movement through multiple boundary points.
+
+**Scenario**: Actor traveling from (5.0, 5.0) to destination (8.0, 2.0)
+
+**Initial State**:
+- Primary subcell: (5, 5)
+- Actor position: (5.0, 5.0) - at subcell center
+- Destination: (8.0, 2.0)
+- Movement speed: 1.0 units/frame
+
+---
+
+**Frame 1** - First Direction Calculation:
+- **State**: IDLE at primary subcell (5, 5)
+- **Calculate direction** (actor_directing_v2.txt):
+  - Ray from (5.0, 5.0) → (8.0, 2.0)
+  - Direction: NORTH-EAST diagonal
+  - Rectangle: [(5, 5), (6, 4)]
+  - Target (intersection): **(6.0, 4.48)**
+  - Affinity: H (hits vertical edge first)
+  - Anchor: (6, 5)
+- **Reserve**: Diagonal (6, 4) + Anchor (6, 5)
+- **Lock values**: target=(6.0, 4.48), affinity=H, anchor=(6,5)
+- **→ Enter MOVE** state
+
+---
+
+**Frames 2-10** - Moving to First Boundary:
+- **State**: MOVE
+- Actor moves toward locked target (6.0, 4.48) at speed 1.0/frame
+- Velocity constant, no recalculation
+- Position: (5.0, 5.0) → (5.1, 4.95) → ... → (5.9, 4.53)
+
+---
+
+**Frame 11** - Reach First Boundary ⚡ SAME-FRAME PROCESSING:
+
+**Phase 1 - Reach Target in MOVE**:
+- Actor position reaches (6.0, 4.48)
+- Target reached → trigger transition
+
+**Phase 2 - Enter IDLE (same frame)**:
+- Release additional reservations: (6, 4) and (6, 5) freed
+- Update primary subcell: (6, 4) ← closest to (6.0, 4.48)
+- Destination still set → proceed to calculate
+
+**Phase 3 - Calculate New Direction (same frame)**:
+- **Calculate direction** from NEW primary (6, 4):
+  - Ray from (6.0, 4.48) → (8.0, 2.0)
+  - Direction: NORTH-EAST diagonal
+  - Rectangle: [(6, 4), (7, 3)]
+  - Target (new intersection): **(7.0, 3.31)**
+  - Affinity: H
+  - Anchor: (7, 4)
+- **Reserve**: Diagonal (7, 3) + Anchor (7, 4)
+- **Lock new values**: target=(7.0, 3.31), affinity=H, anchor=(7,4)
+
+**Phase 4 - Enter MOVE (same frame)**:
+- **→ Enter MOVE** with new target (7.0, 3.31)
+- **Actor never stopped** - velocity remained constant throughout all 4 phases
+
+**Result**: From user perspective, actor smoothly transitions from moving toward (6.0, 4.48) to moving toward (7.0, 3.31) with no visible interruption.
+
+---
+
+**Frames 12-20** - Moving to Second Boundary:
+- **State**: MOVE
+- Actor moves toward locked target (7.0, 3.31)
+- Position: (6.0, 4.48) → (6.1, 4.36) → ... → (6.9, 3.39)
+
+---
+
+**Frame 21** - Reach Second Boundary ⚡ SAME-FRAME PROCESSING:
+
+**Phase 1-4** (same frame):
+- Reach (7.0, 3.31)
+- → IDLE: Release (7,3)+(7,4), update primary to (7,3)
+- → Calculate: New target (8.0, 2.17), reserve (8,2)+(8,3)
+- → MOVE: Enter with new locked target
+- **Continuous fluid movement maintained**
+
+---
+
+**Frames 22-30** - Moving to Final Destination:
+- Actor continues toward (8.0, 2.17) or eventual destination (8.0, 2.0)
+- More boundary transitions may occur depending on path
+
+---
+
+**Final Frame** - Reach Destination:
+- Actor reaches (8.0, 2.0)
+- → IDLE: Release reservations, clear destination
+- Actor stops and waits (destination reached)
+
+---
+
+**Key Observations**:
+
+1. **State transitions happen**: `IDLE → MOVE → IDLE → MOVE → IDLE → MOVE`
+2. **But same-frame processing**: All transitions at boundary points occur in Frame N (no delay)
+3. **Velocity never drops**: Actor maintains constant movement speed throughout entire path
+4. **No "stopping" at subcells**: Actor flows directly through (5,5) → (6,4) → (7,3) → (8,2) via boundary intersections
+5. **Primary subcell updates**: Actor's logical position updates at each boundary, enabling correct direction calculation for next segment
+6. **Reservation churn**: Additional reservations are released and new ones acquired at each boundary, but primary reservation persists (just changes to new subcell)
+
+This creates the "fluid diagonal movement" emergent behavior described in Section 4.
 
 ---
 
