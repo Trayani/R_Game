@@ -195,6 +195,7 @@ struct VisState {
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
     filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
     basic3_fallback_enabled: bool,  // If true, Basic3 modes fall back to best move when all filtered
+    use_directing_v2: bool,  // If true, use ray-rectangle intersection (v2), else legacy alignment-based
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
     highlight_timer: f32,
@@ -273,6 +274,7 @@ impl VisState {
             early_reservation_enabled: config.subcell.early_reservation_enabled,
             filter_backward_moves: true,  // Enabled by default
             basic3_fallback_enabled: false,  // Disabled by default (wait when blocked)
+            use_directing_v2: true,  // Enabled by default (ray-rectangle intersection)
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
             tracking_mode: TrackingMode::Disabled,  // Disabled by default
@@ -1305,9 +1307,14 @@ impl VisState {
         } else {
             " | SubCell Movement: OFF".to_string()
         };
+        let directing_v2_status = if self.use_directing_v2 {
+            " | Directing V2: ON"
+        } else {
+            " | Directing V2: OFF"
+        };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter | W: toggle directing v2\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1315,6 +1322,7 @@ impl VisState {
             actor_status,
             subcell_status,
             subcell_movement_status,
+            directing_v2_status,
             self.visible_cells.len(),
             self.all_corners.len(),
             self.interesting_corners.len(),
@@ -1338,6 +1346,7 @@ async fn main() {
     println!("Early reservation: {}", if state.early_reservation_enabled { "ON" } else { "OFF" });
     println!("Filter backward: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
     println!("Basic3 fallback: {}", if state.basic3_fallback_enabled { "ON" } else { "OFF" });
+    println!("Actor directing v2: {}", if state.use_directing_v2 { "ON" } else { "OFF" });
     println!("Tracking mode: {:?}", state.tracking_mode);
     println!("Actor speed: {}", state.actor_speed);
     println!("============================");
@@ -1449,6 +1458,16 @@ async fn main() {
             println!("Basic3 Fallback: {}", if state.basic3_fallback_enabled { "ON (allow backward when blocked)" } else { "OFF (wait when blocked)" });
         }
 
+        // Toggle actor directing v2 on W key
+        if is_key_pressed(KeyCode::W) {
+            state.use_directing_v2 = !state.use_directing_v2;
+            // Update all existing actors
+            for actor in &mut state.actors {
+                actor.use_directing_v2 = state.use_directing_v2;
+            }
+            println!("Actor Directing V2: {}", if state.use_directing_v2 { "ON (ray-rectangle intersection)" } else { "OFF (legacy alignment-based)" });
+        }
+
         // Toggle sub-cell offset on T key (cycle through None, X, Y, XY)
         if is_key_pressed(KeyCode::T) {
             state.subcell_offset = state.subcell_offset.next();
@@ -1492,7 +1511,8 @@ async fn main() {
             let collision_radius = state.cell_width.min(state.cell_height) * state.actor_collision_radius_ratio;
             let subcell_grid_size = state.subcell_reservation_manager.grid_size();
             let (offset_x, offset_y) = state.subcell_offset.get_offsets();
-            let actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, state.actor_speed, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
+            let mut actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, state.actor_speed, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
+            actor.use_directing_v2 = state.use_directing_v2;
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
             println!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
@@ -1931,7 +1951,9 @@ async fn main() {
                     .iter()
                     .map(|&idx| {
                         let data = &actor_data[idx];
-                        Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size, offset_x, offset_y)
+                        let mut actor = Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size, offset_x, offset_y);
+                        actor.use_directing_v2 = state.use_directing_v2;
+                        actor
                     })
                     .collect();
 
