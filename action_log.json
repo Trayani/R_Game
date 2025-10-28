@@ -1,9 +1,26 @@
 [
-{"timestamp_ms":1190,"action":{"SpawnActor":{"x":219.0,"y":511.0}},"phase":"Start"},
-{"timestamp_ms":1190,"action":{"SpawnActor":{"x":219.0,"y":511.0}},"phase":"Finish"},
-{"timestamp_ms":1190,"action":{"LogMessage":{"message":"Actor 0 spawned at (219.0, 511.0). Total actors: 1"}},"phase":"Finish"},
-{"timestamp_ms":2290,"action":{"SetActorDestination":{"x":20,"y":30,"actor_count":1}},"phase":"Start"},
-{"timestamp_ms":2290,"action":{"SetActorDestination":{"x":20,"y":30,"actor_count":1}},"phase":"Finish"}
+{"timestamp_ms":1325,"action":{"SpawnActor":{"x":218.0,"y":466.0}},"phase":"Start"},
+{"timestamp_ms":1325,"action":{"SpawnActor":{"x":218.0,"y":466.0}},"phase":"Finish"},
+{"timestamp_ms":1325,"action":{"LogMessage":{"message":"Actor 0 spawned at (218.0, 466.0). Total actors: 1"}},"phase":"Finish"},
+{"timestamp_ms":2491,"action":{"SetActorDestination":{"x":21,"y":27,"actor_count":1}},"phase":"Start"},
+{"timestamp_ms":2491,"action":{"SetActorDestination":{"x":21,"y":27,"actor_count":1}},"phase":"Finish"},
+{"timestamp_ms":2492,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":215.0,"target_y":461.25,"reserved_cell_x":11,"reserved_cell_y":30,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":11,"anchor_cell_y":31,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":2508,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":225.0,"target_y":453.75,"reserved_cell_x":11,"reserved_cell_y":30,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":11,"anchor_cell_y":30,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":2642,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":225.0,"target_y":446.25,"reserved_cell_x":11,"reserved_cell_y":29,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":11,"anchor_cell_y":30,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":2941,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":225.0,"target_y":438.75,"reserved_cell_x":11,"reserved_cell_y":29,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":11,"anchor_cell_y":29,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":2958,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":235.0,"target_y":431.25,"reserved_cell_x":12,"reserved_cell_y":28,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":12,"anchor_cell_y":29,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":3158,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":235.0,"target_y":423.75,"reserved_cell_x":11,"reserved_cell_y":28,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":11,"anchor_cell_y":28,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":3458,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":235.0,"target_y":416.25,"reserved_cell_x":12,"reserved_cell_y":27,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":12,"anchor_cell_y":28,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":3475,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":245.0,"target_y":408.75,"reserved_cell_x":12,"reserved_cell_y":27,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":12,"anchor_cell_y":27,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":3675,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":245.0,"target_y":401.25,"reserved_cell_x":12,"reserved_cell_y":26,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":12,"anchor_cell_y":27,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":3975,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Both","target_x":245.0,"target_y":401.25,"reserved_cell_x":12,"reserved_cell_y":27,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":12,"anchor_cell_y":26,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":3991,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":255.0,"target_y":401.4643,"reserved_cell_x":13,"reserved_cell_y":27,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":13,"anchor_cell_y":27,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":4108,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":255.0,"target_y":401.4643,"reserved_cell_x":12,"reserved_cell_y":27,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":12,"anchor_cell_y":27,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":4125,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":255.0,"target_y":401.4643,"reserved_cell_x":13,"reserved_cell_y":27,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":13,"anchor_cell_y":27,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":4141,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":265.0,"target_y":401.6786,"reserved_cell_x":13,"reserved_cell_y":27,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":13,"anchor_cell_y":27,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":4258,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":265.0,"target_y":401.67856,"reserved_cell_x":13,"reserved_cell_y":27,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":13,"anchor_cell_y":27,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"},
+{"timestamp_ms":4408,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":265.0,"target_y":401.67856,"reserved_cell_x":13,"reserved_cell_y":27,"reserved_sub_x":1,"reserved_sub_y":0,"anchor_cell_x":13,"anchor_cell_y":27,"anchor_sub_x":1,"anchor_sub_y":1}},"phase":"Finish"},
+{"timestamp_ms":4425,"action":{"ActorDirecting":{"actor_id":0,"affinity":"Horizontal","target_x":275.0,"target_y":401.89285,"reserved_cell_x":14,"reserved_cell_y":27,"reserved_sub_x":0,"reserved_sub_y":1,"anchor_cell_x":14,"anchor_cell_y":27,"anchor_sub_x":0,"anchor_sub_y":0}},"phase":"Finish"}
 ]
 
 ]

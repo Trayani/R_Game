@@ -1061,6 +1061,8 @@ impl Actor {
             }
 
             // Calculate affinity and target using ray-rectangle intersection
+            println!("[AFFINITY INPUT] actor_pos=({:.1},{:.1}) current_subcell={:?} diagonal={:?} dest_screen=({:.1},{:.1})",
+                self.fpos_x, self.fpos_y, current, diagonal, dest_screen_x, dest_screen_y);
             let affinity_result = self.calculate_affinity_and_target(
                 self.fpos_x,
                 self.fpos_y,
@@ -2279,6 +2281,11 @@ impl Actor {
         // Get destination screen position at grid intersection (no +0.5 offset)
         let dest_screen_x = dest.x as f32 * self.cell_width;
         let dest_screen_y = dest.y as f32 * self.cell_height;
+
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[DEST CALC] dest_cell=({},{}) -> dest_screen=({:.1},{:.1}) actor_pos=({:.1},{:.1})",
+                dest.x, dest.y, dest_screen_x, dest_screen_y, self.fpos_x, self.fpos_y);
+        }
 
         // Check if we've reached the destination
         let dx_to_dest = dest_screen_x - self.fpos_x;
