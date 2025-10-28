@@ -202,15 +202,39 @@
             <label>Filter by Position:</label>
             <select id="position-filter">
                 <option value="all">All Positions</option>
-                <option value="PSC_Center">PSC Center (P1)</option>
-                <option value="Rect_Center">Rectangle Center (P2)</option>
-                <option value="Diag_Corner">Diagonal Corner (P3)</option>
-                <option value="Top_Edge">Top Edge (P4)</option>
-                <option value="Bottom_Edge">Bottom Edge (P5)</option>
-                <option value="Left_Edge">Left Edge (P6)</option>
-                <option value="Right_Edge">Right Edge (P7)</option>
-                <option value="BL_Corner">Bottom-Left Corner (P8)</option>
-                <option value="BR_Corner">Bottom-Right Corner (P9)</option>
+                <optgroup label="Standard Positions">
+                    <option value="PSC_Center">PSC Center (P1)</option>
+                    <option value="Rect_Center">Rectangle Center (P2)</option>
+                    <option value="Diag_Corner">Diagonal Corner (P3)</option>
+                    <option value="Top_Edge">Top Edge (P4)</option>
+                    <option value="Bottom_Edge">Bottom Edge (P5)</option>
+                    <option value="Left_Edge">Left Edge (P6)</option>
+                    <option value="Right_Edge">Right Edge (P7)</option>
+                    <option value="BL_Corner">Bottom-Left Corner (P8)</option>
+                    <option value="BR_Corner">Bottom-Right Corner (P9)</option>
+                </optgroup>
+                <optgroup label="Ugly Positions">
+                    <option value="Ugly_Near_PSC">Ugly Near PSC (U1)</option>
+                    <option value="Ugly_Mid_Range">Ugly Mid Range (U2)</option>
+                    <option value="Ugly_Near_Diag">Ugly Near Diagonal (U1)</option>
+                    <option value="Ugly_Offset">Ugly Offset (U2)</option>
+                    <option value="Ugly_Asymmetric">Ugly Asymmetric (U1)</option>
+                    <option value="Ugly_Far">Ugly Far (U2)</option>
+                    <option value="Ugly_NE_Offset">Ugly NE Offset (U1)</option>
+                    <option value="Ugly_NE_Mid">Ugly NE Mid (U2)</option>
+                    <option value="Ugly_East_Near">Ugly East Near (U1)</option>
+                    <option value="Ugly_East_Mid">Ugly East Mid (U2)</option>
+                    <option value="Ugly_SE_Near">Ugly SE Near (U1)</option>
+                    <option value="Ugly_SE_Mid">Ugly SE Mid (U2)</option>
+                    <option value="Ugly_SE_Alt">Ugly SE Alt (U1)</option>
+                    <option value="Ugly_SE_Center">Ugly SE Center (U2)</option>
+                    <option value="Ugly_SW_Near">Ugly SW Near (U1)</option>
+                    <option value="Ugly_SW_Mid">Ugly SW Mid (U2)</option>
+                    <option value="Ugly_SW_Alt">Ugly SW Alt (U1)</option>
+                    <option value="Ugly_SW_Center">Ugly SW Center (U2)</option>
+                    <option value="Ugly_NW_Near">Ugly NW Near (U1)</option>
+                    <option value="Ugly_NW_Mid">Ugly NW Mid (U2)</option>
+                </optgroup>
             </select>
 
             <label>Filter by Affinity:</label>
@@ -219,6 +243,13 @@
                 <option value="H">Horizontal (H)</option>
                 <option value="V">Vertical (V)</option>
                 <option value="BOTH">Both</option>
+            </select>
+
+            <label>Filter by Type:</label>
+            <select id="type-filter">
+                <option value="all">All Types</option>
+                <option value="standard">Standard (P1-P9)</option>
+                <option value="ugly">Ugly Positions (_U)</option>
             </select>
         </div>
 
@@ -601,6 +632,7 @@
             const baseFilter = document.getElementById('base-filter').value;
             const positionFilter = document.getElementById('position-filter').value;
             const affinityFilter = document.getElementById('affinity-filter').value;
+            const typeFilter = document.getElementById('type-filter').value;
 
             let filtered = allTests;
 
@@ -614,6 +646,12 @@
 
             if (affinityFilter !== 'all') {
                 filtered = filtered.filter(t => t.affinity === affinityFilter);
+            }
+
+            if (typeFilter === 'ugly') {
+                filtered = filtered.filter(t => t.id.includes('_U'));
+            } else if (typeFilter === 'standard') {
+                filtered = filtered.filter(t => !t.id.includes('_U'));
             }
 
             populateTestList(filtered);
@@ -666,6 +704,7 @@
                 document.getElementById('base-filter').addEventListener('change', filterTests);
                 document.getElementById('position-filter').addEventListener('change', filterTests);
                 document.getElementById('affinity-filter').addEventListener('change', filterTests);
+                document.getElementById('type-filter').addEventListener('change', filterTests);
 
                 // Initial population
                 populateTestList(allTests);

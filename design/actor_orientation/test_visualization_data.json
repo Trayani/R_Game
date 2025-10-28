@@ -29,8 +29,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.25,
@@ -61,8 +61,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.57,
@@ -93,8 +93,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         6.0,
@@ -125,8 +125,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.5,
@@ -157,8 +157,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.62,
@@ -189,8 +189,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.14,
@@ -221,8 +221,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         6.0,
@@ -253,8 +253,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         5.25,
@@ -285,8 +285,8 @@
         4
       ],
       "destination": [
-        6,
-        1
+        6.0,
+        1.0
       ],
       "target": [
         6.0,
@@ -299,6 +299,70 @@
       ],
       "optimal_dir": "NE-H",
       "notes": "At anchor corner"
+    },
+    {
+      "id": "T021_U1",
+      "base": "T021",
+      "position": "Ugly_Near_PSC",
+      "actor": [
+        5.1,
+        4.9
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6.0,
+        1.0
+      ],
+      "target": [
+        5.31,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T021_U2",
+      "base": "T021",
+      "position": "Ugly_Mid_Range",
+      "actor": [
+        5.3,
+        4.7
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        6.0,
+        1.0
+      ],
+      "target": [
+        5.43,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Ugly position test"
     },
     {
       "id": "T022_P1",
@@ -317,8 +381,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         5.67,
@@ -349,8 +413,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         5.8,
@@ -381,8 +445,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         6.0,
@@ -413,8 +477,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         5.5,
@@ -445,8 +509,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         6.0,
@@ -477,8 +541,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         5.4,
@@ -509,8 +573,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         6.0,
@@ -541,8 +605,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         5.67,
@@ -573,8 +637,8 @@
         4
       ],
       "destination": [
-        7,
-        2
+        7.0,
+        2.0
       ],
       "target": [
         6.0,
@@ -587,6 +651,70 @@
       ],
       "optimal_dir": "NE-H",
       "notes": "CORRECTED: was (6.0, 4.5), now (6.0, 5.0)"
+    },
+    {
+      "id": "T022_U1",
+      "base": "T022",
+      "position": "Ugly_Near_Diag",
+      "actor": [
+        5.9,
+        4.2
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7.0,
+        2.0
+      ],
+      "target": [
+        6.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "CORRECTED: was (5.98, 4.0), now (6.0, 4.0)"
+    },
+    {
+      "id": "T022_U2",
+      "base": "T022",
+      "position": "Ugly_Offset",
+      "actor": [
+        5.6,
+        4.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        7.0,
+        2.0
+      ],
+      "target": [
+        5.78,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NE-H",
+      "notes": "Ugly position test"
     },
     {
       "id": "T024_P1",
@@ -605,8 +733,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -637,8 +765,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -669,8 +797,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -701,8 +829,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         5.5,
@@ -733,8 +861,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -765,8 +893,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -797,8 +925,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -829,8 +957,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -861,8 +989,8 @@
         4
       ],
       "destination": [
-        8,
-        3
+        8.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -875,6 +1003,70 @@
       ],
       "optimal_dir": "NE-H",
       "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T024_U1",
+      "base": "T024",
+      "position": "Ugly_Asymmetric",
+      "actor": [
+        5.2,
+        4.8
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8.0,
+        3.0
+      ],
+      "target": [
+        6.0,
+        4.29
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T024_U2",
+      "base": "T024",
+      "position": "Ugly_Far",
+      "actor": [
+        5.7,
+        4.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        8.0,
+        3.0
+      ],
+      "target": [
+        6.0,
+        4.13
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T025_P1",
@@ -893,8 +1085,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -925,8 +1117,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -957,8 +1149,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -989,8 +1181,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         5.5,
@@ -1021,8 +1213,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -1053,8 +1245,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -1085,8 +1277,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -1117,8 +1309,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -1149,8 +1341,8 @@
         4
       ],
       "destination": [
-        9,
-        3
+        9.0,
+        3.0
       ],
       "target": [
         6.0,
@@ -1163,6 +1355,70 @@
       ],
       "optimal_dir": "NE-H",
       "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T025_U1",
+      "base": "T025",
+      "position": "Ugly_NE_Offset",
+      "actor": [
+        5.2,
+        4.8
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9.0,
+        3.0
+      ],
+      "target": [
+        6.0,
+        4.42
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T025_U2",
+      "base": "T025",
+      "position": "Ugly_NE_Mid",
+      "actor": [
+        5.6,
+        4.4
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9.0,
+        3.0
+      ],
+      "target": [
+        6.0,
+        4.24
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T026_P1",
@@ -1181,8 +1437,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1213,8 +1469,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1245,8 +1501,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1277,8 +1533,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1309,8 +1565,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1341,8 +1597,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1373,8 +1629,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1405,8 +1661,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1437,8 +1693,8 @@
         4
       ],
       "destination": [
-        9,
-        4
+        9.0,
+        4.0
       ],
       "target": [
         6.0,
@@ -1451,6 +1707,70 @@
       ],
       "optimal_dir": "NE-H",
       "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T026_U1",
+      "base": "T026",
+      "position": "Ugly_East_Near",
+      "actor": [
+        5.9,
+        4.5
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9.0,
+        4.0
+      ],
+      "target": [
+        6.0,
+        4.48
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T026_U2",
+      "base": "T026",
+      "position": "Ugly_East_Mid",
+      "actor": [
+        5.3,
+        4.7
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        4
+      ],
+      "destination": [
+        9.0,
+        4.0
+      ],
+      "target": [
+        6.0,
+        4.57
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "NE-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T027_P1",
@@ -1469,8 +1789,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1501,8 +1821,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1533,8 +1853,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1565,8 +1885,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1597,8 +1917,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         5.5,
@@ -1629,8 +1949,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1661,8 +1981,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1693,8 +2013,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1725,8 +2045,8 @@
         6
       ],
       "destination": [
-        8,
-        7
+        8.0,
+        7.0
       ],
       "target": [
         6.0,
@@ -1739,6 +2059,70 @@
       ],
       "optimal_dir": "SE-H",
       "notes": "At anchor, minimal move"
+    },
+    {
+      "id": "T027_U1",
+      "base": "T027",
+      "position": "Ugly_SE_Near",
+      "actor": [
+        5.1,
+        5.9
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8.0,
+        7.0
+      ],
+      "target": [
+        5.36,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T027_U2",
+      "base": "T027",
+      "position": "Ugly_SE_Mid",
+      "actor": [
+        5.3,
+        5.7
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        8.0,
+        7.0
+      ],
+      "target": [
+        5.92,
+        6.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        6
+      ],
+      "optimal_dir": "SE-H",
+      "notes": "Ugly position test"
     },
     {
       "id": "T029_P1",
@@ -1757,8 +2141,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         5.67,
@@ -1789,8 +2173,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         5.8,
@@ -1821,8 +2205,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         6.0,
@@ -1853,8 +2237,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         6.0,
@@ -1885,8 +2269,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         5.5,
@@ -1917,8 +2301,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         5.4,
@@ -1949,8 +2333,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         6.0,
@@ -1981,8 +2365,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         5.67,
@@ -2013,8 +2397,8 @@
         6
       ],
       "destination": [
-        7,
-        8
+        7.0,
+        8.0
       ],
       "target": [
         6.0,
@@ -2027,6 +2411,70 @@
       ],
       "optimal_dir": "SE-H",
       "notes": "CORRECTED: was (6.0, 5.5), now (6.0, 5.0)"
+    },
+    {
+      "id": "T029_U1",
+      "base": "T029",
+      "position": "Ugly_SE_Alt",
+      "actor": [
+        5.9,
+        5.2
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7.0,
+        8.0
+      ],
+      "target": [
+        6.0,
+        5.45
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T029_U2",
+      "base": "T029",
+      "position": "Ugly_SE_Center",
+      "actor": [
+        5.7,
+        5.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        6,
+        6
+      ],
+      "destination": [
+        7.0,
+        8.0
+      ],
+      "target": [
+        6.0,
+        5.92
+      ],
+      "affinity": "H",
+      "anchor": [
+        6,
+        5
+      ],
+      "optimal_dir": "SE-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T031_P1",
@@ -2045,8 +2493,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2077,8 +2525,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2109,8 +2557,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2141,8 +2589,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2173,8 +2621,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.5,
@@ -2205,8 +2653,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2237,8 +2685,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2269,8 +2717,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2301,8 +2749,8 @@
         6
       ],
       "destination": [
-        2,
-        7
+        2.0,
+        7.0
       ],
       "target": [
         5.0,
@@ -2315,6 +2763,70 @@
       ],
       "optimal_dir": "SW-H",
       "notes": "CORRECTED: was (4.5, 6.0), now (5.0, 6.0)"
+    },
+    {
+      "id": "T031_U1",
+      "base": "T031",
+      "position": "Ugly_SW_Near",
+      "actor": [
+        4.1,
+        5.1
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2.0,
+        7.0
+      ],
+      "target": [
+        4.0,
+        5.19
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-V",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T031_U2",
+      "base": "T031",
+      "position": "Ugly_SW_Mid",
+      "actor": [
+        4.3,
+        5.6
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        2.0,
+        7.0
+      ],
+      "target": [
+        4.0,
+        5.78
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T032_P1",
@@ -2333,8 +2845,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2365,8 +2877,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2397,8 +2909,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2429,8 +2941,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2461,8 +2973,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.5,
@@ -2493,8 +3005,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2525,8 +3037,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2557,8 +3069,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         4.0,
@@ -2589,8 +3101,8 @@
         6
       ],
       "destination": [
-        1,
-        7
+        1.0,
+        7.0
       ],
       "target": [
         5.0,
@@ -2603,6 +3115,70 @@
       ],
       "optimal_dir": "SW-H",
       "notes": "CORRECTED: was (4.25, 6.0), now (5.0, 6.0)"
+    },
+    {
+      "id": "T032_U1",
+      "base": "T032",
+      "position": "Ugly_SW_Alt",
+      "actor": [
+        4.2,
+        5.9
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1.0,
+        7.0
+      ],
+      "target": [
+        4.0,
+        5.97
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-V",
+      "notes": "CORRECTED: was (4.0, 5.95), now (4.0, 5.97)"
+    },
+    {
+      "id": "T032_U2",
+      "base": "T032",
+      "position": "Ugly_SW_Center",
+      "actor": [
+        4.6,
+        5.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        6
+      ],
+      "destination": [
+        1.0,
+        7.0
+      ],
+      "target": [
+        4.0,
+        5.58
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "SW-V",
+      "notes": "Ugly position test"
     },
     {
       "id": "T034_P1",
@@ -2621,8 +3197,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2653,8 +3229,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2685,8 +3261,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2717,8 +3293,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.5,
@@ -2749,8 +3325,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2781,8 +3357,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2813,8 +3389,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2845,8 +3421,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         4.0,
@@ -2877,8 +3453,8 @@
         4
       ],
       "destination": [
-        2,
-        3
+        2.0,
+        3.0
       ],
       "target": [
         5.0,
@@ -2891,6 +3467,70 @@
       ],
       "optimal_dir": "NW-H",
       "notes": "CORRECTED: was (4.5, 4.0), now (5.0, 4.0)"
+    },
+    {
+      "id": "T034_U1",
+      "base": "T034",
+      "position": "Ugly_NW_Near",
+      "actor": [
+        4.9,
+        4.1
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2.0,
+        3.0
+      ],
+      "target": [
+        4.64,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Ugly position test"
+    },
+    {
+      "id": "T034_U2",
+      "base": "T034",
+      "position": "Ugly_NW_Mid",
+      "actor": [
+        4.7,
+        4.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2.0,
+        3.0
+      ],
+      "target": [
+        4.08,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "Ugly position test"
     },
     {
       "id": "T035_P1",
@@ -2909,8 +3549,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.25,
@@ -2941,8 +3581,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.14,
@@ -2973,8 +3613,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.0,
@@ -3005,8 +3645,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.5,
@@ -3037,8 +3677,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.0,
@@ -3069,8 +3709,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.0,
@@ -3101,8 +3741,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.57,
@@ -3133,8 +3773,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         4.25,
@@ -3165,8 +3805,8 @@
         4
       ],
       "destination": [
-        2,
-        1
+        2.0,
+        1.0
       ],
       "target": [
         5.0,
@@ -3179,6 +3819,70 @@
       ],
       "optimal_dir": "NW-V",
       "notes": "CORRECTED: was (4.5, 4.0), now (5.0, 4.0)"
+    },
+    {
+      "id": "T035_U1",
+      "base": "T035",
+      "position": "Ugly_NW_Alt",
+      "actor": [
+        4.8,
+        4.2
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2.0,
+        1.0
+      ],
+      "target": [
+        4.62,
+        4.0
+      ],
+      "affinity": "V",
+      "anchor": [
+        5,
+        4
+      ],
+      "optimal_dir": "NW-H",
+      "notes": "CORRECTED: was (4.67, 4.0), now (4.62, 4.0)"
+    },
+    {
+      "id": "T035_U2",
+      "base": "T035",
+      "position": "Ugly_NW_Center",
+      "actor": [
+        4.4,
+        4.6
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        2.0,
+        1.0
+      ],
+      "target": [
+        4.0,
+        4.0
+      ],
+      "affinity": "BOTH",
+      "anchor": [
+        5,
+        5
+      ],
+      "optimal_dir": "NW",
+      "notes": "Ugly position test"
     },
     {
       "id": "T036_P1",
@@ -3197,8 +3901,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3229,8 +3933,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3261,8 +3965,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3293,8 +3997,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.5,
@@ -3325,8 +4029,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3357,8 +4061,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3389,8 +4093,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.2,
@@ -3421,8 +4125,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         4.0,
@@ -3453,8 +4157,8 @@
         4
       ],
       "destination": [
-        1,
-        2
+        1.0,
+        2.0
       ],
       "target": [
         5.0,
@@ -3467,6 +4171,70 @@
       ],
       "optimal_dir": "NW-H",
       "notes": "CORRECTED: was (4.75, 4.0), now (5.0, 4.0)"
+    },
+    {
+      "id": "T036_U1",
+      "base": "T036",
+      "position": "Ugly_NW_Corner",
+      "actor": [
+        4.2,
+        4.2
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1.0,
+        2.0
+      ],
+      "target": [
+        4.0,
+        4.06
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "CORRECTED: was (4.0, 4.02), now (4.0, 4.06)"
+    },
+    {
+      "id": "T036_U2",
+      "base": "T036",
+      "position": "Ugly_NW_Far",
+      "actor": [
+        4.3,
+        4.3
+      ],
+      "psc": [
+        5,
+        5
+      ],
+      "diagonal": [
+        4,
+        4
+      ],
+      "destination": [
+        1.0,
+        2.0
+      ],
+      "target": [
+        4.0,
+        4.09
+      ],
+      "affinity": "H",
+      "anchor": [
+        4,
+        5
+      ],
+      "optimal_dir": "NW-V",
+      "notes": "Ugly position test"
     }
   ]
 }

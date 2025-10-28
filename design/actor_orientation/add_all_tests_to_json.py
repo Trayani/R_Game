@@ -117,7 +117,7 @@ def load_tsv(tsv_path):
                 'actor': [float(parts[3]), float(parts[4])],
                 'psc': [int(parts[5]), int(parts[6])],
                 'diagonal': [int(parts[7]), int(parts[8])],
-                'destination': [int(parts[9]), int(parts[10])],
+                'destination': [float(parts[9]), float(parts[10])],
                 'target_tsv': [float(parts[11]), float(parts[12])],
                 'affinity': parts[13],
                 'anchor_raw': parts[14],
