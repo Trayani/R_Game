@@ -2352,60 +2352,10 @@ impl Actor {
                 }
                 let previous_current = current;
 
-                // MIRROR TRIANGLE LOGIC: Try to reserve mirror BEFORE releasing everything
-                // This enables continuous boundary surfing as per spec Q2.5-Q2.6
-                let mirror_reserved = if let Some(&anchor_copy) = self.extra_reserved_subcells.first() {
-                    // We have a triangle: (current, reserved, anchor)
-                    // Try to reserve the mirror triangle
-                    if self.id == 0 && track_movement {
-                        println!("  [MIRROR] Attempting mirror reservation...");
-                    }
-
-                    let mirror_info = self.try_reserve_mirror_triangle(
-                        &current,
-                        &reserved,
-                        &anchor_copy,
-                        dest_screen_x,
-                        dest_screen_y,
-                        reservation_manager,
-                        track_movement,
-                    );
-
-                    if let Some(info) = mirror_info {
-                        // Mirror succeeded! Check if we should release the redundant subcell
-                        if self.should_release_redundant(&info.redundant, release_eagerness) {
-                            release_redundant(&info.redundant, self.id, reservation_manager);
-                            if self.id == 0 && track_movement {
-                                println!("  [MIRROR] Released redundant: {:?}", info.redundant);
-                            }
-                        } else {
-                            if self.id == 0 && track_movement {
-                                println!("  [MIRROR] Keeping redundant (ROUND release not ready): {:?}", info.redundant);
-                            }
-                        }
-
-                        // Update PSC to the reserved diagonal (we've crossed into it)
-                        self.current_subcell = Some(reserved);
-                        reservation_manager.set_current(reserved, self.id);
-
-                        // The mirror is already set up in try_reserve_mirror_triangle:
-                        // - self.reserved_subcell = new diagonal
-                        // - self.extra_reserved_subcells = shared edge
-
-                        if self.id == 0 && track_movement {
-                            println!("  [MIRROR SUCCESS] Continuous flow maintained!");
-                            println!("    New PSC: {:?}", reserved);
-                            println!("    Reserved diagonal: {:?}", self.reserved_subcell);
-                            println!("    Shared edge: {:?}", self.extra_reserved_subcells);
-                        }
-
-                        true // Mirror succeeded
-                    } else {
-                        false // Mirror failed
-                    }
-                } else {
-                    false // No anchor, can't do mirror (probably pure H/V movement)
-                };
+                // MIRROR TRIANGLE LOGIC: DISABLED
+                // This feature was causing incorrect reservation releases after boundary crossing
+                // Actors now use standard switching logic which correctly maintains reservations
+                let mirror_reserved = false;
 
                 // If mirror failed or not applicable, fall back to standard switching
                 if !mirror_reserved {

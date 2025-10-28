@@ -104,7 +104,7 @@ fn test_diagnose_actor_stopping() {
             false, // enable_early_reservation
             false, // filter_backward
             false, // basic3_fallback_enabled
-            false, // track_movement
+            iteration >= 140 && iteration <= 160, // track_movement - only log around failure
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,
             ReleaseEagerness::Center,
@@ -140,14 +140,13 @@ fn test_diagnose_actor_stopping() {
 
             last_report_iteration = iteration;
 
-            // If stopped for too long, abort
-            if !moved && iteration > 120 {  // Stopped for 2+ seconds
+            // If stopped for too long, warn but continue for debugging
+            if !moved && iteration == 145 {  // Log once at iteration 145
                 println!("\n!!! ACTOR STOPPED MOVING after {:.1}s !!!", time_sec);
                 println!("Current position: ({:.1}, {:.1})", actor.fpos_x, actor.fpos_y);
                 println!("Distance remaining: {:.1}px ({:.1} cells)",
                     new_distance, new_distance / cell_width);
-                println!("Progress: {:.1}%", (travel_distance / distance_to_dest) * 100.0);
-                break;
+                println!("Progress: {:.1}%\n", (travel_distance / distance_to_dest) * 100.0);
             }
         }
 
