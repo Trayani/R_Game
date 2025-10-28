@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actor State Machine - Visual Diagram</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .legend {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .legend h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .legend-item {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .legend-icon {
+            width: 80px;
+            margin-right: 15px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .legend-desc {
+            color: #555;
+            flex: 1;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Actor State Machine</h1>
+        <p class="subtitle">Visual representation of the 4-state actor movement system</p>
+
+        <svg width="900" height="600" viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+            <!-- Define markers for arrow heads -->
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                </marker>
+
+                <!-- Gradient for collision immunity states -->
+                <linearGradient id="immuneGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#e3f2fd;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#bbdefb;stop-opacity:1" />
+                </linearGradient>
+
+                <!-- Gradient for collision-enabled states -->
+                <linearGradient id="normalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#fff3e0;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ffe0b2;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+
+            <!-- State 1: NO_SUBCELL (top-left) -->
+            <g id="state_no_subcell">
+                <rect x="50" y="50" width="200" height="120" rx="15" ry="15"
+                      fill="url(#normalGradient)" stroke="#ff9800" stroke-width="3"/>
+                <text x="150" y="90" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">
+                    NO_SUBCELL
+                </text>
+                <text x="150" y="115" text-anchor="middle" font-size="13" fill="#666">
+                    Trying to reserve
+                </text>
+                <text x="150" y="135" text-anchor="middle" font-size="13" fill="#666">
+                    primary subcell
+                </text>
+                <text x="150" y="155" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">
+                    ⚡ Collision enabled
+                </text>
+            </g>
+
+            <!-- State 2: PSC_ALIGNMENT (top-right) -->
+            <g id="state_alignment">
+                <rect x="450" y="50" width="200" height="120" rx="15" ry="15"
+                      fill="url(#immuneGradient)" stroke="#2196f3" stroke-width="3"/>
+                <text x="550" y="90" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">
+                    PSC_ALIGNMENT
+                </text>
+                <text x="550" y="115" text-anchor="middle" font-size="13" fill="#666">
+                    Moving to subcell
+                </text>
+                <text x="550" y="135" text-anchor="middle" font-size="13" fill="#666">
+                    center (speed × 1.3)
+                </text>
+                <text x="550" y="155" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">
+                    🛡️ Collision immune
+                </text>
+            </g>
+
+            <!-- State 3: IDLE (bottom-left) -->
+            <g id="state_idle">
+                <rect x="50" y="400" width="200" height="120" rx="15" ry="15"
+                      fill="url(#normalGradient)" stroke="#ff9800" stroke-width="3"/>
+                <text x="150" y="440" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">
+                    IDLE
+                </text>
+                <text x="150" y="465" text-anchor="middle" font-size="13" fill="#666">
+                    Calculating next move
+                </text>
+                <text x="150" y="485" text-anchor="middle" font-size="13" fill="#666">
+                    (actor_directing_v2.txt)
+                </text>
+                <text x="150" y="505" text-anchor="middle" font-size="11" fill="#ff6f00" font-weight="bold">
+                    ⚡ Collision enabled
+                </text>
+            </g>
+
+            <!-- State 4: MOVE (bottom-right) -->
+            <g id="state_move">
+                <rect x="450" y="400" width="200" height="120" rx="15" ry="15"
+                      fill="url(#immuneGradient)" stroke="#2196f3" stroke-width="3"/>
+                <text x="550" y="440" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">
+                    MOVE
+                </text>
+                <text x="550" y="465" text-anchor="middle" font-size="13" fill="#666">
+                    Moving to locked
+                </text>
+                <text x="550" y="485" text-anchor="middle" font-size="13" fill="#666">
+                    target position
+                </text>
+                <text x="550" y="505" text-anchor="middle" font-size="11" fill="#1565c0" font-weight="bold">
+                    🛡️ Collision immune
+                </text>
+            </g>
+
+            <!-- Transition 1: NO_SUBCELL -> PSC_ALIGNMENT -->
+            <g id="transition_1">
+                <path d="M 250 110 L 450 110" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <text x="350" y="100" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+                    Subcell reserved
+                </text>
+            </g>
+
+            <!-- Transition 2: PSC_ALIGNMENT -> IDLE -->
+            <g id="transition_2">
+                <path d="M 450 290 Q 350 290, 350 380 L 200 380" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <text x="360" y="280" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+                    Distance &lt; 1.0 px
+                </text>
+                <text x="360" y="295" text-anchor="middle" font-size="11" fill="#666">
+                    (at subcell center)
+                </text>
+                <!-- Curved path from PSC_ALIGNMENT to IDLE -->
+                <path d="M 500 170 L 500 380" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0"/>
+                <path d="M 500 170 Q 350 250, 200 400" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            </g>
+
+            <!-- Transition 3: IDLE -> MOVE -->
+            <g id="transition_3">
+                <path d="M 250 460 L 450 460" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <text x="350" y="450" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+                    Direction determined
+                </text>
+                <text x="350" y="465" text-anchor="middle" font-size="11" fill="#666">
+                    (reserve diagonal + anchor)
+                </text>
+            </g>
+
+            <!-- Transition 4: MOVE -> IDLE (loop back) -->
+            <g id="transition_4">
+                <path d="M 550 400 Q 550 300, 450 300 Q 350 300, 250 380 L 250 400" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                <text x="400" y="330" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+                    Target reached
+                </text>
+                <text x="400" y="345" text-anchor="middle" font-size="11" fill="#666">
+                    (release additional reservations)
+                </text>
+            </g>
+
+            <!-- Self-loop annotations -->
+            <g id="loop_no_subcell">
+                <path d="M 70 50 Q 70 20, 100 20 Q 130 20, 130 50" stroke="#999" stroke-width="1.5" fill="none"
+                      stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+                <text x="100" y="15" text-anchor="middle" font-size="10" fill="#666">
+                    Retry every frame
+                </text>
+            </g>
+
+            <g id="loop_idle">
+                <path d="M 70 520 Q 70 550, 100 550 Q 130 550, 130 520" stroke="#999" stroke-width="1.5" fill="none"
+                      stroke-dasharray="3,3" marker-end="url(#arrowhead)"/>
+                <text x="100" y="565" text-anchor="middle" font-size="10" fill="#666">
+                    Retry if blocked
+                </text>
+            </g>
+
+            <!-- Reservation indicators -->
+            <g id="reservations">
+                <!-- Primary reservation badge on IDLE -->
+                <rect x="220" y="395" width="25" height="18" rx="3" fill="#4caf50" opacity="0.9"/>
+                <text x="232.5" y="407" text-anchor="middle" font-size="10" fill="white" font-weight="bold">1°</text>
+
+                <!-- Primary + Additional reservation badge on MOVE -->
+                <rect x="620" y="395" width="25" height="18" rx="3" fill="#4caf50" opacity="0.9"/>
+                <text x="632.5" y="407" text-anchor="middle" font-size="10" fill="white" font-weight="bold">1°</text>
+                <rect x="620" y="418" width="25" height="18" rx="3" fill="#9c27b0" opacity="0.9"/>
+                <text x="632.5" y="430" text-anchor="middle" font-size="10" fill="white" font-weight="bold">2+</text>
+            </g>
+        </svg>
+
+        <div class="legend">
+            <h3>Legend & Key Concepts</h3>
+
+            <div class="legend-item">
+                <div class="legend-icon">🟠 Orange</div>
+                <div class="legend-desc">
+                    <strong>Collision-enabled states</strong>: Actor subject to normal collision physics (NO_SUBCELL, IDLE)
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">🔵 Blue</div>
+                <div class="legend-desc">
+                    <strong>Collision-immune states</strong>: Actor phases through others (PSC_ALIGNMENT, MOVE)
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">🟢 1°</div>
+                <div class="legend-desc">
+                    <strong>Primary Subcell Reservation</strong>: Persistent reservation defining actor's "home" subcell. Released only when changing to new primary subcell.
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">🟣 2+</div>
+                <div class="legend-desc">
+                    <strong>Additional Reservations</strong>: Temporary diagonal + anchor subcells reserved during MOVE state. Released when target is reached.
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">🔒 Locked</div>
+                <div class="legend-desc">
+                    During MOVE state, values are locked in actor structure: <span class="highlight">locked_target_position</span>,
+                    <span class="highlight">locked_affinity</span>, <span class="highlight">locked_anchor_subcell</span>
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">🔄 Infinite</div>
+                <div class="legend-desc">
+                    Both NO_SUBCELL and IDLE states retry indefinitely when blocked (no timeout mechanism)
+                </div>
+            </div>
+
+            <div class="legend-item">
+                <div class="legend-icon">📐 Rectangle</div>
+                <div class="legend-desc">
+                    "Rectangle boundary" targets refer to ray-rectangle intersection calculated per <strong>actor_directing_v2.txt Section B</strong>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: #e8eaf6; border-radius: 8px; border-left: 4px solid #3f51b5;">
+            <strong>Design Principle:</strong> Affinity and target position are determined (locked) once diagonal is reserved,
+            based on actor's precise float position. Values remain constant throughout MOVE state.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,38 +1,330 @@
-Actors have following states
+# Actor State Machine Design Document
 
+## 1. Overview
 
-1) NO SUBCELL
-Actor owns no subcell, that would be primary subcell for him.
-In this state, the actor can receive destination for movement, but cannot move until a primary subcell is reserved.
+Actors in the system use a 4-state machine to manage subcell-based movement:
+- **NO_SUBCELL**: Actor has no reserved subcell, attempting to acquire one
+- **PSC_ALIGNMENT**: Actor moves to center of newly reserved primary subcell
+- **IDLE**: Actor has primary subcell, waiting or calculating next move
+- **MOVE**: Actor is moving toward a target position
 
-EVERY FRAME:  the actor tries to reserve a nearby subcell as a primary cell.
-This is limited to the four subcells whose centers form a rectangle around the actor's float-precise position.
-If more subcells are available, prioritize the closest one.
-If the actor was unable to reserve a subcell and is very close to the rectangle boundary (2px, but configurable) ,
-he can also try to reserve the neighboring rectangle's subcells (2 of which are shared by actor's rectangle and the neighbour
-in the close-by boundary). This applies both vertically, and horizontally.
-if the actor successfully reserved a subcell, he enters the PSC_ALIGNMENT state
+The state machine integrates with the actor directing algorithm defined in [actor_directing_v2.txt] for calculating movement directions and targets.
 
-2) PRIMARY SUBCELL ALIGNMENT "PSC_ALIGNMENT"
-In this state, the actor has to place himself in the center on his primary subcell.
-EVERY FRAME: actor moves DIRECTLY to the subcell center until it is reached.
-A specific destination CAN be set to the actor, but he ignores it and moves to PSC center first.
+---
 
-3) IDLE
-EVERY FRAME: if no destination is set, do nothing.
-Otherwise:  actor calculates the movement direction and target according to [actor_directing_v2.txt] design file
-- if no direction was determined, try again in the next frame
-- if direction WAS determined, enter MOVE state
+## 2. Constants & Configuration
 
-4) MOVE
-EVERY FRAME: actor moves to the target position.
-Once the target has been reached, it depends
+### PSC_ALIGNMENT_THRESHOLD
+**Value**: `1.0` pixels
+**Purpose**: Distance tolerance for considering actor "at center" of primary subcell
+**Usage**: When `distance(actor.position, PSC_center) < 1.0`, transition PSC_ALIGNMENT → IDLE
 
-- the target was a subcell center (was normalized): actor sets his primary cell to the target subcell and enters IDLE. If the
-target was the same as destination, unassign the destination value (the actor reached destination and should stay until new destination is set)
+### PSC_ALIGNMENT_SPEED_MULTIPLIER
+**Value**: `1.3` (default, configurable)
+**Purpose**: Speed multiplier for alignment movement
+**Usage**: During PSC_ALIGNMENT, `alignment_speed = movement_speed * 1.3`
 
-- the target was a rectangle boundary (not normalized): the boundary is defined by 2 subcells. The actor sets his
-primary cell to the closer subcell and enters IDLE.
-NOTE: The expected emergent behaviour is that the actor can travel directly to destination, if he all subcells in the the direct path
-are free for reservation.
+---
+
+## 3. State Definitions
+
+### State 1: NO_SUBCELL
+
+**Definition**: Actor owns no subcell that would be a primary subcell for them.
+
+**Characteristics**:
+- Actor can receive destination for movement, but cannot move until a primary subcell is reserved
+- Actor is subject to normal collision physics
+
+**EVERY FRAME Behavior**:
+The actor tries to reserve a nearby subcell as a primary cell. Reservation attempts are limited to the **four subcells whose centers form a rectangle around the actor's float-precise position**.
+
+If multiple subcells are available, prioritize the closest one (by distance to actor position).
+
+**Transition**: If the actor successfully reserves a subcell, enter **PSC_ALIGNMENT** state.
+
+**Note**: Infinite retry behavior - actor will keep trying every frame until successful. No timeout mechanism.
+
+---
+
+### State 2: PRIMARY SUBCELL ALIGNMENT "PSC_ALIGNMENT"
+
+**Definition**: Actor has reserved a primary subcell and must align to its center.
+
+**Characteristics**:
+- Actor is **immune to collision** during this state (no collision processing)
+- Destination can be set during this state, but it is stored and ignored until alignment completes
+
+**EVERY FRAME Behavior**:
+Actor moves **DIRECTLY** toward the primary subcell center at speed: `movement_speed * PSC_ALIGNMENT_SPEED_MULTIPLIER`
+
+Movement vector: `direction = normalize(PSC_center - actor.position)`
+
+**Transition**: When `distance(actor.position, PSC_center) < PSC_ALIGNMENT_THRESHOLD` (1.0 pixels), enter **IDLE** state.
+
+**Destination Handling**: If destination is set during PSC_ALIGNMENT, it is stored in actor structure and will be processed once the actor enters IDLE state. The actor ignores the destination and completes alignment first.
+
+---
+
+### State 3: IDLE
+
+**Definition**: Actor is aligned to primary subcell center and ready to move (or waiting).
+
+**Characteristics**:
+- Actor has a valid primary subcell reservation
+- Actor is subject to normal collision physics
+
+**EVERY FRAME Behavior**:
+
+**If no destination is set**: Do nothing (wait).
+
+**If destination is set**:
+1. Calculate movement direction and target position according to [actor_directing_v2.txt] design file
+2. **If no direction was determined** (all candidates blocked): Try again next frame (infinite retry)
+3. **If direction WAS determined**: Reserve additional subcells as needed (e.g., diagonal + anchor), lock target/affinity values, and enter **MOVE** state
+
+**Note**: If all movement candidates are blocked, actor waits indefinitely in IDLE state, retrying every frame. No timeout mechanism.
+
+---
+
+### State 4: MOVE
+
+**Definition**: Actor is moving toward a locked target position.
+
+**Characteristics**:
+- Actor is **immune to collision** during this state (no collision processing)
+- Actor has locked values stored (see Section 6)
+- Actor maintains primary subcell reservation + any additional reservations (diagonal/anchor)
+
+**EVERY FRAME Behavior**:
+Actor moves toward the **locked target position** at normal `movement_speed`.
+
+**Target Position Types**:
+
+1. **Subcell center (normalized target)**:
+   - Target is the center of an adjacent subcell
+   - Used for cardinal direction moves (NORTH, SOUTH, EAST, WEST)
+
+2. **Rectangle boundary (non-normalized target)**:
+   - Target is the intersection point calculated via actor_directing_v2.txt Section B (Rectangle Intersection Formula)
+   - Used for diagonal direction moves
+   - Target lies on the boundary of the rectangle formed by current primary subcell and diagonal subcell
+
+**Transition - Target Reached**:
+
+When target is reached, actor enters **IDLE** state. The following occur:
+
+1. **Release additional reservations** (diagonal subcell, anchor subcell) if any were reserved
+2. **Update primary subcell**:
+   - If target was a subcell center: primary subcell = target subcell
+   - If target was a rectangle boundary: primary subcell = **subcell whose center is closest to actor's final position**
+3. **Clear destination** (if target position matched destination): Actor has reached destination and should remain idle until new destination is set
+
+**Expected Emergent Behavior**: An actor can travel directly to destination in a fluid path if all subcells along the direct trajectory are free for reservation. The actor will move through multiple boundary intersection points without stopping at subcell centers.
+
+---
+
+## 4. State Transitions
+
+```
+NO_SUBCELL ──────────────────────────> PSC_ALIGNMENT
+           (subcell reserved)
+
+PSC_ALIGNMENT ───────────────────────> IDLE
+              (distance < 1.0 pixels)
+
+IDLE ─────────────────────────────────> MOVE
+     (direction determined,
+      reservations successful)
+
+MOVE ─────────────────────────────────> IDLE
+     (target reached)
+```
+
+**Notes**:
+- All transitions are unidirectional (no backward transitions)
+- Actors do not return to NO_SUBCELL unless explicitly releasing primary subcell (not shown in normal flow)
+
+---
+
+## 5. Reservation Model
+
+The system uses **two types of reservations**:
+
+### 5.1 Primary Subcell Reservation
+
+**Characteristics**:
+- **Persistent**: Held continuously while actor is in PSC_ALIGNMENT, IDLE, or MOVE states
+- **Released only** when actor changes to a new primary subcell (during MOVE → IDLE transition)
+- **Purpose**: Defines actor's "home" subcell and the basis for all movement calculations
+
+**Lifecycle**:
+- Reserved in NO_SUBCELL state
+- Maintained through PSC_ALIGNMENT → IDLE → MOVE cycle
+- Updated (released and new one acquired) when actor reaches target in MOVE state
+
+### 5.2 Additional Reservations (Diagonal + Anchor)
+
+**Characteristics**:
+- **Temporary**: Only held during MOVE state
+- **Released** when target is reached (MOVE → IDLE transition)
+- **Purpose**: Collision avoidance for diagonal movement (reserves both diagonal subcell and anchor subcell per actor_directing_v2.txt)
+
+**Lifecycle**:
+- Reserved in IDLE state when diagonal direction is determined
+- Maintained throughout MOVE state
+- Released when MOVE → IDLE transition occurs
+
+**Example**:
+```
+Actor in IDLE at primary subcell (5, 5)
+Destination requires NORTH-EAST diagonal move
+Reservations:
+  - Primary: (5, 5) [persistent]
+  - Diagonal: (6, 4) [temporary]
+  - Anchor: (6, 5) [temporary]
+
+After reaching target:
+  - Primary: (6, 4) [updated]
+  - Diagonal: released
+  - Anchor: released
+```
+
+---
+
+## 6. Locked Values During Movement
+
+When an actor enters **MOVE** state, the following values are calculated (per actor_directing_v2.txt) and **locked in the actor structure**:
+
+### 6.1 locked_target_position
+- **Type**: `(x: f32, y: f32)`
+- **Value**: Exact target position calculated from ray-rectangle intersection (diagonal) or adjacent subcell center (cardinal)
+- **Lock Duration**: Entire MOVE state
+- **Usage**: Actor moves toward this exact position; never recalculated during movement
+
+### 6.2 locked_affinity
+- **Type**: Enum `{ H, V, BOTH }`
+- **Value**: Determined by which rectangle edge the ray hits first (see actor_directing_v2.txt Section B)
+  - `H`: Ray hits vertical edge first (horizontal-favoring)
+  - `V`: Ray hits horizontal edge first (vertical-favoring)
+  - `BOTH`: Ray hits corner (both edges simultaneously)
+- **Lock Duration**: Entire MOVE state
+- **Usage**: Determines anchor subcell selection
+
+### 6.3 locked_anchor_subcell
+- **Type**: `(x: i32, y: i32)` or None
+- **Value**: For diagonal moves, the anchor subcell adjacent to primary subcell
+  - H-affinity: horizontal neighbor
+  - V-affinity: vertical neighbor
+  - Cardinal moves: None
+- **Lock Duration**: Entire MOVE state
+- **Usage**: Reserved to prevent diagonal crossing
+
+**Lifecycle**:
+- ✅ **Calculated and locked**: IDLE → MOVE transition (when direction is determined)
+- ✅ **Remain constant**: Throughout MOVE state (never recalculated even if actor is moved by external forces)
+- ✅ **Released/invalidated**: MOVE → IDLE transition (when target is reached)
+
+---
+
+## 7. Edge Cases & Special Behaviors
+
+### 7.1 Destination Set During PSC_ALIGNMENT
+
+**Scenario**: Actor is in PSC_ALIGNMENT state (moving toward subcell center), and a destination is set.
+
+**Behavior**:
+- Destination is **stored** in actor structure
+- Actor **continues** PSC_ALIGNMENT (does not abort)
+- Once PSC_ALIGNMENT → IDLE transition occurs, the stored destination is processed normally
+
+**Rationale**: Alignment to subcell center is a prerequisite for movement calculations; skipping it would break the subcell reservation model.
+
+---
+
+### 7.2 All Movement Options Blocked in IDLE
+
+**Scenario**: Actor has destination, but all movement candidates are blocked (actor_directing_v2.txt returns "no direction determined").
+
+**Behavior**:
+- Actor remains in IDLE state
+- Actor retries every frame indefinitely
+- No timeout mechanism
+- No destination clearing
+
+**Rationale**: Consistent with NO_SUBCELL infinite retry behavior. Assumes blockages are temporary and paths will eventually open.
+
+---
+
+### 7.3 Primary Subcell Selection at Rectangle Boundary
+
+**Scenario**: Actor reaches a target position on rectangle boundary (e.g., `(6.0, 4.48)`), equidistant or near-equidistant from two subcells.
+
+**Behavior**:
+- Primary subcell = **subcell whose center is closest to actor's final position**
+- If equidistant (within floating-point epsilon), choose the diagonal subcell (the one that was reserved for the move)
+
+**Rationale**: Actor's actual position determines most logical "home" subcell for next movement calculation.
+
+---
+
+### 7.4 Collision Immunity
+
+**States with Collision Immunity**:
+- PSC_ALIGNMENT
+- MOVE
+
+**Behavior**:
+- Actors in these states are not processed by collision detection/response system
+- Actors "phase through" other actors and obstacles
+- Only actors in NO_SUBCELL and IDLE states are subject to collision physics
+
+**Rationale**:
+- PSC_ALIGNMENT: Actor needs to reach subcell center precisely; collisions would cause oscillation and prevent transition
+- MOVE: Actor has reserved subcells and is executing locked trajectory; collision interference would break the subcell reservation model
+
+**Alternative Interpretation**: "No collision" may also mean "other actors avoid these actors but these actors follow their path". Implementation choice depends on collision system design.
+
+---
+
+## 8. Integration with actor_directing_v2.txt
+
+### 8.1 When to Invoke actor_directing_v2.txt
+
+**State**: IDLE
+**Timing**: Every frame when destination is set
+**Purpose**: Calculate movement direction, target position, affinity, and anchor subcell
+
+### 8.2 Input to actor_directing_v2.txt
+
+- Actor's current position (float-precise)
+- Primary subcell (current logical grid position)
+- Destination position
+- Subcell reservation state (which subcells are available)
+
+### 8.3 Output from actor_directing_v2.txt
+
+- **Direction**: Cardinal (N/S/E/W) or Diagonal (NE/NW/SE/SW) or NONE (all blocked)
+- **Target Position**: Calculated via Section B (Rectangle Intersection Formula)
+- **Affinity**: H/V/BOTH (for diagonal moves)
+- **Anchor Subcell**: Determined by affinity
+- **Reservations to Make**: Diagonal subcell + anchor subcell (if diagonal)
+
+### 8.4 What Gets Locked
+
+All values from actor_directing_v2.txt are locked into actor structure during IDLE → MOVE transition (see Section 6).
+
+### 8.5 Key Design Principle
+
+**From actor_directing_v2.txt Section A**:
+> "Affinity and target position are determined (locked) once diagonal is reserved, based on actor's precise float position."
+
+This principle is enforced by the state machine: calculations happen in IDLE, values lock during IDLE → MOVE transition, and remain constant throughout MOVE state.
+
+---
+
+## 9. See Also
+
+- **actor_directing_v2.txt**: Algorithm for calculating movement direction, target position, affinity, and anchor subcell
+- **actor_states.html**: Visual SVG state transition diagram
 
