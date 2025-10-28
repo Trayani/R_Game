@@ -11,13 +11,16 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="" />
+    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/actor_orientation.txt" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:dev" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:test" />
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
@@ -63,6 +66,8 @@
   "keyToString": {
     "Cargo.Run rustgame3.executor": "Debug",
     "Cargo.Test ray.executor": "Debug",
+    "Cargo.Test test_actor_directing.executor": "Run",
+    "Cargo.Test test_save_state_simulation.executor": "Run",
     "Cargo.test.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -99,7 +104,7 @@
       <command value="cargo test" />
     </option>
   </component>
-  <component name="RunManager" selected="Cargo.Test test_save_state_simulation">
+  <component name="RunManager" selected="Cargo.Test test_actor_directing">
     <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="buildProfileId" value="dev" />
       <option name="command" value="run --package rustgame3 --bin rustgame3" />
@@ -120,6 +125,23 @@
     </configuration>
     <configuration name="Test ray" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="test --package rustgame3 --bin rustgame3 ray" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Test test_actor_directing" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="test --package rustgame3 --test test_actor_directing" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
       <envs />
       <option name="emulateTerminal" value="true" />
@@ -173,11 +195,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Cargo.Test test_actor_directing" />
         <item itemvalue="Cargo.Test test_save_state_simulation" />
         <item itemvalue="Cargo.Run rustgame3" />
         <item itemvalue="Cargo.Test ray" />
         <item itemvalue="Cargo.test" />
-        <item itemvalue="Cargo.Run rustgame3" />
       </list>
     </recent_temporary>
   </component>
