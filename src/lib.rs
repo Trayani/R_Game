@@ -13,7 +13,7 @@ pub mod save_state;
 pub mod subcell;
 
 pub use action_log::{Action, ActionLog, ActionPhase, LoggedAction};
-pub use actor::{Actor, CellPosition, MovementEvent};
+pub use actor::{Actor, CellPosition, MovementEvent, Affinity, AffinityResult};
 pub use compact_log::{CompactLogWriter, CompactLogStats};
 pub use config::{Config, ReservationEagerness, ReleaseEagerness};
 pub use grid::Grid;

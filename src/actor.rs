@@ -639,7 +639,7 @@ impl Actor {
     /// 4. Affinity = which edge hits first (vertical → H, horizontal → V)
     /// 5. Target = intersection point on boundary
     /// 6. Anchor = horizontal or vertical neighbor based on affinity
-    fn calculate_affinity_and_target(
+    pub fn calculate_affinity_and_target(
         &self,
         actor_x: f32,
         actor_y: f32,
@@ -651,24 +651,25 @@ impl Actor {
         const EPSILON: f32 = 1e-6;
 
         // Step 1: Define rectangle bounds
-        // Subcells are at grid intersections (0.0, 1.0, 2.0, ...)
-        let psc_screen = psc.to_screen_center_with_offset(
-            self.cell_width,
-            self.cell_height,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
-        let diag_screen = diagonal.to_screen_center_with_offset(
-            self.cell_width,
-            self.cell_height,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
+        // Subcells are at grid intersections (0.0, 1.0, 2.0, ...), NOT at centers
+        // actor_directing_v2.txt line 69-70: "Subcells are at grid line intersections"
+        let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
+        let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
 
-        let rect_min_x = psc_screen.0.min(diag_screen.0);
-        let rect_max_x = psc_screen.0.max(diag_screen.0);
-        let rect_min_y = psc_screen.1.min(diag_screen.1);
-        let rect_max_y = psc_screen.1.max(diag_screen.1);
+        // Calculate grid intersection positions (corners, not centers)
+        let psc_x = psc.cell_x as f32 * self.cell_width + psc.sub_x as f32 * sub_cell_width
+            - self.subcell_offset_x * sub_cell_width;
+        let psc_y = psc.cell_y as f32 * self.cell_height + psc.sub_y as f32 * sub_cell_height
+            - self.subcell_offset_y * sub_cell_height;
+        let diag_x = diagonal.cell_x as f32 * self.cell_width + diagonal.sub_x as f32 * sub_cell_width
+            - self.subcell_offset_x * sub_cell_width;
+        let diag_y = diagonal.cell_y as f32 * self.cell_height + diagonal.sub_y as f32 * sub_cell_height
+            - self.subcell_offset_y * sub_cell_height;
+
+        let rect_min_x = psc_x.min(diag_x);
+        let rect_max_x = psc_x.max(diag_x);
+        let rect_min_y = psc_y.min(diag_y);
+        let rect_max_y = psc_y.max(diag_y);
 
         // Step 2: Calculate ray direction
         let dir_x = dest_x - actor_x;
@@ -678,8 +679,8 @@ impl Actor {
         // Handle edge case: actor already at destination
         if dir_len < EPSILON {
             // Choose anchor based on actor position offset from PSC
-            let offset_x = (actor_x - psc_screen.0).abs();
-            let offset_y = (actor_y - psc_screen.1).abs();
+            let offset_x = (actor_x - psc_x).abs();
+            let offset_y = (actor_y - psc_y).abs();
             let anchor = if offset_x > offset_y {
                 Self::get_horizontal_anchor(psc, diagonal)
             } else {
@@ -725,10 +726,12 @@ impl Actor {
         }
 
         // Handle edge case: actor on or past boundary (t ≤ 0)
+        // Note: t ≈ 0 means actor is ON the boundary. This is valid if ray exits through it.
+        // We should only reject if BOTH boundaries have t ≤ 0 (actor at corner/outside).
         if t_vertical <= EPSILON && t_horizontal <= EPSILON {
             // Actor at corner or outside rectangle
-            let offset_x = (actor_x - psc_screen.0).abs();
-            let offset_y = (actor_y - psc_screen.1).abs();
+            let offset_x = (actor_x - psc_x).abs();
+            let offset_y = (actor_y - psc_y).abs();
             let anchor = if offset_x > offset_y {
                 Self::get_horizontal_anchor(psc, diagonal)
             } else {
@@ -739,15 +742,30 @@ impl Actor {
                 target_x: actor_x.max(rect_min_x).min(rect_max_x),
                 target_y: actor_y.max(rect_min_y).min(rect_max_y),
                 anchor,
+                t_vertical: 0.0,
+                t_horizontal: 0.0,
+            };
+        }
+        // Don't filter out t ≈ 0 cases - they're valid when actor is on boundary
+
+        // Handle edge case: both t values are infinity (ray parallel to edges or no intersection)
+        // This happens when actor is at boundary and ray is perpendicular to that boundary
+        if t_vertical.is_infinite() && t_horizontal.is_infinite() {
+            let offset_x = (actor_x - psc_x).abs();
+            let offset_y = (actor_y - psc_y).abs();
+            let anchor = if offset_x > offset_y {
+                Self::get_horizontal_anchor(psc, diagonal)
+            } else {
+                Self::get_vertical_anchor(psc, diagonal)
+            };
+            return AffinityResult {
+                affinity: Affinity::Both,
+                target_x: actor_x,  // Already at boundary
+                target_y: actor_y,
+                anchor,
                 t_vertical,
                 t_horizontal,
             };
-        } else if t_vertical <= EPSILON {
-            // Actor on vertical edge → use horizontal edge
-            t_vertical = f32::INFINITY;
-        } else if t_horizontal <= EPSILON {
-            // Actor on horizontal edge → use vertical edge
-            t_horizontal = f32::INFINITY;
         }
 
         // Step 4: Determine affinity and target based on which edge hits first
@@ -764,8 +782,8 @@ impl Actor {
 
             // Choose anchor based on actor's position offset from PSC
             // If actor is more horizontally offset, use horizontal anchor
-            let offset_x = (actor_x - psc_screen.0).abs();
-            let offset_y = (actor_y - psc_screen.1).abs();
+            let offset_x = (actor_x - psc_x).abs();
+            let offset_y = (actor_y - psc_y).abs();
             anchor = if offset_x > offset_y {
                 Self::get_horizontal_anchor(psc, diagonal)
             } else {
@@ -801,10 +819,11 @@ impl Actor {
 
     /// Get horizontal anchor for diagonal move (anchor is horizontal neighbor of PSC)
     fn get_horizontal_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
-        // Horizontal anchor: same Y as PSC, X toward diagonal
+        // Horizontal anchor: shares Y coordinate with PSC, X coordinate with diagonal
+        // Example: PSC=(5,5), Diag=(6,4) → Anchor=(6,5)
         SubCellCoord {
-            cell_x: psc.cell_x,
-            cell_y: psc.cell_y,
+            cell_x: diagonal.cell_x,  // X from diagonal
+            cell_y: psc.cell_y,        // Y from PSC
             sub_x: diagonal.sub_x,
             sub_y: psc.sub_y,
             grid_size: psc.grid_size,
@@ -813,10 +832,11 @@ impl Actor {
 
     /// Get vertical anchor for diagonal move (anchor is vertical neighbor of PSC)
     fn get_vertical_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
-        // Vertical anchor: same X as PSC, Y toward diagonal
+        // Vertical anchor: shares X coordinate with PSC, Y coordinate with diagonal
+        // Example: PSC=(5,5), Diag=(6,4) → Anchor=(5,4)
         SubCellCoord {
-            cell_x: psc.cell_x,
-            cell_y: psc.cell_y,
+            cell_x: psc.cell_x,         // X from PSC
+            cell_y: diagonal.cell_y,    // Y from diagonal
             sub_x: psc.sub_x,
             sub_y: diagonal.sub_y,
             grid_size: psc.grid_size,
