@@ -137,6 +137,9 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
         test.dest_y,
     );
 
+    println!("\n[{}] {} at ({:.2},{:.2}) → dest ({:.2},{:.2})",
+        test.test_id, test.position, test.actor_x, test.actor_y, test.dest_x, test.dest_y);
+
     // Validate algorithm properties instead of comparing to buggy TSV values:
     // 1. Target must be on rectangle boundary
     // 2. Target must be on ray from actor to destination
@@ -159,6 +162,9 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
             result.target_x, result.target_y,
             rect_min_x, rect_max_x, rect_min_y, rect_max_y
         ));
+    } else {
+        println!("  ✓ Validation 1: Target ({:.2},{:.2}) is on rectangle boundary [{:.2}-{:.2}, {:.2}-{:.2}]",
+            result.target_x, result.target_y, rect_min_x, rect_max_x, rect_min_y, rect_max_y);
     }
 
     // Validation 2: Target must be on ray from actor to destination
@@ -174,12 +180,18 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
             "target not on ray: cross product = {:.4} (should be ~0)",
             cross
         ));
+    } else {
+        println!("  ✓ Validation 2: Target is on ray from actor ({:.2},{:.2}) to dest ({:.2},{:.2}) [cross product: {:.6}]",
+            test.actor_x, test.actor_y, test.dest_x, test.dest_y, cross);
     }
 
     // Validation 3: Affinity matches which edge was hit
     // (implicit - just check it's a valid value)
     match result.affinity {
-        rustgame3::Affinity::Horizontal | rustgame3::Affinity::Vertical | rustgame3::Affinity::Both => {},
+        rustgame3::Affinity::Horizontal | rustgame3::Affinity::Vertical | rustgame3::Affinity::Both => {
+            println!("  ✓ Validation 3: Affinity is valid: {:?} (t_v={:.4}, t_h={:.4})",
+                result.affinity, result.t_vertical, result.t_horizontal);
+        },
     }
 
     // Validation 4: Anchor must follow affinity rules
@@ -211,6 +223,9 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
             result.anchor.cell_x, result.anchor.cell_y,
             result.affinity
         ));
+    } else {
+        println!("  ✓ Validation 4: Anchor ({},{}) matches affinity {:?} rules",
+            result.anchor.cell_x, result.anchor.cell_y, result.affinity);
     }
 
     if errors.is_empty() {
