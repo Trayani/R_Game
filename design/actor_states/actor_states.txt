@@ -20,7 +20,7 @@ A specific destination CAN be set to the actor, but he ignores it and moves to P
 
 3) IDLE
 EVERY FRAME: if no destination is set, do nothing.
-Otherwise:  actor calculates the movement direction and target according to [actor_directing.txt] design file
+Otherwise:  actor calculates the movement direction and target according to [actor_directing_v2.txt] design file
 - if no direction was determined, try again in the next frame
 - if direction WAS determined, enter MOVE state
 
