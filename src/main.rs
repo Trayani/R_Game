@@ -1874,6 +1874,11 @@ async fn main() {
                 };
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
 
+                // Log diagnostic messages to action log
+                for msg in state.actors[i].diagnostic_messages.drain(..) {
+                    state.action_log.log_event(Action::LogMessage { message: msg });
+                }
+
                 // Log directing decisions to action log
                 if let Some(directing_info) = state.actors[i].last_directing_info.take() {
                     let affinity_str = match directing_info.affinity {

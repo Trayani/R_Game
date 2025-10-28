@@ -119,6 +119,8 @@ pub struct Actor {
     pub use_directing_v2: bool,
     /// Last directing decision for logging - cleared after main.rs logs it
     pub last_directing_info: Option<DirectingInfo>,
+    /// Diagnostic messages to log to action log (cleared after main.rs logs them)
+    pub diagnostic_messages: Vec<String>,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -174,6 +176,7 @@ impl Actor {
             locked_affinity: None,
             use_directing_v2: true,
             last_directing_info: None,
+            diagnostic_messages: Vec::new(),
         }
     }
 
@@ -1061,8 +1064,15 @@ impl Actor {
             }
 
             // Calculate affinity and target using ray-rectangle intersection
-            println!("[AFFINITY INPUT] actor_pos=({:.1},{:.1}) current_subcell={:?} diagonal={:?} dest_screen=({:.1},{:.1})",
-                self.fpos_x, self.fpos_y, current, diagonal, dest_screen_x, dest_screen_y);
+            if self.id == 0 {
+                self.diagnostic_messages.push(format!(
+                    "[AFFINITY INPUT] actor_pos=({:.1},{:.1}) current=({},{},{},{}) diagonal=({},{},{},{}) dest_screen=({:.1},{:.1})",
+                    self.fpos_x, self.fpos_y,
+                    current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                    diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y,
+                    dest_screen_x, dest_screen_y
+                ));
+            }
             let affinity_result = self.calculate_affinity_and_target(
                 self.fpos_x,
                 self.fpos_y,
@@ -2283,8 +2293,17 @@ impl Actor {
         let dest_screen_y = dest.y as f32 * self.cell_height;
 
         if always_trace || (self.id == 0 && track_movement) {
-            println!("[DEST CALC] dest_cell=({},{}) -> dest_screen=({:.1},{:.1}) actor_pos=({:.1},{:.1})",
-                dest.x, dest.y, dest_screen_x, dest_screen_y, self.fpos_x, self.fpos_y);
+            if self.id == 0 {
+                let dx = dest_screen_x - self.fpos_x;
+                let dy = dest_screen_y - self.fpos_y;
+                self.diagnostic_messages.push(format!(
+                    "[DEST CALC] dest_cell=({},{}) dest_screen=({:.1},{:.1}) actor_pos=({:.1},{:.1}) expected_dir: dx={:.1} dy={:.1} ({} and {})",
+                    dest.x, dest.y, dest_screen_x, dest_screen_y, self.fpos_x, self.fpos_y,
+                    dx, dy,
+                    if dx > 0.0 { "RIGHT" } else { "LEFT" },
+                    if dy > 0.0 { "DOWN" } else { "UP" }
+                ));
+            }
         }
 
         // Check if we've reached the destination
