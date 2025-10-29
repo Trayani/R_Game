@@ -1,6 +1,7 @@
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
 use crate::compact_log::CompactLogWriter;
+use rusqlite::Connection;
 
 /// Action phase - whether the action is starting or finishing
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -94,6 +95,40 @@ pub struct LoggedAction {
 use std::fs::File;
 use std::io::Write;
 
+/// Extract actor_id from action if it has one
+fn extract_actor_id(action: &Action) -> Option<i64> {
+    match action {
+        Action::ActorStartMovingToCell { actor_id, .. } |
+        Action::ActorReachedWaypoint { actor_id, .. } |
+        Action::ActorReachedDestination { actor_id, .. } |
+        Action::ActorDirecting { actor_id, .. } |
+        Action::PSCSelection { actor_id, .. } => Some(*actor_id as i64),
+        _ => None,
+    }
+}
+
+/// Get action type name as string
+fn action_type_name(action: &Action) -> &'static str {
+    match action {
+        Action::SetBlocked { .. } => "SetBlocked",
+        Action::SetFree { .. } => "SetFree",
+        Action::ToggleCell { .. } => "ToggleCell",
+        Action::MoveObserver { .. } => "MoveObserver",
+        Action::ToggleMessyX => "ToggleMessyX",
+        Action::ToggleMessyY => "ToggleMessyY",
+        Action::SetObserverDestination { .. } => "SetObserverDestination",
+        Action::SpawnActor { .. } => "SpawnActor",
+        Action::SetActorDestination { .. } => "SetActorDestination",
+        Action::PasteGrid { .. } => "PasteGrid",
+        Action::ActorStartMovingToCell { .. } => "ActorStartMovingToCell",
+        Action::ActorReachedWaypoint { .. } => "ActorReachedWaypoint",
+        Action::ActorReachedDestination { .. } => "ActorReachedDestination",
+        Action::LogMessage { .. } => "LogMessage",
+        Action::ActorDirecting { .. } => "ActorDirecting",
+        Action::PSCSelection { .. } => "PSCSelection",
+    }
+}
+
 /// Action logger with streaming JSON output
 pub struct ActionLog {
     start_time: Instant,
@@ -101,6 +136,7 @@ pub struct ActionLog {
     compact_log: CompactLogWriter,
     json_file: Option<File>,
     first_entry: bool,
+    db_conn: Option<Connection>,
 }
 
 impl ActionLog {
@@ -113,12 +149,39 @@ impl ActionLog {
             let _ = writeln!(file as &File, "[");
         }
 
+        // Open/create SQLite database and initialize schema
+        let db_conn = Connection::open("action_log.db").ok();
+        if let Some(ref conn) = db_conn {
+            // Create tables and indexes if they don't exist
+            let _ = conn.execute_batch("
+                CREATE TABLE IF NOT EXISTS actions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp_ms INTEGER NOT NULL,
+                    actor_id INTEGER,
+                    action_type TEXT NOT NULL,
+                    phase TEXT NOT NULL,
+                    data TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_actor_time
+                    ON actions(actor_id, timestamp_ms);
+
+                CREATE INDEX IF NOT EXISTS idx_action_type
+                    ON actions(action_type);
+
+                CREATE INDEX IF NOT EXISTS idx_timestamp
+                    ON actions(timestamp_ms);
+            ");
+        }
+
         ActionLog {
             start_time: Instant::now(),
             actions: Vec::new(),
             compact_log: CompactLogWriter::new(),
             json_file,
             first_entry: true,
+            db_conn,
         }
     }
 
@@ -151,6 +214,30 @@ impl ActionLog {
             if let Ok(json) = serde_json::to_string(&logged_action) {
                 let _ = write!(file, "{}", json);
                 let _ = file.flush(); // Flush immediately
+            }
+        }
+
+        // Write to SQLite database
+        if let Some(ref conn) = self.db_conn {
+            let actor_id = extract_actor_id(&logged_action.action);
+            let action_type = action_type_name(&logged_action.action);
+            let phase_str = match logged_action.phase {
+                ActionPhase::Start => "Start",
+                ActionPhase::Finish => "Finish",
+            };
+
+            // Serialize action data as JSON for storage
+            if let Ok(data_json) = serde_json::to_string(&logged_action.action) {
+                let _ = conn.execute(
+                    "INSERT INTO actions (timestamp_ms, actor_id, action_type, phase, data) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    rusqlite::params![
+                        logged_action.timestamp_ms as i64,
+                        actor_id,
+                        action_type,
+                        phase_str,
+                        data_json
+                    ],
+                );
             }
         }
     }
