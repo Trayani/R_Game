@@ -905,26 +905,6 @@ impl VisState {
                 }
             }
         }
-
-        // Draw small black dots at each subcell intersection point
-        let dot_radius = 1.5;
-        let dot_color = BLACK;
-
-        // Calculate total number of subcell grid points
-        let total_subcell_points_x = self.grid.cols * subdivisions + 1;
-        let total_subcell_points_y = self.grid.rows * subdivisions + 1;
-
-        let subcell_width = self.cell_width / subdivisions as f32;
-        let subcell_height = self.cell_height / subdivisions as f32;
-
-        // Draw dots at each subcell intersection point
-        for sub_y in 0..total_subcell_points_y {
-            for sub_x in 0..total_subcell_points_x {
-                let dot_x = sub_x as f32 * subcell_width;
-                let dot_y = sub_y as f32 * subcell_height;
-                draw_circle(dot_x, dot_y, dot_radius, dot_color);
-            }
-        }
     }
 
     fn draw_corners(&self) {
@@ -962,6 +942,40 @@ impl VisState {
                     corner_size,
                     corner_color,
                 );
+            }
+        }
+    }
+
+    fn draw_subcell_dots(&self) {
+        // Only draw dots if subcell mode is active
+        if self.subcell_mode == SubCellMode::None {
+            return;
+        }
+
+        let subdivisions = match self.subcell_mode {
+            SubCellMode::None => return,
+            SubCellMode::Grid1x1 => 1,
+            SubCellMode::Grid2x2 => 2,
+            SubCellMode::Grid3x3 => 3,
+        };
+
+        // White dots to make subcell intersection points visible
+        let dot_radius = 1.5;
+        let dot_color = WHITE;
+
+        // Calculate total number of subcell grid points
+        let total_subcell_points_x = self.grid.cols * subdivisions + 1;
+        let total_subcell_points_y = self.grid.rows * subdivisions + 1;
+
+        let subcell_width = self.cell_width / subdivisions as f32;
+        let subcell_height = self.cell_height / subdivisions as f32;
+
+        // Draw dots at each subcell intersection point
+        for sub_y in 0..total_subcell_points_y {
+            for sub_x in 0..total_subcell_points_x {
+                let dot_x = sub_x as f32 * subcell_width;
+                let dot_y = sub_y as f32 * subcell_height;
+                draw_circle(dot_x, dot_y, dot_radius, dot_color);
             }
         }
     }
@@ -1309,6 +1323,9 @@ impl VisState {
                 self.draw_path_list(&path);
             }
         }
+
+        // Draw subcell dots (last non-movable grid element, just before actors)
+        self.draw_subcell_dots();
 
         // Draw actor on top of everything
         self.draw_actor();
