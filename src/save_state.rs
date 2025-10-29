@@ -99,22 +99,26 @@ impl SaveState {
     }
 
     /// Restore actors from save state
-    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, configured_speed: f32) -> Vec<Actor> {
+    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, configured_speed: f32, distance_tolerance_multiplier: f32) -> Vec<Actor> {
         self.actors
             .iter()
-            .map(|data| Actor::new(
-                data.id,
-                data.fpos_x,
-                data.fpos_y,
-                data.size,
-                configured_speed,  // Use configured speed instead of saved speed
-                data.collision_radius,
-                cell_width,
-                cell_height,
-                subcell_grid_size,
-                subcell_offset_x,
-                subcell_offset_y,
-            ))
+            .map(|data| {
+                let mut actor = Actor::new(
+                    data.id,
+                    data.fpos_x,
+                    data.fpos_y,
+                    data.size,
+                    configured_speed,  // Use configured speed instead of saved speed
+                    data.collision_radius,
+                    cell_width,
+                    cell_height,
+                    subcell_grid_size,
+                    subcell_offset_x,
+                    subcell_offset_y,
+                );
+                actor.distance_tolerance_multiplier = distance_tolerance_multiplier;
+                actor
+            })
             .collect()
     }
 }

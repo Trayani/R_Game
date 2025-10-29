@@ -45,7 +45,8 @@ fn test_f9_load_and_p_destination() {
         subcell_grid_size,
         0.0, // subcell_offset_x
         0.0, // subcell_offset_y
-        50.0 // configured_speed
+        50.0, // configured_speed
+        0.6 // distance_tolerance_multiplier
     );
     let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
 

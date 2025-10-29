@@ -207,6 +207,7 @@ struct VisState {
     actor_speed: f32,  // Default actor speed in pixels/second
     actor_size_ratio: f32,  // Actor size as ratio of cell size
     actor_collision_radius_ratio: f32,  // Collision radius as ratio of cell size
+    actor_distance_tolerance_multiplier: f32,  // Distance tolerance for subcell distance rule
 }
 
 impl VisState {
@@ -282,6 +283,7 @@ impl VisState {
             actor_speed: config.actors.default_speed,
             actor_size_ratio: config.actors.size_ratio,
             actor_collision_radius_ratio: config.actors.collision_radius_ratio,
+            actor_distance_tolerance_multiplier: config.actors.distance_tolerance_multiplier,
         }
     }
 
@@ -1478,7 +1480,7 @@ async fn main() {
                     // Restore actors with configured speed (not saved speed)
                     let subcell_grid_size = state.subcell_reservation_manager.grid_size();
                     let (offset_x, offset_y) = state.subcell_offset.get_offsets();
-                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y, state.actor_speed);
+                    state.actors = save_state.restore_actors(state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y, state.actor_speed, state.actor_distance_tolerance_multiplier);
 
                     // Update next_actor_id to avoid ID conflicts
                     state.next_actor_id = state.actors.iter().map(|a| a.id).max().unwrap_or(0) + 1;
@@ -1616,6 +1618,7 @@ async fn main() {
             let (offset_x, offset_y) = state.subcell_offset.get_offsets();
             let mut actor = Actor::new(actor_id, mouse_x, mouse_y, actor_size, state.actor_speed, collision_radius, state.cell_width, state.cell_height, subcell_grid_size, offset_x, offset_y);
             actor.use_directing_v2 = state.use_directing_v2;
+            actor.distance_tolerance_multiplier = state.actor_distance_tolerance_multiplier;
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
 
@@ -2212,6 +2215,7 @@ async fn main() {
                         let data = &actor_data[idx];
                         let mut actor = Actor::new(data.id, data.fpos_x, data.fpos_y, data.size, 0.0, data.collision_radius, data.cell_width, data.cell_height, subcell_grid_size, offset_x, offset_y);
                         actor.use_directing_v2 = state.use_directing_v2;
+                        actor.distance_tolerance_multiplier = state.actor_distance_tolerance_multiplier;
                         actor
                     })
                     .collect();
