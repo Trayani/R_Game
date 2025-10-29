@@ -901,6 +901,76 @@ impl Actor {
         }
     }
 
+    /// Evaluate look-ahead (2-step) path quality from a candidate subcell
+    /// Returns the distance from the best 2nd-step neighbor to destination
+    /// Returns None if no valid 2nd-step exists (all neighbors blocked/reserved by others)
+    ///
+    /// This is used to break deadlocks when hysteresis detects equidistant candidates.
+    /// By looking one step ahead, we can choose the path that leads to better future positions.
+    fn evaluate_lookahead_candidate(
+        candidate: &SubCellCoord,
+        dest_x: f32,
+        dest_y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        subcell_offset_x: f32,
+        subcell_offset_y: f32,
+        reservation_manager: &crate::subcell::SubCellReservationManager,
+        actor_id: usize,
+    ) -> Option<f32> {
+        // Get all 8 neighbors FROM the candidate position
+        let neighbors = candidate.get_neighbors();
+
+        // Calculate direction from candidate to destination for alignment scoring
+        let (candidate_center_x, candidate_center_y) = candidate.to_screen_center_with_offset(
+            cell_width,
+            cell_height,
+            subcell_offset_x,
+            subcell_offset_y,
+        );
+        let dir_x = dest_x - candidate_center_x;
+        let dir_y = dest_y - candidate_center_y;
+
+        // Filter and score valid neighbors
+        let mut best_distance: Option<f32> = None;
+
+        for neighbor in &neighbors {
+            // Skip if reserved by ANOTHER actor (we're allowed to move through our own reservations)
+            if let Some(reserver_id) = reservation_manager.is_reserved(neighbor) {
+                if reserver_id != actor_id {
+                    continue; // Reserved by someone else, skip
+                }
+            }
+
+            // Calculate alignment score (dot product of direction vectors)
+            let alignment = neighbor.alignment_score(candidate, dir_x, dir_y, cell_width, cell_height);
+
+            // Skip backward moves (negative alignment)
+            if alignment < 0.0 {
+                continue;
+            }
+
+            // Calculate distance from this 2nd-step position to destination
+            let distance = Self::subcell_center_distance_to_destination(
+                neighbor,
+                dest_x,
+                dest_y,
+                cell_width,
+                cell_height,
+                subcell_offset_x,
+                subcell_offset_y,
+            );
+
+            // Track best (smallest) distance
+            best_distance = Some(match best_distance {
+                None => distance,
+                Some(current_best) => current_best.min(distance),
+            });
+        }
+
+        best_distance
+    }
+
     /// Calculate Euclidean distance from subcell center to destination
     /// Used for PSC switching logic to determine which subcell is closer to destination
     fn subcell_center_distance_to_destination(
@@ -2596,14 +2666,76 @@ impl Actor {
                         }
                         (anchor, "Anchor".to_string())
                     } else {
-                        // Within epsilon - effectively equidistant, prefer diagonal for consistent progress
-                        println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), preferring RESERVED (diagonal)",
+                        // Within epsilon - effectively equidistant, use look-ahead to break deadlock
+                        println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
                             HYSTERESIS_EPSILON);
-                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - hysteresis tie-break");
-                        if always_trace || (self.id == 0 && track_movement) {
-                            println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC (hysteresis)");
-                        }
-                        (reserved, "Reserved".to_string())
+
+                        // Evaluate 2-step paths from both candidates
+                        let lookahead_reserved = Self::evaluate_lookahead_candidate(
+                            &reserved,
+                            dest_screen_x,
+                            dest_screen_y,
+                            self.cell_width,
+                            self.cell_height,
+                            self.subcell_offset_x,
+                            self.subcell_offset_y,
+                            reservation_manager,
+                            self.id,
+                        );
+                        let lookahead_anchor = Self::evaluate_lookahead_candidate(
+                            &anchor,
+                            dest_screen_x,
+                            dest_screen_y,
+                            self.cell_width,
+                            self.cell_height,
+                            self.subcell_offset_x,
+                            self.subcell_offset_y,
+                            reservation_manager,
+                            self.id,
+                        );
+
+                        // Choose based on look-ahead results
+                        let (chosen, chosen_name) = match (lookahead_reserved, lookahead_anchor) {
+                            (Some(dist_r), Some(dist_a)) => {
+                                println!("  [LOOKAHEAD] reserved_2step={:.6} anchor_2step={:.6}", dist_r, dist_a);
+                                if dist_r < dist_a {
+                                    println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    if always_trace || (self.id == 0 && track_movement) {
+                                        println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC (lookahead)");
+                                    }
+                                    (reserved, "Reserved (lookahead)".to_string())
+                                } else {
+                                    println!("  [LOOKAHEAD] Breaking deadlock: chose ANCHOR (better 2-step)");
+                                    if always_trace || (self.id == 0 && track_movement) {
+                                        println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC (lookahead)");
+                                    }
+                                    (anchor, "Anchor (lookahead)".to_string())
+                                }
+                            }
+                            (Some(_), None) => {
+                                println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Chose RESERVED (only valid lookahead)");
+                                }
+                                (reserved, "Reserved (only valid lookahead)".to_string())
+                            }
+                            (None, Some(_)) => {
+                                println!("  [LOOKAHEAD] Only anchor has valid 2-step");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Chose ANCHOR (only valid lookahead)");
+                                }
+                                (anchor, "Anchor (only valid lookahead)".to_string())
+                            }
+                            (None, None) => {
+                                println!("  [LOOKAHEAD] Both blocked, falling back to reserved (diagonal)");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Chose RESERVED (deadlock, both blocked)");
+                                }
+                                (reserved, "Reserved (deadlock)".to_string())
+                            }
+                        };
+
+                        (chosen, chosen_name)
                     };
 
                     // Create PSC selection info for logging
@@ -2662,14 +2794,76 @@ impl Actor {
                         }
                         (reserved, "Reserved".to_string())
                     } else {
-                        // Stay at current (reserved not clearly better, prevents oscillation)
-                        println!("  [PSC_HV] HYSTERESIS: staying at CURRENT - reserved not clearly better (within epsilon {:.6})",
+                        // Within epsilon - use look-ahead to break deadlock
+                        println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
                             HYSTERESIS_EPSILON);
-                        println!("  [PSC_HV] Chose CURRENT (stayed) - hysteresis prevents switching");
-                        if always_trace || (self.id == 0 && track_movement) {
-                            println!("  [PSC SELECTION] H/V move, staying at current PSC (hysteresis)");
-                        }
-                        (current, "Current".to_string())
+
+                        // Evaluate 2-step paths from both candidates
+                        let lookahead_current = Self::evaluate_lookahead_candidate(
+                            &current,
+                            dest_screen_x,
+                            dest_screen_y,
+                            self.cell_width,
+                            self.cell_height,
+                            self.subcell_offset_x,
+                            self.subcell_offset_y,
+                            reservation_manager,
+                            self.id,
+                        );
+                        let lookahead_reserved = Self::evaluate_lookahead_candidate(
+                            &reserved,
+                            dest_screen_x,
+                            dest_screen_y,
+                            self.cell_width,
+                            self.cell_height,
+                            self.subcell_offset_x,
+                            self.subcell_offset_y,
+                            reservation_manager,
+                            self.id,
+                        );
+
+                        // Choose based on look-ahead results
+                        let (chosen, chosen_name) = match (lookahead_current, lookahead_reserved) {
+                            (Some(dist_c), Some(dist_r)) => {
+                                println!("  [LOOKAHEAD] current_2step={:.6} reserved_2step={:.6}", dist_c, dist_r);
+                                if dist_r < dist_c {
+                                    println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    if always_trace || (self.id == 0 && track_movement) {
+                                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC (lookahead)");
+                                    }
+                                    (reserved, "Reserved (lookahead)".to_string())
+                                } else {
+                                    println!("  [LOOKAHEAD] Staying at CURRENT (better 2-step)");
+                                    if always_trace || (self.id == 0 && track_movement) {
+                                        println!("  [PSC SELECTION] H/V move, staying at current PSC (lookahead)");
+                                    }
+                                    (current, "Current (lookahead)".to_string())
+                                }
+                            }
+                            (Some(_), None) => {
+                                println!("  [LOOKAHEAD] Only current has valid 2-step");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Staying at current (only valid lookahead)");
+                                }
+                                (current, "Current (only valid lookahead)".to_string())
+                            }
+                            (None, Some(_)) => {
+                                println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Using reserved (only valid lookahead)");
+                                }
+                                (reserved, "Reserved (only valid lookahead)".to_string())
+                            }
+                            (None, None) => {
+                                println!("  [LOOKAHEAD] Both blocked, staying at current");
+                                if always_trace || (self.id == 0 && track_movement) {
+                                    println!("  [PSC SELECTION] Staying at current (deadlock, both blocked)");
+                                }
+                                (current, "Current (deadlock)".to_string())
+                            }
+                        };
+
+                        (chosen, chosen_name)
                     };
 
                     let info = PSCSelectionInfo {
