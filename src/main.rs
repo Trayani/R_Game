@@ -905,6 +905,26 @@ impl VisState {
                 }
             }
         }
+
+        // Draw small black dots at each subcell intersection point
+        let dot_radius = 1.5;
+        let dot_color = BLACK;
+
+        // Calculate total number of subcell grid points
+        let total_subcell_points_x = self.grid.cols * subdivisions + 1;
+        let total_subcell_points_y = self.grid.rows * subdivisions + 1;
+
+        let subcell_width = self.cell_width / subdivisions as f32;
+        let subcell_height = self.cell_height / subdivisions as f32;
+
+        // Draw dots at each subcell intersection point
+        for sub_y in 0..total_subcell_points_y {
+            for sub_x in 0..total_subcell_points_x {
+                let dot_x = sub_x as f32 * subcell_width;
+                let dot_y = sub_y as f32 * subcell_height;
+                draw_circle(dot_x, dot_y, dot_radius, dot_color);
+            }
+        }
     }
 
     fn draw_corners(&self) {
