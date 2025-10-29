@@ -969,12 +969,6 @@ impl Actor {
             .iter()
             .filter(|n| Self::is_diagonal_move(current, n))
             .filter(|n| {
-                // ANTI-ZIGZAG: For DestinationDirect, only consider diagonal moves to NEXT cell
-                // This prevents zigzagging between subcells within the same cell
-                // A diagonal move should make progress: at least one of cell_x or cell_y must change
-                n.cell_x != current.cell_x || n.cell_y != current.cell_y
-            })
-            .filter(|n| {
                 // DESIGN DOC RULE (line 20): Filter candidates that would increase distance
                 // "individual Manhattan-like distances of X and Y float coordinates must never increase"
                 !current.violates_distance_rule(
@@ -1071,12 +1065,6 @@ impl Actor {
         let diagonal_candidates: Vec<SubCellCoord> = neighbors
             .iter()
             .filter(|n| Self::is_diagonal_move(current, n))
-            .filter(|n| {
-                // ANTI-ZIGZAG: For DestinationDirect, only consider diagonal moves to NEXT cell
-                // This prevents zigzagging between subcells within the same cell
-                // A diagonal move should make progress: at least one of cell_x or cell_y must change
-                n.cell_x != current.cell_x || n.cell_y != current.cell_y
-            })
             .filter(|n| {
                 // DESIGN DOC RULE: Filter candidates that would increase distance
                 !current.violates_distance_rule(
