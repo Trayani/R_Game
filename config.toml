@@ -11,7 +11,7 @@ rows = 80
 # Cell size in pixels
 # Default: 20.0 width, 15.0 height
 cell_width = 20.0
-cell_height = 15.0
+cell_height = 16.0
 
 [observer]
 # Starting observer position (grid coordinates)

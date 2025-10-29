@@ -834,9 +834,30 @@ impl Actor {
             anchor = Self::get_vertical_anchor(psc, diagonal);
         }
 
-        // Clamp target to rectangle bounds (defensive)
-        let target_x = target_x.max(rect_min_x).min(rect_max_x);
-        let target_y = target_y.max(rect_min_y).min(rect_max_y);
+        // LOGICAL CLAMPING: Apply affinity-specific clamping
+        // - Horizontal affinity: clamp X only (target on vertical edge, Y determined by ray)
+        // - Vertical affinity: clamp Y only (target on horizontal edge, X determined by ray)
+        // - Both affinity: clamp both (target at corner)
+        let target_x_unclamped = target_x;
+        let target_y_unclamped = target_y;
+
+        let target_x = match affinity {
+            Affinity::Horizontal | Affinity::Both => target_x.max(rect_min_x).min(rect_max_x),
+            Affinity::Vertical => target_x, // No X clamping for vertical affinity
+        };
+        let target_y = match affinity {
+            Affinity::Vertical | Affinity::Both => target_y.max(rect_min_y).min(rect_max_y),
+            Affinity::Horizontal => target_y, // No Y clamping for horizontal affinity
+        };
+
+        // Debug log for actor 0 to verify fix
+        if self.id == 0 {
+            println!("[TARGET CLAMP] affinity={:?}", affinity);
+            println!("  Unclamped: ({:.2}, {:.2})", target_x_unclamped, target_y_unclamped);
+            println!("  Clamped:   ({:.2}, {:.2})", target_x, target_y);
+            println!("  Rect bounds: X=[{:.1}, {:.1}], Y=[{:.1}, {:.1}]",
+                rect_min_x, rect_max_x, rect_min_y, rect_max_y);
+        }
 
         AffinityResult {
             affinity,
