@@ -10,3 +10,4 @@ toml = "0.8"
 macroquad = "0.4"
 arboard = "3.4"
 rusqlite = { version = "0.31", features = ["bundled"] }
+crossbeam-channel = "0.5"

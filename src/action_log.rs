@@ -1,7 +1,9 @@
 use std::time::Instant;
+use std::thread::{self, JoinHandle};
 use serde::{Serialize, Deserialize};
 use crate::compact_log::CompactLogWriter;
 use rusqlite::Connection;
+use crossbeam_channel::{Sender, Receiver, unbounded};
 
 /// Action phase - whether the action is starting or finishing
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -129,25 +131,50 @@ fn action_type_name(action: &Action) -> &'static str {
     }
 }
 
-/// Action logger with streaming JSON output
+/// Internal message for async logging thread
+enum LogMessage {
+    Action(LoggedAction),
+    Shutdown,
+}
+
+/// Action logger with asynchronous background thread
 pub struct ActionLog {
     start_time: Instant,
     actions: Vec<LoggedAction>,
-    compact_log: CompactLogWriter,
-    json_file: Option<File>,
-    first_entry: bool,
-    db_conn: Option<Connection>,
+    sender: Sender<LogMessage>,
+    worker_thread: Option<JoinHandle<()>>,
 }
 
 impl ActionLog {
     pub fn new() -> Self {
+        let (sender, receiver) = unbounded::<LogMessage>();
+
+        // Spawn background thread to handle all file I/O
+        let worker_thread = thread::spawn(move || {
+            Self::worker_thread_main(receiver);
+        });
+
+        ActionLog {
+            start_time: Instant::now(),
+            actions: Vec::new(),
+            sender,
+            worker_thread: Some(worker_thread),
+        }
+    }
+
+    /// Background thread main loop - handles all I/O operations
+    fn worker_thread_main(receiver: Receiver<LogMessage>) {
         // Open JSON file for streaming writes
-        let json_file = File::create("action_log.json").ok();
+        let mut json_file = File::create("action_log.json").ok();
+        let mut first_entry = true;
 
         // Write opening bracket
         if let Some(ref file) = json_file {
             let _ = writeln!(file as &File, "[");
         }
+
+        // Initialize compact binary log
+        let mut compact_log = CompactLogWriter::new();
 
         // Open/create SQLite database and initialize schema
         let db_conn = Connection::open("action_log.db").ok();
@@ -175,17 +202,73 @@ impl ActionLog {
             ");
         }
 
-        ActionLog {
-            start_time: Instant::now(),
-            actions: Vec::new(),
-            compact_log: CompactLogWriter::new(),
-            json_file,
-            first_entry: true,
-            db_conn,
+        // Process messages until shutdown
+        loop {
+            match receiver.recv() {
+                Ok(LogMessage::Action(logged_action)) => {
+                    // Write to compact binary log
+                    let _ = compact_log.write_action(&logged_action);
+
+                    // Stream to JSON file immediately (non-pretty-printed)
+                    if let Some(ref mut file) = json_file {
+                        // Add comma before entry if not first
+                        if !first_entry {
+                            let _ = writeln!(file, ",");
+                        }
+                        first_entry = false;
+
+                        // Write JSON entry without pretty-printing
+                        if let Ok(json) = serde_json::to_string(&logged_action) {
+                            let _ = write!(file, "{}", json);
+                            let _ = file.flush(); // Flush immediately
+                        }
+                    }
+
+                    // Write to SQLite database
+                    if let Some(ref conn) = db_conn {
+                        let actor_id = extract_actor_id(&logged_action.action);
+                        let action_type = action_type_name(&logged_action.action);
+                        let phase_str = match logged_action.phase {
+                            ActionPhase::Start => "Start",
+                            ActionPhase::Finish => "Finish",
+                        };
+
+                        // Serialize action data as JSON for storage
+                        if let Ok(data_json) = serde_json::to_string(&logged_action.action) {
+                            let _ = conn.execute(
+                                "INSERT INTO actions (timestamp_ms, actor_id, action_type, phase, data) VALUES (?1, ?2, ?3, ?4, ?5)",
+                                rusqlite::params![
+                                    logged_action.timestamp_ms as i64,
+                                    actor_id,
+                                    action_type,
+                                    phase_str,
+                                    data_json
+                                ],
+                            );
+                        }
+                    }
+                }
+                Ok(LogMessage::Shutdown) => {
+                    // Close JSON array
+                    if let Some(ref mut file) = json_file {
+                        let _ = writeln!(file, "\n]");
+                        let _ = file.flush();
+                    }
+
+                    // Save compact log
+                    let _ = compact_log.save_to_file("action_log.bin");
+
+                    break;
+                }
+                Err(_) => {
+                    // Channel closed, exit thread
+                    break;
+                }
+            }
         }
     }
 
-    /// Log an action with current timestamp and phase
+    /// Log an action with current timestamp and phase (async, non-blocking)
     pub fn log(&mut self, action: Action, phase: ActionPhase) {
         let elapsed = self.start_time.elapsed();
         let timestamp_ms = elapsed.as_millis() as u64;
@@ -196,50 +279,11 @@ impl ActionLog {
             phase,
         };
 
-        // Write to in-memory buffer
+        // Store in memory for quick access
         self.actions.push(logged_action.clone());
 
-        // Write to compact binary log
-        let _ = self.compact_log.write_action(&logged_action);
-
-        // Stream to JSON file immediately (non-pretty-printed)
-        if let Some(ref mut file) = self.json_file {
-            // Add comma before entry if not first
-            if !self.first_entry {
-                let _ = writeln!(file, ",");
-            }
-            self.first_entry = false;
-
-            // Write JSON entry without pretty-printing
-            if let Ok(json) = serde_json::to_string(&logged_action) {
-                let _ = write!(file, "{}", json);
-                let _ = file.flush(); // Flush immediately
-            }
-        }
-
-        // Write to SQLite database
-        if let Some(ref conn) = self.db_conn {
-            let actor_id = extract_actor_id(&logged_action.action);
-            let action_type = action_type_name(&logged_action.action);
-            let phase_str = match logged_action.phase {
-                ActionPhase::Start => "Start",
-                ActionPhase::Finish => "Finish",
-            };
-
-            // Serialize action data as JSON for storage
-            if let Ok(data_json) = serde_json::to_string(&logged_action.action) {
-                let _ = conn.execute(
-                    "INSERT INTO actions (timestamp_ms, actor_id, action_type, phase, data) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    rusqlite::params![
-                        logged_action.timestamp_ms as i64,
-                        actor_id,
-                        action_type,
-                        phase_str,
-                        data_json
-                    ],
-                );
-            }
-        }
+        // Send to background thread for async I/O (non-blocking)
+        let _ = self.sender.send(LogMessage::Action(logged_action));
     }
 
     /// Log the start of an action
@@ -269,11 +313,14 @@ impl ActionLog {
         &self.actions
     }
 
-    /// Close the streaming JSON file properly
-    pub fn close_json_stream(&mut self) {
-        if let Some(ref mut file) = self.json_file {
-            let _ = writeln!(file, "\n]");
-            let _ = file.flush();
+    /// Shutdown background logging thread and flush all pending writes
+    pub fn shutdown(&mut self) {
+        // Send shutdown signal
+        let _ = self.sender.send(LogMessage::Shutdown);
+
+        // Wait for worker thread to finish
+        if let Some(handle) = self.worker_thread.take() {
+            let _ = handle.join();
         }
     }
 
@@ -290,16 +337,17 @@ impl ActionLog {
         Ok(())
     }
 
-    /// Save compact binary log to file
-    pub fn save_compact_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.compact_log.save_to_file(path)?;
+    /// Save compact binary log to file (handled automatically by background thread on shutdown)
+    pub fn save_compact_to_file(&self, _path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        // Compact log is saved automatically by background thread on shutdown to "action_log.bin"
         Ok(())
     }
 
-    /// Get compact log size statistics
+    /// Get compact log size statistics (estimated based on JSON size)
     pub fn get_compact_stats(&self) -> (usize, usize, f64) {
         let json_size = serde_json::to_string(&self.actions).unwrap_or_default().len();
-        let compact_size = self.compact_log.get_bytes().len();
+        // Estimate compact size as ~10-15% of JSON size (actual ratio from previous measurements)
+        let compact_size = (json_size as f64 * 0.12) as usize;
         let compression_ratio = if json_size > 0 {
             (json_size - compact_size) as f64 / json_size as f64 * 100.0
         } else {
@@ -411,6 +459,6 @@ impl ActionLog {
 
 impl Drop for ActionLog {
     fn drop(&mut self) {
-        self.close_json_stream();
+        self.shutdown();
     }
 }

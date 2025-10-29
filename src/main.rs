@@ -2264,9 +2264,9 @@ async fn main() {
             println!("\n{}", state.action_log.summary());
             state.action_log.print_with_durations();
 
-            // Close the streaming JSON log
-            state.action_log.close_json_stream();
-            println!("Action log saved to action_log.json (streaming mode)");
+            // Shutdown async logging and flush all pending writes
+            state.action_log.shutdown();
+            println!("Action log saved to action_log.json, action_log.bin, and action_log.db");
 
             // Save to files (compact binary only, JSON already streamed)
             if let Err(e) = state.action_log.save_to_file("action_log.json") {
