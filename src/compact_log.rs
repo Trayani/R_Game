@@ -163,6 +163,59 @@ impl CompactLogWriter {
                 self.write_i32(*anchor_sub_x);
                 self.write_i32(*anchor_sub_y);
             }
+            Action::PSCSelection {
+                actor_id,
+                old_psc_cell_x,
+                old_psc_cell_y,
+                old_psc_sub_x,
+                old_psc_sub_y,
+                reserved_cell_x,
+                reserved_cell_y,
+                reserved_sub_x,
+                reserved_sub_y,
+                reserved_dist,
+                anchor_cell_x,
+                anchor_cell_y,
+                anchor_sub_x,
+                anchor_sub_y,
+                anchor_dist,
+                chosen,
+                chosen_cell_x,
+                chosen_cell_y,
+                chosen_sub_x,
+                chosen_sub_y,
+            } => {
+                self.buffer.push(19 | phase_bit);
+                self.write_varint(*actor_id as u64);
+                self.write_i32(*old_psc_cell_x);
+                self.write_i32(*old_psc_cell_y);
+                self.write_i32(*old_psc_sub_x);
+                self.write_i32(*old_psc_sub_y);
+                self.write_i32(*reserved_cell_x);
+                self.write_i32(*reserved_cell_y);
+                self.write_i32(*reserved_sub_x);
+                self.write_i32(*reserved_sub_y);
+                self.write_f32(*reserved_dist);
+                // Write anchor presence flag and data
+                if let (Some(ax), Some(ay), Some(asx), Some(asy), Some(ad)) =
+                    (*anchor_cell_x, *anchor_cell_y, *anchor_sub_x, *anchor_sub_y, *anchor_dist) {
+                    self.buffer.push(1); // Has anchor
+                    self.write_i32(ax);
+                    self.write_i32(ay);
+                    self.write_i32(asx);
+                    self.write_i32(asy);
+                    self.write_f32(ad);
+                } else {
+                    self.buffer.push(0); // No anchor
+                }
+                // Encode chosen as u8: 0=Reserved, 1=Anchor
+                let chosen_byte = if chosen == "Reserved" { 0 } else { 1 };
+                self.buffer.push(chosen_byte);
+                self.write_i32(*chosen_cell_x);
+                self.write_i32(*chosen_cell_y);
+                self.write_i32(*chosen_sub_x);
+                self.write_i32(*chosen_sub_y);
+            }
         }
 
         Ok(())

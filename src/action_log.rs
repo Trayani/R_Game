@@ -55,6 +55,29 @@ pub enum Action {
         anchor_sub_x: i32,
         anchor_sub_y: i32,
     },
+    /// PSC (Primary SubCell) selection when target reached
+    PSCSelection {
+        actor_id: usize,
+        old_psc_cell_x: i32,
+        old_psc_cell_y: i32,
+        old_psc_sub_x: i32,
+        old_psc_sub_y: i32,
+        reserved_cell_x: i32,
+        reserved_cell_y: i32,
+        reserved_sub_x: i32,
+        reserved_sub_y: i32,
+        reserved_dist: f32,
+        anchor_cell_x: Option<i32>,  // None for H/V moves
+        anchor_cell_y: Option<i32>,
+        anchor_sub_x: Option<i32>,
+        anchor_sub_y: Option<i32>,
+        anchor_dist: Option<f32>,
+        chosen: String,  // "Reserved" or "Anchor"
+        chosen_cell_x: i32,
+        chosen_cell_y: i32,
+        chosen_sub_x: i32,
+        chosen_sub_y: i32,
+    },
 }
 
 /// Logged action with timestamp and phase

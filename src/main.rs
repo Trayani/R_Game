@@ -1036,11 +1036,15 @@ impl VisState {
             if self.subcell_movement_enabled && self.show_subcell_markers {
                 let (offset_x, offset_y) = self.subcell_offset.get_offsets();
 
-                // Draw current sub-cell (green)
+                // Draw current sub-cell (PSC - bright cyan with thick border)
                 if let Some(current_sc) = actor.current_subcell {
                     let (cx, cy) = current_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
-                    draw_circle(cx, cy, 4.0, GREEN);
-                    draw_circle_lines(cx, cy, 6.0, 1.5, GREEN);
+                    // PSC gets a thicker, brighter cyan border to stand out
+                    draw_circle(cx, cy, 5.0, SKYBLUE);
+                    draw_circle_lines(cx, cy, 8.0, 2.5, SKYBLUE);
+
+                    // Draw "PSC" label above the circle
+                    draw_text("PSC", cx - 10.0, cy - 12.0, 12.0, WHITE);
                 }
 
                 // Draw reserved sub-cell (yellow)
@@ -1051,16 +1055,24 @@ impl VisState {
 
                     // Draw line from actor to reserved sub-cell
                     draw_line(actor.fpos_x, actor.fpos_y, rx, ry, 1.5, YELLOW);
+
+                    // Draw "R" label for reserved
+                    draw_text("R", rx - 4.0, ry - 12.0, 12.0, YELLOW);
                 }
 
-                // Draw extra reserved sub-cells (from square reservation) with black lines
-                for extra_sc in &actor.extra_reserved_subcells {
+                // Draw extra reserved sub-cells (anchor) with orange
+                for (idx, extra_sc) in actor.extra_reserved_subcells.iter().enumerate() {
                     let (ex, ey) = extra_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
-                    draw_circle(ex, ey, 3.0, BLACK);
-                    draw_circle_lines(ex, ey, 5.0, 1.5, BLACK);
+                    draw_circle(ex, ey, 3.5, ORANGE);
+                    draw_circle_lines(ex, ey, 5.5, 1.5, ORANGE);
 
-                    // Draw black line from actor to extra reserved sub-cell
-                    draw_line(actor.fpos_x, actor.fpos_y, ex, ey, 1.5, BLACK);
+                    // Draw orange line from actor to extra reserved sub-cell (anchor)
+                    draw_line(actor.fpos_x, actor.fpos_y, ex, ey, 1.5, ORANGE);
+
+                    // Draw "A" label for anchor
+                    if idx == 0 {
+                        draw_text("A", ex - 4.0, ey - 12.0, 12.0, ORANGE);
+                    }
                 }
 
                 // Draw destination
@@ -1314,7 +1326,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter | W: toggle directing v2\nO: spawn actor | 0: clear all actors | L: toggle tracking ({}) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close",
+            "Observer: ({}, {}){}{}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers (shows PSC/Reserved/Anchor) | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter | W: toggle directing v2\nO: spawn actor | 0: clear all actors | L: toggle tracking {} (logs PSC selection to console+action_log.json) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close\n\nPSC Visualization: Cyan=PSC (Primary SubCell), Yellow=Reserved, Orange=Anchor",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1329,6 +1341,46 @@ impl VisState {
             self.tracking_mode.to_string()
         );
         draw_text(&info, 10.0, 20.0, 20.0, WHITE);
+
+        // Draw PSC debug info for first actor if markers are enabled
+        if self.subcell_movement_enabled && self.show_subcell_markers && !self.actors.is_empty() {
+            let actor = &self.actors[0];
+            let mut debug_y = 200.0;
+
+            // Draw PSC info
+            if let Some(psc) = actor.current_subcell {
+                let psc_text = format!("PSC: cell=({},{}), sub=({},{})",
+                    psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y);
+                draw_text(&psc_text, 10.0, debug_y, 18.0, SKYBLUE);
+                debug_y += 20.0;
+            }
+
+            // Draw reserved & anchor info with distances
+            if let Some(reserved) = actor.reserved_subcell {
+                let reserved_text = format!("Reserved: cell=({},{}), sub=({},{})",
+                    reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+                draw_text(&reserved_text, 10.0, debug_y, 18.0, YELLOW);
+                debug_y += 20.0;
+
+                // Show anchor if present
+                if let Some(anchor) = actor.extra_reserved_subcells.get(0) {
+                    let anchor_text = format!("Anchor: cell=({},{}), sub=({},{})",
+                        anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+                    draw_text(&anchor_text, 10.0, debug_y, 18.0, ORANGE);
+                    debug_y += 20.0;
+
+                    // Show which was chosen on last PSC switch (if available)
+                    if let Some(ref last_psc) = actor.last_psc_selection {
+                        let choice_text = format!("Last PSC switch chose: {} (R: {:.1}px, A: {:.1}px)",
+                            last_psc.chosen_name,
+                            last_psc.reserved_dist,
+                            last_psc.anchor_dist.unwrap_or(0.0));
+                        draw_text(&choice_text, 10.0, debug_y, 18.0, WHITE);
+                        debug_y += 20.0;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1937,6 +1989,32 @@ async fn main() {
                         anchor_cell_y: directing_info.anchor.cell_y,
                         anchor_sub_x: directing_info.anchor.sub_x,
                         anchor_sub_y: directing_info.anchor.sub_y,
+                    });
+                }
+
+                // Log PSC selection decisions to action log
+                if let Some(psc_info) = state.actors[i].last_psc_selection.take() {
+                    state.action_log.log_event(Action::PSCSelection {
+                        actor_id: state.actors[i].id,
+                        old_psc_cell_x: psc_info.old_psc.cell_x,
+                        old_psc_cell_y: psc_info.old_psc.cell_y,
+                        old_psc_sub_x: psc_info.old_psc.sub_x,
+                        old_psc_sub_y: psc_info.old_psc.sub_y,
+                        reserved_cell_x: psc_info.reserved.cell_x,
+                        reserved_cell_y: psc_info.reserved.cell_y,
+                        reserved_sub_x: psc_info.reserved.sub_x,
+                        reserved_sub_y: psc_info.reserved.sub_y,
+                        reserved_dist: psc_info.reserved_dist,
+                        anchor_cell_x: psc_info.anchor.map(|a| a.cell_x),
+                        anchor_cell_y: psc_info.anchor.map(|a| a.cell_y),
+                        anchor_sub_x: psc_info.anchor.map(|a| a.sub_x),
+                        anchor_sub_y: psc_info.anchor.map(|a| a.sub_y),
+                        anchor_dist: psc_info.anchor_dist,
+                        chosen: psc_info.chosen_name.clone(),
+                        chosen_cell_x: psc_info.chosen.cell_x,
+                        chosen_cell_y: psc_info.chosen.cell_y,
+                        chosen_sub_x: psc_info.chosen.sub_x,
+                        chosen_sub_y: psc_info.chosen.sub_y,
                     });
                 }
             }

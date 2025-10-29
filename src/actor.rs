@@ -42,6 +42,18 @@ pub struct DirectingInfo {
     pub anchor: SubCellCoord,
 }
 
+/// PSC selection information for logging - captures PSC switching decision
+#[derive(Clone, Debug)]
+pub struct PSCSelectionInfo {
+    pub old_psc: SubCellCoord,
+    pub reserved: SubCellCoord,
+    pub reserved_dist: f32,
+    pub anchor: Option<SubCellCoord>,  // None for H/V moves
+    pub anchor_dist: Option<f32>,
+    pub chosen: SubCellCoord,
+    pub chosen_name: String,  // "Reserved" or "Anchor"
+}
+
 /// Movement event for logging
 #[derive(Clone, Debug)]
 pub enum MovementEvent {
@@ -119,6 +131,8 @@ pub struct Actor {
     pub use_directing_v2: bool,
     /// Last directing decision for logging - cleared after main.rs logs it
     pub last_directing_info: Option<DirectingInfo>,
+    /// Last PSC selection for logging - cleared after main.rs logs it
+    pub last_psc_selection: Option<PSCSelectionInfo>,
     /// Diagnostic messages to log to action log (cleared after main.rs logs them)
     pub diagnostic_messages: Vec<String>,
 }
@@ -176,6 +190,7 @@ impl Actor {
             locked_affinity: None,
             use_directing_v2: true,
             last_directing_info: None,
+            last_psc_selection: None,
             diagnostic_messages: Vec::new(),
         }
     }
@@ -2484,7 +2499,7 @@ impl Actor {
                 // CRITICAL: Choose the CLOSER subcell as new PSC (before switching)
                 // For diagonal moves, we have both 'reserved' (diagonal) and 'anchor' (H or V)
                 // We must choose whichever is closer to the destination
-                let new_psc = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
+                let (new_psc, psc_selection_info) = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
                     // Diagonal move - compare distances
                     let dist_reserved = Self::subcell_center_distance_to_destination(
                         &reserved,
@@ -2511,24 +2526,62 @@ impl Actor {
                     }
 
                     // Choose closer subcell (tie-break: prefer reserved for diagonal progress)
-                    if dist_reserved <= dist_anchor {
+                    let (chosen, chosen_name) = if dist_reserved <= dist_anchor {
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
                         }
-                        reserved
+                        (reserved, "Reserved".to_string())
                     } else {
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
                         }
-                        anchor
-                    }
+                        (anchor, "Anchor".to_string())
+                    };
+
+                    // Create PSC selection info for logging
+                    let info = PSCSelectionInfo {
+                        old_psc: current,
+                        reserved,
+                        reserved_dist: dist_reserved,
+                        anchor: Some(anchor),
+                        anchor_dist: Some(dist_anchor),
+                        chosen,
+                        chosen_name,
+                    };
+
+                    (chosen, Some(info))
                 } else {
                     // H/V move - no anchor, use reserved directly
                     if always_trace || (self.id == 0 && track_movement) {
                         println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
                     }
-                    reserved
+
+                    // Create PSC selection info for H/V move
+                    let dist_reserved = Self::subcell_center_distance_to_destination(
+                        &reserved,
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    let info = PSCSelectionInfo {
+                        old_psc: current,
+                        reserved,
+                        reserved_dist: dist_reserved,
+                        anchor: None,
+                        anchor_dist: None,
+                        chosen: reserved,
+                        chosen_name: "Reserved".to_string(),
+                    };
+
+                    (reserved, Some(info))
                 };
+
+                // Store PSC selection info for main.rs to log
+                self.last_psc_selection = psc_selection_info;
 
                 // If mirror failed or not applicable, fall back to standard switching
                 if !mirror_reserved {
