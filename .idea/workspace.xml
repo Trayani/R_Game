@@ -11,7 +11,12 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="" />
+    <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/ANCHOR_FIX_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/actor_orientation/VERIFICATION_REPORT.md" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -272,5 +277,64 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/actor.rs</url>
+          <line>1067</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="CargoCommandRunConfiguration">
+        <watch expression="actor_x" />
+        <watch expression="actor_y" />
+        <watch expression="psc" language="Rust" />
+        <watch expression="psc-&gt;cell_x" />
+        <watch expression="psc-&gt;cell_y" />
+        <watch expression="psc-&gt;sub_x" />
+        <watch expression="psc-&gt;sub_y" />
+        <watch expression="psc-&gt;grid_size" />
+        <watch expression="diagonal" />
+        <watch expression="diagonal-&gt;cell_x" />
+        <watch expression="diagonal-&gt;cell_y" />
+        <watch expression="diagonal-&gt;sub_x" />
+        <watch expression="diagonal-&gt;sub_y" />
+        <watch expression="diagonal-&gt;grid_size" />
+        <watch expression="dest_x" />
+        <watch expression="dest_y" />
+        <watch expression="sub_cell_width" />
+        <watch expression="sub_cell_height" />
+        <watch expression="psc_x" />
+        <watch expression="psc_y" />
+        <watch expression="diag_x" />
+        <watch expression="diag_y" />
+        <watch expression="rect_min_x" />
+        <watch expression="rect_max_x" />
+        <watch expression="rect_min_y" />
+        <watch expression="rect_max_y" />
+        <watch expression="dir_x" />
+        <watch expression="dir_y" />
+        <watch expression="dir_len" />
+        <watch expression="ray_x" />
+        <watch expression="ray_y" />
+        <watch expression="t_vertical" />
+        <watch expression="t_horizontal" />
+        <watch expression="affinity" />
+        <watch expression="target_x" />
+        <watch expression="target_y" />
+        <watch expression="anchor" />
+        <watch expression="anchor.cell_x" />
+        <watch expression="anchor.cell_y" />
+        <watch expression="anchor.sub_x" />
+        <watch expression="anchor.sub_y" />
+        <watch expression="anchor.grid_size" />
+        <watch expression="target_x" />
+        <watch expression="target_y" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

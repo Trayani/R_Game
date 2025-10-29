@@ -1529,7 +1529,45 @@ async fn main() {
             actor.use_directing_v2 = state.use_directing_v2;
             state.actors.push(actor);
             state.action_log.log_finish(Action::SpawnActor { x: mouse_x, y: mouse_y });
-            let msg = format!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}", actor_id, mouse_x, mouse_y, state.actors.len());
+
+            // Calculate subcell rectangle information for logging
+            let actor_ref = state.actors.last().unwrap();
+            let subcell_info = if let Some(ref sc) = actor_ref.current_subcell {
+                let sub_cell_width = state.cell_width / subcell_grid_size as f32;
+                let sub_cell_height = state.cell_height / subcell_grid_size as f32;
+                let max_sub = subcell_grid_size - 1;
+
+                // Helper closure to calculate screen position for a subcell
+                let calc_screen_pos = |sub_x: i32, sub_y: i32| -> (f32, f32) {
+                    let screen_x = sc.cell_x as f32 * state.cell_width
+                        + sub_x as f32 * sub_cell_width
+                        - offset_x * sub_cell_width;
+                    let screen_y = sc.cell_y as f32 * state.cell_height
+                        + sub_y as f32 * sub_cell_height
+                        - offset_y * sub_cell_height;
+                    (screen_x, screen_y)
+                };
+
+                // Calculate 4 corners
+                let (tl_x, tl_y) = calc_screen_pos(0, 0);
+                let (tr_x, tr_y) = calc_screen_pos(max_sub, 0);
+                let (bl_x, bl_y) = calc_screen_pos(0, max_sub);
+                let (br_x, br_y) = calc_screen_pos(max_sub, max_sub);
+
+                format!(
+                    "\n  Current subcell: ({}, {}, {}, {}) grid_size={}\n  Cell corners:\n    TL ({},{},{},{}) @ ({:.1}, {:.1})\n    TR ({},{},{},{}) @ ({:.1}, {:.1})\n    BL ({},{},{},{}) @ ({:.1}, {:.1})\n    BR ({},{},{},{}) @ ({:.1}, {:.1})",
+                    sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y, sc.grid_size,
+                    sc.cell_x, sc.cell_y, 0, 0, tl_x, tl_y,
+                    sc.cell_x, sc.cell_y, max_sub, 0, tr_x, tr_y,
+                    sc.cell_x, sc.cell_y, 0, max_sub, bl_x, bl_y,
+                    sc.cell_x, sc.cell_y, max_sub, max_sub, br_x, br_y
+                )
+            } else {
+                String::from("\n  No subcell assigned")
+            };
+
+            let msg = format!("Actor {} spawned at ({:.1}, {:.1}). Total actors: {}{}",
+                actor_id, mouse_x, mouse_y, state.actors.len(), subcell_info);
             println!("{}", msg);
             state.action_log.log_message(&msg);
         }
