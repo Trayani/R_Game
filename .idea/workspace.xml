@@ -13,9 +13,8 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/design/actor_orientation/ANCHOR_FIX_REPORT.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/design/actor_orientation/VERIFICATION_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/actor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/actor.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +106,7 @@
     </option>
   </component>
   <component name="RunManager" selected="Cargo.Run rustgame3">
-    <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+    <configuration name="Run rustgame3" type="CargoCommandRunConfiguration" factoryName="Cargo Command" singleton="false" temporary="true">
       <option name="buildProfileId" value="dev" />
       <option name="command" value="run --package rustgame3 --bin rustgame3" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -195,6 +194,13 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="Cargo.Run rustgame3" />
+      <item itemvalue="Cargo.test" />
+      <item itemvalue="Cargo.Test ray" />
+      <item itemvalue="Cargo.Test test_actor_directing" />
+      <item itemvalue="Cargo.Test test_save_state_simulation" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Cargo.Run rustgame3" />
@@ -279,15 +285,6 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/src/actor.rs</url>
-          <line>1067</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
     <watches-manager>
       <configuration name="CargoCommandRunConfiguration">
         <watch expression="actor_x" />

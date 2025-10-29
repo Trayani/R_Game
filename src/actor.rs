@@ -667,12 +667,12 @@ impl Actor {
         const EPSILON: f32 = 1e-6;
 
         // Step 1: Define rectangle bounds
-        // Subcells are at grid intersections (0.0, 1.0, 2.0, ...), NOT at centers
-        // actor_directing_v2.txt line 69-70: "Subcells are at grid line intersections"
+        // Use offset coordinate system for fluid movement (matches to_screen_center_with_offset)
+        // When offset=0.5, subcells are positioned at their actual screen locations in offset system
         let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
         let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
 
-        // Calculate grid intersection positions (corners, not centers)
+        // Calculate subcell positions in offset coordinate system
         let psc_x = psc.cell_x as f32 * self.cell_width + psc.sub_x as f32 * sub_cell_width
             - self.subcell_offset_x * sub_cell_width;
         let psc_y = psc.cell_y as f32 * self.cell_height + psc.sub_y as f32 * sub_cell_height
@@ -857,6 +857,31 @@ impl Actor {
             sub_y: diagonal.sub_y,
             grid_size: psc.grid_size,
         }
+    }
+
+    /// Calculate Euclidean distance from subcell center to destination
+    /// Used for PSC switching logic to determine which subcell is closer to destination
+    fn subcell_center_distance_to_destination(
+        subcell: &SubCellCoord,
+        dest_x: f32,
+        dest_y: f32,
+        cell_width: f32,
+        cell_height: f32,
+        subcell_offset_x: f32,
+        subcell_offset_y: f32,
+    ) -> f32 {
+        // Convert subcell to its center position in screen coordinates
+        let (center_x, center_y) = subcell.to_screen_center_with_offset(
+            cell_width,
+            cell_height,
+            subcell_offset_x,
+            subcell_offset_y,
+        );
+
+        // Calculate Euclidean distance to destination
+        let dx = dest_x - center_x;
+        let dy = dest_y - center_y;
+        (dx * dx + dy * dy).sqrt()
     }
 
     /// Try to reserve diagonal sub-cell with H/V anchor (triangle formation)
@@ -2403,6 +2428,14 @@ impl Actor {
             println!("  NOT MOVING: dist_to_target={:.4} < 0.001", dist_to_target);
         }
 
+        // Recalculate distance to target AFTER movement for consistent switching check
+        // (Previously used pre-movement distance, causing overshoot bugs)
+        let dist_to_target_after = {
+            let dx = target_x - self.fpos_x;
+            let dy = target_y - self.fpos_y;
+            (dx * dx + dy * dy).sqrt()
+        };
+
         // Check if we should switch from reserved to current (triangle-based switching)
         if let Some(reserved) = self.reserved_subcell {
             if always_trace || (self.id == 0 && track_movement) {
@@ -2421,18 +2454,18 @@ impl Actor {
                 let dy_to_curr = current_y - self.fpos_y;
                 let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
 
-                let switch = dist_to_target <= dist_to_current_center;
+                let switch = dist_to_target_after <= dist_to_current_center;
                 if always_trace || (self.id == 0 && track_movement) {
                     println!("  [SWITCH CHECK] EARLY MODE: dist_boundary={:.4} <= dist_center={:.4} = {}",
-                        dist_to_target, dist_to_current_center, switch);
+                        dist_to_target_after, dist_to_current_center, switch);
                 }
                 switch
             } else {
                 // Standard mode: Switch when at boundary (cannot move further)
-                let switch = dist_to_target < 0.5;
+                let switch = dist_to_target_after < 0.5;
                 if always_trace || (self.id == 0 && track_movement) {
                     println!("  [SWITCH CHECK] STANDARD MODE: dist={:.4} < 0.5 = {}",
-                        dist_to_target, switch);
+                        dist_to_target_after, switch);
                 }
                 switch
             };
@@ -2448,6 +2481,55 @@ impl Actor {
                 // Actors now use standard switching logic which correctly maintains reservations
                 let mirror_reserved = false;
 
+                // CRITICAL: Choose the CLOSER subcell as new PSC (before switching)
+                // For diagonal moves, we have both 'reserved' (diagonal) and 'anchor' (H or V)
+                // We must choose whichever is closer to the destination
+                let new_psc = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
+                    // Diagonal move - compare distances
+                    let dist_reserved = Self::subcell_center_distance_to_destination(
+                        &reserved,
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dist_anchor = Self::subcell_center_distance_to_destination(
+                        &anchor,
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [PSC SELECTION] reserved={:?} dist={:.2}, anchor={:?} dist={:.2}",
+                            reserved, dist_reserved, anchor, dist_anchor);
+                    }
+
+                    // Choose closer subcell (tie-break: prefer reserved for diagonal progress)
+                    if dist_reserved <= dist_anchor {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
+                        }
+                        reserved
+                    } else {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
+                        }
+                        anchor
+                    }
+                } else {
+                    // H/V move - no anchor, use reserved directly
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
+                    }
+                    reserved
+                };
+
                 // If mirror failed or not applicable, fall back to standard switching
                 if !mirror_reserved {
                     if always_trace || (self.id == 0 && track_movement) {
@@ -2458,21 +2540,24 @@ impl Actor {
                     if current != reserved {
                         reservation_manager.release(current, self.id);
                     }
-                    // Release extra reserved cells
+
+                    // Release extra reserved cells (not chosen as PSC)
                     for extra in &self.extra_reserved_subcells {
-                        reservation_manager.release(*extra, self.id);
+                        if *extra != new_psc {
+                            reservation_manager.release(*extra, self.id);
+                        }
                     }
                     self.extra_reserved_subcells.clear();
 
-                    // Update current to reserved
-                    self.current_subcell = Some(reserved);
+                    // Update current to the CLOSER subcell
+                    self.current_subcell = Some(new_psc);
                     self.reserved_subcell = None;
                     // Clear locked values when changing reservation
                     self.locked_target = None;
                     self.locked_affinity = None;
 
                     // Register the new current subcell
-                    reservation_manager.set_current(reserved, self.id);
+                    reservation_manager.set_current(new_psc, self.id);
 
                     // Record position when reaching subcell
                     if track_movement {
@@ -2484,7 +2569,7 @@ impl Actor {
                 // (Only if mirror didn't already set up next reservation)
                 // This prevents stuttering at boundary crossings
                 if !mirror_reserved {
-                    let current = reserved;
+                    let current = new_psc;  // Use the NEW PSC (closer subcell)
 
                     if always_trace || (self.id == 0 && track_movement) {
                         println!("  [SWITCH] After switching, current is now: {:?}", current);
