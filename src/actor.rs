@@ -2619,9 +2619,22 @@ impl Actor {
 
                     (chosen, Some(info))
                 } else {
-                    // H/V move - no anchor, use reserved directly
+                    // H/V move - no anchor, compare current vs reserved with hysteresis
+                    // Hysteresis epsilon defined in diagonal section above
+                    const HYSTERESIS_EPSILON: f32 = 0.001;
 
-                    // Create PSC selection info for H/V move
+                    // Calculate distance from current PSC to destination
+                    let dist_current = Self::subcell_center_distance_to_destination(
+                        &current,
+                        dest_screen_x,
+                        dest_screen_y,
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    // Calculate distance from reserved PSC to destination
                     let dist_reserved = Self::subcell_center_distance_to_destination(
                         &reserved,
                         dest_screen_x,
@@ -2636,12 +2649,28 @@ impl Actor {
                     println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
                         current.cell_x, current.cell_y, current.sub_x, current.sub_y,
                         reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
-                    println!("  [PSC_HV] dist_reserved={:.6} - Chose RESERVED (H/V move)",
-                        dist_reserved);
+                    println!("  [PSC_HV] dist_current={:.6} dist_reserved={:.6} diff={:.6}",
+                        dist_current, dist_reserved, (dist_reserved - dist_current).abs());
 
-                    if always_trace || (self.id == 0 && track_movement) {
-                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
-                    }
+                    // Apply hysteresis: only switch if reserved is clearly better
+                    let (chosen, chosen_name) = if dist_reserved < dist_current - HYSTERESIS_EPSILON {
+                        // Reserved is clearly better (more than epsilon closer)
+                        println!("  [PSC_HV] Chose RESERVED - dist_reserved ({:.6}) < dist_current ({:.6}) - epsilon",
+                            dist_reserved, dist_current);
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
+                        }
+                        (reserved, "Reserved".to_string())
+                    } else {
+                        // Stay at current (reserved not clearly better, prevents oscillation)
+                        println!("  [PSC_HV] HYSTERESIS: staying at CURRENT - reserved not clearly better (within epsilon {:.6})",
+                            HYSTERESIS_EPSILON);
+                        println!("  [PSC_HV] Chose CURRENT (stayed) - hysteresis prevents switching");
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] H/V move, staying at current PSC (hysteresis)");
+                        }
+                        (current, "Current".to_string())
+                    };
 
                     let info = PSCSelectionInfo {
                         old_psc: current,
@@ -2649,11 +2678,11 @@ impl Actor {
                         reserved_dist: dist_reserved,
                         anchor: None,
                         anchor_dist: None,
-                        chosen: reserved,
-                        chosen_name: "Reserved".to_string(),
+                        chosen,
+                        chosen_name,
                     };
 
-                    (reserved, Some(info))
+                    (chosen, Some(info))
                 };
 
                 // Store PSC selection info for main.rs to log
