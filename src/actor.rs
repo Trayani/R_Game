@@ -923,7 +923,18 @@ impl Actor {
         // Calculate Euclidean distance to destination
         let dx = dest_x - center_x;
         let dy = dest_y - center_y;
-        (dx * dx + dy * dy).sqrt()
+        let distance = (dx * dx + dy * dy).sqrt();
+
+        // DEBUG: Log distance calculation details
+        println!("  [DIST_CALC] subcell=({},{},{},{}) center_px=({:.2},{:.2}) dest_px=({:.2},{:.2}) cell_dim=({:.1}x{:.1}) offset=({:.2},{:.2}) dist={:.6}",
+            subcell.cell_x, subcell.cell_y, subcell.sub_x, subcell.sub_y,
+            center_x, center_y,
+            dest_x, dest_y,
+            cell_width, cell_height,
+            subcell_offset_x, subcell_offset_y,
+            distance);
+
+        distance
     }
 
     /// Try to reserve diagonal sub-cell with H/V anchor (triangle formation)
@@ -2550,18 +2561,30 @@ impl Actor {
                         self.subcell_offset_y,
                     );
 
+                    // DEBUG: Log diagonal PSC selection with high precision
+                    println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
+                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                        reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
+                        anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+                    println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6} diff={:.6}",
+                        dist_reserved, dist_anchor, (dist_reserved - dist_anchor).abs());
+
                     if always_trace || (self.id == 0 && track_movement) {
-                        println!("  [PSC SELECTION] reserved={:?} dist={:.2}, anchor={:?} dist={:.2}",
+                        println!("  [PSC SELECTION] reserved={:?} dist={:.6}, anchor={:?} dist={:.6}",
                             reserved, dist_reserved, anchor, dist_anchor);
                     }
 
                     // Choose closer subcell (tie-break: prefer reserved for diagonal progress)
                     let (chosen, chosen_name) = if dist_reserved <= dist_anchor {
+                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) <= dist_anchor ({:.6})",
+                            dist_reserved, dist_anchor);
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
                         }
                         (reserved, "Reserved".to_string())
                     } else {
+                        println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6})",
+                            dist_anchor, dist_reserved);
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
                         }
@@ -2582,9 +2605,6 @@ impl Actor {
                     (chosen, Some(info))
                 } else {
                     // H/V move - no anchor, use reserved directly
-                    if always_trace || (self.id == 0 && track_movement) {
-                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
-                    }
 
                     // Create PSC selection info for H/V move
                     let dist_reserved = Self::subcell_center_distance_to_destination(
@@ -2596,6 +2616,17 @@ impl Actor {
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
+
+                    // DEBUG: Log H/V PSC selection with high precision
+                    println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
+                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                        reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+                    println!("  [PSC_HV] dist_reserved={:.6} - Chose RESERVED (H/V move)",
+                        dist_reserved);
+
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
+                    }
 
                     let info = PSCSelectionInfo {
                         old_psc: current,
