@@ -135,6 +135,11 @@ pub struct Actor {
     pub last_psc_selection: Option<PSCSelectionInfo>,
     /// Diagnostic messages to log to action log (cleared after main.rs logs them)
     pub diagnostic_messages: Vec<String>,
+
+    /// Tolerance multiplier for distance rule check (default: 0.6)
+    /// Applied as: tolerance = subcell_width * distance_tolerance_multiplier
+    /// Set to 0.0 for strict monotonic distance decrease enforcement
+    pub distance_tolerance_multiplier: f32,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -192,6 +197,7 @@ impl Actor {
             last_directing_info: None,
             last_psc_selection: None,
             diagnostic_messages: Vec::new(),
+            distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
         }
     }
 
@@ -1002,6 +1008,7 @@ impl Actor {
                     self.cell_height,
                     self.subcell_offset_x,
                     self.subcell_offset_y,
+                    self.distance_tolerance_multiplier,
                 )
             })
             .map(|n| {
@@ -1098,6 +1105,7 @@ impl Actor {
                     self.cell_height,
                     self.subcell_offset_x,
                     self.subcell_offset_y,
+                    self.distance_tolerance_multiplier,
                 )
             })
             .copied()
@@ -1730,6 +1738,7 @@ impl Actor {
                 self.cell_height,
                 self.subcell_offset_x,
                 self.subcell_offset_y,
+                self.distance_tolerance_multiplier,
             ) {
                 continue; // Skip - would increase distanceX or distanceY
             }

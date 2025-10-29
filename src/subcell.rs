@@ -180,6 +180,7 @@ impl SubCellCoord {
         cell_height: f32,
         offset_x: f32,
         offset_y: f32,
+        tolerance_multiplier: f32,
     ) -> bool {
         // IMPORTANT: Check distance from CURRENT SUBCELL CENTER, not actor's floating position
         // This prevents zigzagging where a move looks good from actor's position
@@ -201,7 +202,7 @@ impl SubCellCoord {
         // This prevents rejecting valid H/V moves where one component increases slightly
         // due to centering within the subcell
         let subcell_width = cell_width / 2.0; // Assuming 2x2 subcell grid
-        let tolerance = subcell_width * 0.6; // 60% of subcell width
+        let tolerance = subcell_width * tolerance_multiplier;
 
         // Violates rule if EITHER distance increases beyond tolerance
         (new_dist_x - curr_dist_x) > tolerance || (new_dist_y - curr_dist_y) > tolerance
