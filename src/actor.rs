@@ -2541,6 +2541,9 @@ impl Actor {
                 // For diagonal moves, we have both 'reserved' (diagonal) and 'anchor' (H or V)
                 // We must choose whichever is closer to the destination
                 let (new_psc, psc_selection_info) = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
+                    // Hysteresis epsilon for preventing oscillation when distances are effectively equal
+                    const HYSTERESIS_EPSILON: f32 = 0.001;
+
                     // Diagonal move - compare distances
                     let dist_reserved = Self::subcell_center_distance_to_destination(
                         &reserved,
@@ -2574,21 +2577,33 @@ impl Actor {
                             reserved, dist_reserved, anchor, dist_anchor);
                     }
 
-                    // Choose closer subcell (tie-break: prefer reserved for diagonal progress)
-                    let (chosen, chosen_name) = if dist_reserved <= dist_anchor {
-                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) <= dist_anchor ({:.6})",
+                    // Choose closer subcell with hysteresis to prevent oscillation
+                    // Three-way comparison: require epsilon margin for one to be "clearly better"
+                    let (chosen, chosen_name) = if dist_reserved < dist_anchor - HYSTERESIS_EPSILON {
+                        // Reserved is clearly better (farther from anchor by more than epsilon)
+                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) < dist_anchor ({:.6}) - epsilon",
                             dist_reserved, dist_anchor);
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
                         }
                         (reserved, "Reserved".to_string())
-                    } else {
-                        println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6})",
+                    } else if dist_anchor < dist_reserved - HYSTERESIS_EPSILON {
+                        // Anchor is clearly better (farther from reserved by more than epsilon)
+                        println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6}) - epsilon",
                             dist_anchor, dist_reserved);
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
                         }
                         (anchor, "Anchor".to_string())
+                    } else {
+                        // Within epsilon - effectively equidistant, prefer diagonal for consistent progress
+                        println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), preferring RESERVED (diagonal)",
+                            HYSTERESIS_EPSILON);
+                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - hysteresis tie-break");
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC (hysteresis)");
+                        }
+                        (reserved, "Reserved".to_string())
                     };
 
                     // Create PSC selection info for logging
