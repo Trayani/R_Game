@@ -1363,7 +1363,7 @@ impl VisState {
         };
 
         let info = format!(
-            "Observer: ({}, {}){}{}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers (shows PSC/Reserved/Anchor) | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter | W: toggle directing v2\nO: spawn actor | 0: clear all actors | L: toggle tracking {} (logs PSC selection to console+action_log.json) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close\n\nPSC Visualization: Cyan=PSC (Primary SubCell), Yellow=Reserved, Orange=Anchor",
+            "Observer: ({}, {}){}{}{}{}{}{}\nVisible: {} cells\nCorners: {} total, {} interesting\nWhite=interesting, Yellow=non-interesting\nLeft click: toggle | Shift+Left hold: draw walls | Shift+Right hold: erase walls\nRight hold: move observer | D: set destination | G: toggle sub-cell grid (None/2x2/3x3) | T: toggle sub-cell offset (None/X/Y/XY)\nM: toggle messy X | N: toggle messy Y | S: toggle sub-cell movement | B: toggle markers (shows PSC/Reserved/Anchor) | Q: cycle reservation (Square/Diagonal/NoDiagonal/AntiCross/Basic3/Basic3AntiCross/DestinationDirect) | E: toggle early reservation | F: toggle backward filter | W: toggle directing v2\nO: spawn actor | 0: clear all actors | L: toggle tracking {} (logs PSC selection to console+action_log.json) | [: set destination (first) | P: set destination (all) | R: random subset (30%, closest) | C: copy | V: paste | F5: save state | F9: load state | Esc: close\n\nPSC Visualization: Cyan=PSC (Primary SubCell), Yellow=Reserved, Orange=Anchor",
             self.observer_x,
             self.observer_y,
             messy_status,
@@ -1786,6 +1786,66 @@ async fn main() {
                     x: target_grid_x,
                     y: target_grid_y,
                     actor_count: state.actors.len(),
+                });
+            }
+        }
+
+        // Set actor destination on '[' key - applies to FIRST ACTOR ONLY
+        if is_key_pressed(KeyCode::LeftBracket) {
+            if !state.actors.is_empty() {
+                let (mouse_x, mouse_y) = mouse_position();
+                let target_grid_x = (mouse_x / state.cell_width) as i32;
+                let target_grid_y = (mouse_y / state.cell_height) as i32;
+
+                state.action_log.log_start(Action::SetActorDestination {
+                    x: target_grid_x,
+                    y: target_grid_y,
+                    actor_count: 1,
+                });
+
+                if state.subcell_movement_enabled {
+                    // Sub-cell movement mode - set destination for first actor
+                    let dest_pos = Position { x: target_grid_x, y: target_grid_y };
+                    state.actors[0].set_subcell_destination(dest_pos);
+                    println!("Sub-cell destination set: ({}, {}) for first actor (id: {})",
+                        target_grid_x, target_grid_y, state.actors[0].id);
+                } else {
+                    // Normal pathfinding mode - calculate path for first actor
+                    let actor = &mut state.actors[0];
+                    let actor_cpos = actor.calculate_cell_position(&state.grid, state.cell_width, state.cell_height);
+
+                    // Find path using pathfinding WITH CACHED CORNERS
+                    if let Some(mut path) = find_path_with_cache(
+                        &state.grid,
+                        actor_cpos.cell_x,
+                        actor_cpos.cell_y,
+                        target_grid_x,
+                        target_grid_y,
+                        actor_cpos.messy_x,
+                        actor_cpos.messy_y,
+                        Some(&state.all_corners),
+                    ) {
+                        // Skip the first waypoint if it's the actor's current cell
+                        if path.len() >= 2 {
+                            let first_waypoint = &path[0];
+                            if first_waypoint.x == actor_cpos.cell_x && first_waypoint.y == actor_cpos.cell_y {
+                                path.remove(0);
+                            }
+                        }
+
+                        actor.set_path(path, state.grid.get_revision());
+                        println!("Path set for first actor (id: {}) to destination ({}, {})",
+                            state.actors[0].id, target_grid_x, target_grid_y);
+                    } else {
+                        println!("No path found for first actor (id: {}) to destination ({}, {})",
+                            state.actors[0].id, target_grid_x, target_grid_y);
+                    }
+                }
+
+                state.action_log.log_finish(Action::SetActorDestination {
+                    x: target_grid_x,
+                    y: target_grid_y,
+                    actor_count: 1,
                 });
             }
         }
