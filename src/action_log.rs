@@ -200,6 +200,26 @@ impl ActionLog {
                 CREATE INDEX IF NOT EXISTS idx_timestamp
                     ON actions(timestamp_ms);
             ");
+
+            // Spawn async cleanup task to delete entries older than 30 minutes
+            thread::spawn(|| {
+                // Wait a bit for app to fully start before cleanup
+                thread::sleep(std::time::Duration::from_secs(5));
+
+                if let Ok(conn) = Connection::open("action_log.db") {
+                    let thirty_minutes_ago = "datetime('now', '-30 minutes')";
+                    let result = conn.execute(
+                        &format!("DELETE FROM actions WHERE created_at < {}", thirty_minutes_ago),
+                        [],
+                    );
+                    if let Ok(deleted) = result {
+                        if deleted > 0 {
+                            println!("Cleaned up {} old action log entries (>30 min)", deleted);
+                        }
+                    }
+                }
+                // Thread exits after cleanup
+            });
         }
 
         // Process messages until shutdown
