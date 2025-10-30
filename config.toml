@@ -129,7 +129,7 @@ enable_lookahead = false
 # Higher values = earlier switching (more aggressive)
 # Default: 0.5 (midpoint, maintains current behavior)
 # Toggle at runtime: Not available (requires restart)
-psc_switch_threshold = 0.5
+psc_switch_threshold = 0.0
 
 [visual]
 # Window title

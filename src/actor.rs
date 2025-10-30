@@ -2127,11 +2127,28 @@ impl Actor {
             }
         };
 
-        // Get destination screen position at grid intersection
-        // Destinations are at grid intersections (no +0.5 offset)
-        // Sub-cells are ONLY used for intermediate movement, not final destinations
-        let dest_screen_x = dest.x as f32 * self.cell_width;
-        let dest_screen_y = dest.y as f32 * self.cell_height;
+        // Get destination screen position and quantize to subcell grid point
+        // Convert cell coordinates to screen coordinates
+        let dest_screen_x_raw = dest.x as f32 * self.cell_width;
+        let dest_screen_y_raw = dest.y as f32 * self.cell_height;
+
+        // Quantize destination to nearest subcell grid point
+        // This ensures destinations are properly aligned with the subcell pathfinding grid
+        let dest_subcell_quantized = SubCellCoord::from_screen_pos_with_offset(
+            dest_screen_x_raw,
+            dest_screen_y_raw,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let (dest_screen_x, dest_screen_y) = dest_subcell_quantized.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
 
         // Check if we've reached the destination
         let dx_to_dest = dest_screen_x - self.fpos_x;
@@ -2465,9 +2482,28 @@ impl Actor {
             }
         };
 
-        // Get destination screen position at grid intersection (no +0.5 offset)
-        let dest_screen_x = dest.x as f32 * self.cell_width;
-        let dest_screen_y = dest.y as f32 * self.cell_height;
+        // Get destination screen position and quantize to subcell grid point
+        // Convert cell coordinates to screen coordinates
+        let dest_screen_x_raw = dest.x as f32 * self.cell_width;
+        let dest_screen_y_raw = dest.y as f32 * self.cell_height;
+
+        // Quantize destination to nearest subcell grid point
+        // This ensures destinations are properly aligned with the subcell pathfinding grid
+        let dest_subcell_quantized = SubCellCoord::from_screen_pos_with_offset(
+            dest_screen_x_raw,
+            dest_screen_y_raw,
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let (dest_screen_x, dest_screen_y) = dest_subcell_quantized.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
 
         if always_trace || (self.id == 0 && track_movement) {
             if self.id == 0 {
