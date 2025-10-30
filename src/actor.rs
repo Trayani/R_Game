@@ -2467,8 +2467,22 @@ impl Actor {
                     }
                 }
 
-                // Sort ALL candidate subcells by distance to actor's position
+                // Sort ALL candidate subcells by:
+                // 1. PRIORITY: Prefer subcells in same cell (cell_dx=0, cell_dy=0)
+                // 2. SECONDARY: Sort by distance to actor's position
+                // This prevents actors from aligning to adjacent cells when current cell has space
                 all_candidate_subcells.sort_by(|a, b| {
+                    let a_in_current_cell = (a.cell_x == cell_coord.cell_x) && (a.cell_y == cell_coord.cell_y);
+                    let b_in_current_cell = (b.cell_x == cell_coord.cell_x) && (b.cell_y == cell_coord.cell_y);
+
+                    // Primary sort: same cell first
+                    match (a_in_current_cell, b_in_current_cell) {
+                        (true, false) => return std::cmp::Ordering::Less,    // a in current cell, prefer a
+                        (false, true) => return std::cmp::Ordering::Greater, // b in current cell, prefer b
+                        _ => {} // Both in same category, continue to distance sort
+                    }
+
+                    // Secondary sort: by distance
                     let (a_x, a_y) = a.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
