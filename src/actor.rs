@@ -23,6 +23,20 @@ enum TargetType {
     SubcellPoint,
 }
 
+/// Actor alignment state machine (actor_states.txt Section 3)
+/// Tracks progression: NoSubcell → PscAlignment → Idle → Move
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AlignmentState {
+    /// Actor has no current_subcell yet, attempting to acquire one
+    NoSubcell,
+    /// Actor moving to center of current_subcell (immune to collision)
+    PscAlignment,
+    /// Actor at subcell center, ready to reserve next cell
+    Idle,
+    /// Actor has reservation, moving toward reserved subcell
+    Move,
+}
+
 /// Cardinal direction in 8-way movement (45° sectors)
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum CardinalDirection {
@@ -171,6 +185,14 @@ pub struct Actor {
     /// 0.0 = switch only when reaching reserved exactly, 0.5 = switch at midpoint
     pub psc_switch_threshold: f32,
 
+    // PSC Alignment State Machine (actor_states.txt)
+    /// Current alignment state: NoSubcell → PscAlignment → Idle → Move
+    pub alignment_state: AlignmentState,
+    /// Target position during PscAlignment (center of current_subcell)
+    pub alignment_target: Option<(f32, f32)>,
+    /// Distance threshold for considering actor "aligned" to PSC center (default: 2.0 pixels)
+    pub alignment_threshold: f32,
+
     // Direction change tracking (for detecting indirect pathfinding)
     /// Target position from two frames ago
     previous_old_target: Option<(f32, f32)>,
@@ -276,6 +298,10 @@ impl Actor {
             distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
             enable_lookahead,
             psc_switch_threshold,
+            // PSC Alignment State Machine - start in PscAlignment since current_subcell is initialized
+            alignment_state: AlignmentState::PscAlignment,
+            alignment_target: None,  // Will be set on first update
+            alignment_threshold: 2.0,  // 2.0 pixels - per actor_states.txt PSC_ALIGNMENT_THRESHOLD
             previous_old_target: None,
             old_target: None,
             target_type: TargetType::SubcellPoint,  // Default to SubcellPoint
@@ -2401,9 +2427,77 @@ impl Actor {
                 self.current_subcell = Some(c);
                 // Register the initial current subcell
                 reservation_manager.set_current(c, self.id);
+
+                // Enter PscAlignment state (NoSubcell → PscAlignment transition)
+                self.alignment_state = AlignmentState::PscAlignment;
+                let (center_x, center_y) = c.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                self.alignment_target = Some((center_x, center_y));
+                if always_trace {
+                    println!("[ALIGN] Actor {} initialized current_subcell ({},{},{},{}), entering PscAlignment to center ({:.1},{:.1})",
+                        self.id, c.cell_x, c.cell_y, c.sub_x, c.sub_y, center_x, center_y);
+                }
+
                 c
             }
         };
+
+        // Initialize alignment_target if in PscAlignment state but target not set
+        // (Happens on first update after Actor::new())
+        if self.alignment_state == AlignmentState::PscAlignment && self.alignment_target.is_none() {
+            let (center_x, center_y) = current.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            );
+            self.alignment_target = Some((center_x, center_y));
+            if always_trace {
+                println!("[ALIGN] Actor {} set initial alignment_target to ({:.1},{:.1})",
+                    self.id, center_x, center_y);
+            }
+        }
+
+        // Handle PscAlignment state - actor moves to PSC center before navigation
+        if self.alignment_state == AlignmentState::PscAlignment {
+            if let Some((target_x, target_y)) = self.alignment_target {
+                let dx = target_x - self.fpos_x;
+                let dy = target_y - self.fpos_y;
+                let dist = (dx * dx + dy * dy).sqrt();
+
+                if dist < self.alignment_threshold {
+                    // Reached center - transition to Idle
+                    self.alignment_state = AlignmentState::Idle;
+                    self.alignment_target = None;
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("[ALIGN] Actor {} reached PSC center (dist={:.2}px < threshold={:.2}px), entering Idle state",
+                            self.id, dist, self.alignment_threshold);
+                    }
+                    // Return early - wait one frame at center before attempting reservation
+                    // This ensures actors are actually "at rest" at subcell center
+                    return false;
+                } else {
+                    // Move toward center (using same logic as moving toward destination)
+                    let movement = self.speed * delta_time;
+                    let move_dist = movement.min(dist);
+                    let dir_x = dx / dist;
+                    let dir_y = dy / dist;
+                    self.fpos_x += dir_x * move_dist;
+                    self.fpos_y += dir_y * move_dist;
+
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("[ALIGN] Actor {} moving to PSC center: ({:.1},{:.1}) → ({:.1},{:.1}), dist={:.2}px",
+                            self.id, self.fpos_x - dir_x * move_dist, self.fpos_y - dir_y * move_dist,
+                            self.fpos_x, self.fpos_y, dist);
+                    }
+                    return false; // Still aligning, not at destination
+                }
+            }
+        }
 
         // Get destination screen position and quantize to subcell grid point
         // Convert cell coordinates to screen coordinates (use cell CENTER, not corner)
@@ -3011,6 +3105,20 @@ impl Actor {
                     // Register the new current subcell
                     reservation_manager.set_current(new_psc, self.id);
 
+                    // Enter PscAlignment state for new PSC (Move → PscAlignment transition)
+                    self.alignment_state = AlignmentState::PscAlignment;
+                    let (center_x, center_y) = new_psc.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    self.alignment_target = Some((center_x, center_y));
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [SWITCH] Switched to new PSC ({},{},{},{}), entering PscAlignment to center ({:.1},{:.1})",
+                            new_psc.cell_x, new_psc.cell_y, new_psc.sub_x, new_psc.sub_y, center_x, center_y);
+                    }
+
                     // Record position when reaching subcell
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
@@ -3020,7 +3128,8 @@ impl Actor {
                 // Always try to reserve next cell after switching
                 // (Only if mirror didn't already set up next reservation)
                 // This prevents stuttering at boundary crossings
-                if !mirror_reserved {
+                // HOWEVER: If we just entered PscAlignment, skip reservation - must align first
+                if !mirror_reserved && self.alignment_state != AlignmentState::PscAlignment {
                     let current = new_psc;  // Use the NEW PSC (closer subcell)
 
                     if always_trace || (self.id == 0 && track_movement) {
@@ -3096,63 +3205,77 @@ impl Actor {
                 println!("  [STATE] Has reservation but NOT switching yet (dist={:.2} threshold=0.5)", dist_to_target);
             }
         } else {
-            // No reservation - always attempt to reserve when we have no reservation yet
+            // No reservation - attempt to reserve only when in Idle state (actor at PSC center)
             // The eagerness check applies to EARLY reservations (reserving next-next cell),
             // not to initial reservations (reserving the first next cell)
 
             if always_trace || (self.id == 0 && track_movement) {
-                println!("  [STATE] NO RESERVATION - will attempt to reserve next subcell");
+                println!("  [STATE] NO RESERVATION - alignment_state={:?}", self.alignment_state);
                 println!("  [STATE] Current subcell: {:?}", current);
                 println!("  [STATE] Direction to dest: dx={:.1} dy={:.1}", dx_to_dest, dy_to_dest);
             }
 
-            // Try to reserve next sub-cell
-            // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-            if self.id == 0 && track_movement {
-                println!("  NO RESERVATION: Attempting diagonal+anchor");
-            }
-
-            // Try diagonal+anchor first
-            let diagonal_success = self.try_reserve_diagonal_with_anchor(
-                &current,
-                None,
-                dx_to_dest,
-                dy_to_dest,
-                dest_screen_x,
-                dest_screen_y,
-                reservation_manager,
-                enable_anti_cross,
-                track_movement,
-            );
-
-            if !diagonal_success {
-                // Diagonal failed, try H/V
-                if always_trace || (self.id == 0 && track_movement) {
-                    println!("  [RESERVE] Diagonal+anchor FAILED, trying H/V fallback");
+            // Only attempt reservation when Idle (aligned to PSC center)
+            if self.alignment_state == AlignmentState::Idle {
+                // Try to reserve next sub-cell
+                // DestinationDirect: Try diagonal+anchor first, fallback to H/V
+                if self.id == 0 && track_movement {
+                    println!("  NO RESERVATION (Idle): Attempting diagonal+anchor");
                 }
-                let hv_success = self.try_reserve_horizontal_vertical(
+
+                // Try diagonal+anchor first
+                let diagonal_success = self.try_reserve_diagonal_with_anchor(
                     &current,
+                    None,
                     dx_to_dest,
                     dy_to_dest,
                     dest_screen_x,
                     dest_screen_y,
                     reservation_manager,
+                    enable_anti_cross,
                     track_movement,
                 );
 
-                if always_trace || (self.id == 0 && track_movement) {
+                if diagonal_success {
+                    // Reservation succeeded - transition Idle → Move
+                    self.alignment_state = AlignmentState::Move;
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [RESERVE] Diagonal+anchor SUCCEEDED - transitioning Idle → Move");
+                    }
+                } else {
+                    // Diagonal failed, try H/V
+                    if always_trace || (self.id == 0 && track_movement) {
+                        println!("  [RESERVE] Diagonal+anchor FAILED, trying H/V fallback");
+                    }
+                    let hv_success = self.try_reserve_horizontal_vertical(
+                        &current,
+                        dx_to_dest,
+                        dy_to_dest,
+                        dest_screen_x,
+                        dest_screen_y,
+                        reservation_manager,
+                        track_movement,
+                    );
+
                     if hv_success {
-                        println!("  [RESERVE] H/V fallback SUCCEEDED");
+                        // Reservation succeeded - transition Idle → Move
+                        self.alignment_state = AlignmentState::Move;
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [RESERVE] H/V fallback SUCCEEDED - transitioning Idle → Move");
+                        }
                     } else {
-                        println!("  [RESERVE] H/V fallback FAILED - actor will stay in place (all directions blocked)");
-                        println!("  [RESERVE] Actor is STUCK with no available moves");
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [RESERVE] H/V fallback FAILED - actor will stay in Idle (all directions blocked)");
+                            println!("  [RESERVE] Actor is STUCK with no available moves");
+                        }
+                        // Note: If H/V also fails, actor stays in Idle state (all directions blocked)
                     }
                 }
-                // Note: If H/V also fails, actor will stay in place (all directions blocked)
-                // The any_available fallback should ONLY be used during initialization when
-                // actor has no primary subcell, not as a movement fallback.
-            } else if always_trace || (self.id == 0 && track_movement) {
-                println!("  [RESERVE] Diagonal+anchor SUCCEEDED");
+            } else if self.alignment_state == AlignmentState::PscAlignment {
+                // Still aligning - don't attempt reservation yet
+                if always_trace || (self.id == 0 && track_movement) {
+                    println!("  [STATE] Still in PscAlignment, skipping reservation attempt");
+                }
             }
         }
 

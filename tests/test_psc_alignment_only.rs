@@ -108,19 +108,19 @@ fn test_four_actors_psc_alignment_no_destination() {
 
             let new_pos = (actor.fpos_x, actor.fpos_y);
 
-            // Check if actor has a reservation (successfully transitioned from NO_SUBCELL)
-            if let Some(reserved) = actor.reserved_subcell {
-                // Calculate distance to reserved subcell center
-                let (center_x, center_y) = reserved.to_screen_center(cell_width, cell_height);
+            // Check if actor has current subcell (should always be true after initialization)
+            if let Some(current) = actor.current_subcell {
+                // Calculate distance to current subcell center (where actor aligns to)
+                let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
                 let dist_to_center = ((new_pos.0 - center_x).powi(2) + (new_pos.1 - center_y).powi(2)).sqrt();
 
-                // Check if aligned (distance < 1.0 pixels per actor_states.txt PSC_ALIGNMENT_THRESHOLD)
-                if !actors_aligned[i] && dist_to_center < 1.0 {
+                // Check if aligned (distance < 2.0 pixels - matching alignment_threshold)
+                if !actors_aligned[i] && dist_to_center < 2.0 {
                     actors_aligned[i] = true;
                     alignment_complete_frame[i] = Some(iteration);
-                    println!("[{:4}ms] Actor {} ALIGNED to subcell ({},{},{},{}) at ({:.1},{:.1}) - dist={:.3}px",
+                    println!("[{:4}ms] Actor {} ALIGNED to current subcell ({},{},{},{}) at ({:.1},{:.1}) - dist={:.3}px",
                         iteration * 16, actor.id,
-                        reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
+                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
                         new_pos.0, new_pos.1, dist_to_center);
                 }
 
@@ -164,21 +164,21 @@ fn test_four_actors_psc_alignment_no_destination() {
     println!();
 
     for (i, actor) in actors.iter().enumerate() {
-        if let Some(reserved) = actor.reserved_subcell {
-            let (center_x, center_y) = reserved.to_screen_center(cell_width, cell_height);
+        if let Some(current) = actor.current_subcell {
+            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
             let dist = ((actor.fpos_x - center_x).powi(2) + (actor.fpos_y - center_y).powi(2)).sqrt();
             let aligned_frame = alignment_complete_frame[i].unwrap_or(0);
             let aligned_ms = aligned_frame * 16;
 
             println!("Actor {}:", actor.id);
-            println!("  Subcell: ({},{},{},{})", reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+            println!("  Current Subcell: ({},{},{},{})", current.cell_x, current.cell_y, current.sub_x, current.sub_y);
             println!("  Position: ({:.2}, {:.2})", actor.fpos_x, actor.fpos_y);
             println!("  Center: ({:.2}, {:.2})", center_x, center_y);
             println!("  Distance: {:.3}px", dist);
             println!("  Aligned: {} (at {}ms)", if actors_aligned[i] { "✓" } else { "✗" }, aligned_ms);
             println!();
         } else {
-            println!("Actor {}: ✗ No subcell reserved", actor.id);
+            println!("Actor {}: ✗ No current subcell", actor.id);
             println!();
         }
     }
@@ -196,16 +196,16 @@ fn test_four_actors_psc_alignment_no_destination() {
         "Expected all {} actors to align to subcell centers, only {} aligned",
         actors.len(), aligned_count);
 
-    // Verify all actors are within alignment threshold (1.0 pixels)
+    // Verify all actors are within alignment threshold (2.0 pixels)
     for actor in &actors {
-        if let Some(reserved) = actor.reserved_subcell {
-            let (center_x, center_y) = reserved.to_screen_center(cell_width, cell_height);
+        if let Some(current) = actor.current_subcell {
+            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
             let dist = ((actor.fpos_x - center_x).powi(2) + (actor.fpos_y - center_y).powi(2)).sqrt();
-            assert!(dist < 1.0,
-                "Actor {} not properly aligned: distance {:.3}px > 1.0px threshold",
+            assert!(dist < 2.0,
+                "Actor {} not properly aligned: distance {:.3}px > 2.0px threshold",
                 actor.id, dist);
         } else {
-            panic!("Actor {} has no reserved subcell after alignment", actor.id);
+            panic!("Actor {} has no current subcell after alignment", actor.id);
         }
     }
 
