@@ -442,15 +442,8 @@ fn test_destination_direct_basic_movement() {
         let reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_mgr,
-            false, // enable_square_reservation
-            false, // enable_diagonal_constraint
-            false, // enable_no_diagonal
-            true,  // enable_anti_cross
-            false, // enable_basic3
-            false, // enable_basic3_anti_cross
             true,  // enable_early_reservation
             false, // filter_backward
-            false, // basic3_fallback_enabled
             false, // track_movement
             0.1,   // reservation_threshold_distance
             rustgame3::ReservationEagerness::Center,

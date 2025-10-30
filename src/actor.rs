@@ -1086,7 +1086,6 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
-        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         // Branch based on actor_directing_v2 feature flag
@@ -1098,7 +1097,6 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
-                enable_anti_cross,
                 track_movement,
             )
         } else {
@@ -1111,7 +1109,6 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
-                enable_anti_cross,
                 track_movement,
             )
         }
@@ -1127,7 +1124,6 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
-        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         let neighbors = current.get_neighbors();
@@ -1168,15 +1164,13 @@ impl Actor {
 
         // Try each diagonal with its H/V anchors
         for (diagonal, _score) in &diagonal_candidates {
-            // Anti-cross check for diagonal
-            if enable_anti_cross {
-                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+            // Anti-cross check for diagonal (always enabled in DestinationDirect mode)
+            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                continue;
+            }
+            if let Some(prev) = previous_current {
+                if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
                     continue;
-                }
-                if let Some(prev) = previous_current {
-                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
-                        continue;
-                    }
                 }
             }
 
@@ -1225,7 +1219,6 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
-        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         // Log function entry for diagnostics
@@ -1296,38 +1289,36 @@ impl Actor {
                 diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y
             ));
 
-            // Anti-cross check for diagonal
-            if enable_anti_cross {
-                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
-                    // Get counter-diagonal cells for logging
-                    let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
+            // Anti-cross check for diagonal (always enabled in DestinationDirect mode)
+            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                // Get counter-diagonal cells for logging
+                let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
+                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                self.diagnostic_messages.push(format!(
+                    "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
+                    self.id, idx + 1,
+                    counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
+                    counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
+                ));
+                if track_movement {
+                    println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
+                }
+                continue;
+            }
+            if let Some(prev) = previous_current {
+                if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                    let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
                     let owner1 = reservation_manager.get_owner(&counter_diag[0]);
                     let owner2 = reservation_manager.get_owner(&counter_diag[1]);
                     self.diagnostic_messages.push(format!(
-                        "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
-                        self.id, idx + 1,
-                        counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
-                        counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
+                        "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
+                        self.id, idx + 1, owner1, owner2
                     ));
                     if track_movement {
-                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
+                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
                     }
                     continue;
-                }
-                if let Some(prev) = previous_current {
-                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
-                        let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
-                        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-                        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
-                        self.diagnostic_messages.push(format!(
-                            "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
-                            self.id, idx + 1, owner1, owner2
-                        ));
-                        if track_movement {
-                            println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
-                        }
-                        continue;
-                    }
                 }
             }
 
@@ -2227,6 +2218,10 @@ impl Actor {
                 self.subcell_offset_y,
             );
 
+            println!("[REACHED] Actor {} reached destination at ({:.1},{:.1}) subcell=({},{},{},{})",
+                self.id, self.fpos_x, self.fpos_y,
+                dest_subcell.cell_x, dest_subcell.cell_y, dest_subcell.sub_x, dest_subcell.sub_y);
+
             // Release all reservations except the destination sub-cell
             // Release current if it's not the destination
             if current != dest_subcell {
@@ -2447,15 +2442,8 @@ impl Actor {
         &mut self,
         delta_time: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
-        enable_square_reservation: bool,
-        enable_diagonal_constraint: bool,
-        enable_no_diagonal: bool,
-        enable_anti_cross: bool,
-        enable_basic3: bool,
-        enable_basic3_anti_cross: bool,
         enable_early_reservation: bool,
         filter_backward: bool,
-        basic3_fallback_enabled: bool,
         track_movement: bool,
         reservation_threshold_distance: f32,
         reservation_eagerness: crate::config::ReservationEagerness,
@@ -2595,6 +2583,10 @@ impl Actor {
                 self.subcell_offset_x,
                 self.subcell_offset_y,
             );
+
+            println!("[REACHED] Actor {} reached destination at ({:.1},{:.1}) subcell=({},{},{},{})",
+                self.id, self.fpos_x, self.fpos_y,
+                dest_subcell.cell_x, dest_subcell.cell_y, dest_subcell.sub_x, dest_subcell.sub_y);
 
             // Release all reservations except the destination sub-cell
             if current != dest_subcell {
@@ -3190,7 +3182,6 @@ impl Actor {
                             dest_screen_x,
                             dest_screen_y,
                             reservation_manager,
-                            enable_anti_cross,
                             track_movement,
                         );
 
@@ -3253,7 +3244,6 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
-                enable_anti_cross,
                 track_movement,
             );
 

@@ -63,9 +63,9 @@ fn test_target_direction_spawn_208_473_dest_20_27() {
         let _reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_mgr,
-            false, false, false, false, false, false,
-            false, false, false,
-            true, // track_movement = true to see logs
+            false, // enable_early_reservation
+            false, // filter_backward
+            true,  // track_movement = true to see logs
             0.0,
             ReservationEagerness::Center,
             ReleaseEagerness::Center,

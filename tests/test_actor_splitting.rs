@@ -72,15 +72,8 @@ fn test_five_actors_split_from_same_start() {
             let _reached = actors[i].update_subcell_destination_direct(
                 delta_time,
                 &mut reservation_mgr,
-                false, // enable_square_reservation
-                false, // enable_diagonal_constraint
-                false, // enable_no_diagonal
-                true,  // enable_anti_cross
-                false, // enable_basic3
-                false, // enable_basic3_anti_cross
                 true,  // enable_early_reservation
                 false, // filter_backward
-                false, // basic3_fallback_enabled
                 false, // track_movement
                 0.1,   // reservation_threshold_distance
                 ReservationEagerness::Center,
@@ -269,8 +262,9 @@ fn test_actors_dont_overlap_during_movement() {
             actors[i].update_subcell_destination_direct(
                 delta_time,
                 &mut reservation_mgr,
-                false, false, false, true, false, false,
-                true, false, false, false,
+                true,  // enable_early_reservation
+                false, // filter_backward
+                false, // track_movement
                 0.1,
                 ReservationEagerness::Center,
                 ReleaseEagerness::Center,

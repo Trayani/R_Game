@@ -2232,52 +2232,20 @@ async fn main() {
 
         if state.subcell_movement_enabled {
             // Sub-cell movement mode - update all actors with sub-cell logic
-            let enable_square = state.reservation_mode == ReservationMode::Square;
-            let enable_diagonal = state.reservation_mode == ReservationMode::Diagonal;
-            let enable_no_diagonal = state.reservation_mode == ReservationMode::NoDiagonal;
-            let enable_anti_cross = state.reservation_mode == ReservationMode::AntiCross;
-            let enable_basic3 = state.reservation_mode == ReservationMode::Basic3;
-            let enable_basic3_anti_cross = state.reservation_mode == ReservationMode::Basic3AntiCross;
-            let use_destination_direct = state.reservation_mode == ReservationMode::DestinationDirect;
             let track_movement = state.tracking_mode == TrackingMode::Tracking;
 
             for i in 0..state.actors.len() {
-                let _reached = if use_destination_direct {
-                    // Use destination-direct movement strategy
-                    state.actors[i].update_subcell_destination_direct(
-                        delta_time,
-                        &mut state.subcell_reservation_manager,
-                        enable_square,
-                        enable_diagonal,
-                        enable_no_diagonal,
-                        enable_anti_cross,
-                        enable_basic3,
-                        enable_basic3_anti_cross,
-                        state.early_reservation_enabled,
-                        state.filter_backward_moves,
-                        state.basic3_fallback_enabled,
-                        track_movement,
-                        config.subcell.reservation_threshold_distance,
-                        config.subcell.reservation_eagerness,
-                        config.subcell.release_eagerness,
-                    )
-                } else {
-                    // Use standard sub-cell movement
-                    state.actors[i].update_subcell(
-                        delta_time,
-                        &mut state.subcell_reservation_manager,
-                        enable_square,
-                        enable_diagonal,
-                        enable_no_diagonal,
-                        enable_anti_cross,
-                        enable_basic3,
-                        enable_basic3_anti_cross,
-                        state.early_reservation_enabled,
-                        state.filter_backward_moves,
-                        state.basic3_fallback_enabled,
-                        track_movement,
-                    )
-                };
+                // DestinationDirect is now the only movement mode
+                let _reached = state.actors[i].update_subcell_destination_direct(
+                    delta_time,
+                    &mut state.subcell_reservation_manager,
+                    state.early_reservation_enabled,
+                    state.filter_backward_moves,
+                    track_movement,
+                    config.subcell.reservation_threshold_distance,
+                    config.subcell.reservation_eagerness,
+                    config.subcell.release_eagerness,
+                );
                 // Note: ignoring reached status for now - no event logging in sub-cell mode
 
                 // Log diagnostic messages to action log

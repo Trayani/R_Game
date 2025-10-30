@@ -113,15 +113,8 @@ fn test_multi_step_path_0_0_to_3_1() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false,  // enable_square_reservation
-            false,  // enable_diagonal_constraint
-            false,  // enable_no_diagonal
-            true,   // enable_anti_cross
-            false,  // enable_basic3
-            false,  // enable_basic3_anti_cross
             false,  // enable_early_reservation
             false,  // filter_backward
-            false,  // basic3_fallback_enabled
             false,  // track_movement
             10.0,   // reservation_threshold_distance
             rustgame3::config::ReservationEagerness::Center,
@@ -198,7 +191,7 @@ fn test_diagonal_ne_prefer_horizontal() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -250,7 +243,7 @@ fn test_diagonal_ne_prefer_vertical() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -301,7 +294,7 @@ fn test_cardinal_east() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -352,7 +345,7 @@ fn test_cardinal_north() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -403,7 +396,7 @@ fn test_diagonal_se() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -454,7 +447,7 @@ fn test_diagonal_sw() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -505,7 +498,7 @@ fn test_diagonal_nw() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_manager,
-            false, false, false, true, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,

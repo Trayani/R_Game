@@ -86,15 +86,8 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
         reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_mgr,
-            false, // enable_square_reservation
-            false, // enable_diagonal_constraint
-            false, // enable_no_diagonal
-            false, // enable_anti_cross
-            false, // enable_basic3
-            false, // enable_basic3_anti_cross
             false, // enable_early_reservation (default, should work now)
             false, // filter_backward
-            false, // basic3_fallback_enabled
             false, // track_movement
             0.0,
             ReservationEagerness::Center,

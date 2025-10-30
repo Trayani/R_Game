@@ -62,7 +62,8 @@ fn test_affinity_spawn_136_525_dest_16_31() {
         let _reached = actor.update_subcell_destination_direct(
             delta_time,
             &mut reservation_mgr,
-            false, false, false, false, false, false, false, false, false,
+            false, // enable_early_reservation
+            false, // filter_backward
             iteration < 20, // track_movement for first 20 frames
             0.0,
             ReservationEagerness::Center,

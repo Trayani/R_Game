@@ -261,15 +261,8 @@ fn test_original_bug_case_175_477_to_19_28() {
     actor.update_subcell_destination_direct(
         0.016,  // delta_time (~60 FPS)
         &mut reservation_mgr,
-        false,  // enable_square_reservation
-        false,  // enable_diagonal_constraint
-        false,  // enable_no_diagonal
-        false,  // enable_anti_cross
-        false,  // enable_basic3
-        false,  // enable_basic3_anti_cross
         false,  // enable_early_reservation
         false,  // filter_backward
-        false,  // basic3_fallback_enabled
         false,  // track_movement
         0.0,    // reservation_threshold_distance
         ReservationEagerness::Center,
@@ -325,7 +318,7 @@ fn test_actor_at_subcell_boundary() {
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
-        false, false, false, false, false, false, false, false, false, false,
+        false, false, false, // enable_early_reservation, filter_backward, track_movement
         0.0, ReservationEagerness::Center, ReleaseEagerness::Center,
     );
 
@@ -374,7 +367,7 @@ fn test_diagonal_movement_northeast() {
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
-        false, false, false, false, false, false, false, false, false, false,
+        false, false, false, // enable_early_reservation, filter_backward, track_movement
         0.0, ReservationEagerness::Center, ReleaseEagerness::Center,
     );
 
@@ -423,7 +416,7 @@ fn test_diagonal_movement_southwest() {
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
-        false, false, false, false, false, false, false, false, false, false,
+        false, false, false, // enable_early_reservation, filter_backward, track_movement
         0.0, ReservationEagerness::Center, ReleaseEagerness::Center,
     );
 
@@ -486,7 +479,7 @@ fn test_multiple_updates_psc_lag() {
 
         actor.update_subcell_destination_direct(
             0.016, &mut reservation_mgr,
-            false, false, false, false, false, false, false, false, false, false,
+            false, false, false, // enable_early_reservation, filter_backward, track_movement
             0.0, ReservationEagerness::Center, ReleaseEagerness::Center,
         );
 
@@ -568,7 +561,7 @@ fn test_high_speed_amplified_psc_lag() {
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
-        false, false, false, false, false, false, false, false, false, false,
+        false, false, false, // enable_early_reservation, filter_backward, track_movement
         0.0, ReservationEagerness::Center, ReleaseEagerness::Center,
     );
 

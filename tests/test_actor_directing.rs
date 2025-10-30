@@ -268,15 +268,8 @@ fn run_alternative_test(
     actor.update_subcell_destination_direct(
         0.016,              // delta_time (~60 FPS)
         reservation_mgr,
-        false,              // enable_square_reservation
-        false,              // enable_diagonal_constraint
-        false,              // enable_no_diagonal
-        false,              // enable_anti_cross
-        false,              // enable_basic3
-        false,              // enable_basic3_anti_cross
         false,              // enable_early_reservation
         false,              // filter_backward
-        false,              // basic3_fallback_enabled
         false,              // track_movement
         0.1,                // reservation_threshold_distance
         config::ReservationEagerness::Round,
