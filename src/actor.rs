@@ -927,9 +927,6 @@ impl Actor {
         // - Horizontal affinity: clamp X only (target on vertical edge, Y determined by ray)
         // - Vertical affinity: clamp Y only (target on horizontal edge, X determined by ray)
         // - Both affinity: clamp both (target at corner)
-        let target_x_unclamped = target_x;
-        let target_y_unclamped = target_y;
-
         let target_x = match affinity {
             Affinity::Horizontal | Affinity::Both => target_x.max(rect_min_x).min(rect_max_x),
             Affinity::Vertical => target_x, // No X clamping for vertical affinity
@@ -938,15 +935,6 @@ impl Actor {
             Affinity::Vertical | Affinity::Both => target_y.max(rect_min_y).min(rect_max_y),
             Affinity::Horizontal => target_y, // No Y clamping for horizontal affinity
         };
-
-        // Debug log for actor 0 to verify fix
-        if self.id == 0 {
-            println!("[TARGET CLAMP] affinity={:?}", affinity);
-            println!("  Unclamped: ({:.2}, {:.2})", target_x_unclamped, target_y_unclamped);
-            println!("  Clamped:   ({:.2}, {:.2})", target_x, target_y);
-            println!("  Rect bounds: X=[{:.1}, {:.1}], Y=[{:.1}, {:.1}]",
-                rect_min_x, rect_max_x, rect_min_y, rect_max_y);
-        }
 
         AffinityResult {
             affinity,
@@ -1076,18 +1064,7 @@ impl Actor {
         // Calculate Euclidean distance to destination
         let dx = dest_x - center_x;
         let dy = dest_y - center_y;
-        let distance = (dx * dx + dy * dy).sqrt();
-
-        // DEBUG: Log distance calculation details
-        println!("  [DIST_CALC] subcell=({},{},{},{}) center_px=({:.2},{:.2}) dest_px=({:.2},{:.2}) cell_dim=({:.1}x{:.1}) offset=({:.2},{:.2}) dist={:.6}",
-            subcell.cell_x, subcell.cell_y, subcell.sub_x, subcell.sub_y,
-            center_x, center_y,
-            dest_x, dest_y,
-            cell_width, cell_height,
-            subcell_offset_x, subcell_offset_y,
-            distance);
-
-        distance
+        (dx * dx + dy * dy).sqrt()
     }
 
     /// Try to reserve diagonal sub-cell with H/V anchor (triangle formation)
@@ -1303,11 +1280,15 @@ impl Actor {
         }
 
         // Try each diagonal with affinity-calculated anchor
-        println!("[RESERVE V2 DEBUG] Actor {} has {} diagonal candidates to try", self.id, diagonal_candidates.len());
+        if track_movement {
+            println!("[RESERVE V2 DEBUG] Actor {} has {} diagonal candidates to try", self.id, diagonal_candidates.len());
+        }
         for (idx, diagonal) in diagonal_candidates.iter().enumerate() {
-            println!("[RESERVE V2 DEBUG] Actor {} trying candidate {} / {}: diagonal=({},{},{},{})",
-                self.id, idx + 1, diagonal_candidates.len(),
-                diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y);
+            if track_movement {
+                println!("[RESERVE V2 DEBUG] Actor {} trying candidate {} / {}: diagonal=({},{},{},{})",
+                    self.id, idx + 1, diagonal_candidates.len(),
+                    diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y);
+            }
 
             self.diagnostic_messages.push(format!(
                 "[DIAG RESERVE] Actor {} candidate {}/{}: trying diagonal ({},{},{},{})",
@@ -1328,7 +1309,9 @@ impl Actor {
                         counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
                         counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
                     ));
-                    println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
+                    if track_movement {
+                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
+                    }
                     continue;
                 }
                 if let Some(prev) = previous_current {
@@ -1340,7 +1323,9 @@ impl Actor {
                             "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
                             self.id, idx + 1, owner1, owner2
                         ));
-                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
+                        if track_movement {
+                            println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
+                        }
                         continue;
                     }
                 }
@@ -1365,10 +1350,12 @@ impl Actor {
                 dest_screen_y,
             );
 
-            println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor=({},{},{},{})",
-                affinity_result.affinity,
-                affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
-                affinity_result.anchor.sub_x, affinity_result.anchor.sub_y);
+            if track_movement {
+                println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor=({},{},{},{})",
+                    affinity_result.affinity,
+                    affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
+                    affinity_result.anchor.sub_x, affinity_result.anchor.sub_y);
+            }
 
             // Check ownership before attempting reservation
             let diag_owner = reservation_manager.get_owner(diagonal);
@@ -1382,7 +1369,9 @@ impl Actor {
             ));
 
             // Try to reserve diagonal + calculated anchor
-            println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
+            if track_movement {
+                println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
+            }
             if reservation_manager.try_reserve_multiple(&[*diagonal, affinity_result.anchor], self.id) {
                 self.reserved_subcell = Some(*diagonal);
                 self.extra_reserved_subcells = vec![affinity_result.anchor];
@@ -1412,7 +1401,9 @@ impl Actor {
                 ));
                 return true;
             } else {
-                println!("[RESERVE V2 DEBUG]   Primary reservation FAILED");
+                if track_movement {
+                    println!("[RESERVE V2 DEBUG]   Primary reservation FAILED");
+                }
                 let blocking_cell = if diag_owner.is_some() && diag_owner != Some(self.id) {
                     "diagonal"
                 } else if anchor_owner.is_some() && anchor_owner != Some(self.id) {
@@ -1427,11 +1418,15 @@ impl Actor {
             }
 
             // Phase 4: Try opposite affinity fallback (actor_directing_v2.txt Section C1)
-            println!("[RESERVE V2 DEBUG]   Trying opposite affinity fallback...");
+            if track_movement {
+                println!("[RESERVE V2 DEBUG]   Trying opposite affinity fallback...");
+            }
             if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, current, diagonal, Some(&affinity_result.anchor)) {
-                println!("[RESERVE V2 DEBUG]   Opposite anchor=({},{},{},{})",
-                    opposite_anchor.cell_x, opposite_anchor.cell_y,
-                    opposite_anchor.sub_x, opposite_anchor.sub_y);
+                if track_movement {
+                    println!("[RESERVE V2 DEBUG]   Opposite anchor=({},{},{},{})",
+                        opposite_anchor.cell_x, opposite_anchor.cell_y,
+                        opposite_anchor.sub_x, opposite_anchor.sub_y);
+                }
 
                 // Check ownership of opposite anchor
                 let opp_anchor_owner = reservation_manager.get_owner(&opposite_anchor);
@@ -1443,7 +1438,9 @@ impl Actor {
                     opp_anchor_owner
                 ));
 
-                println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
+                if track_movement {
+                    println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
+                }
                 if reservation_manager.try_reserve_multiple(&[*diagonal, opposite_anchor], self.id) {
                     self.reserved_subcell = Some(*diagonal);
                     self.extra_reserved_subcells = vec![opposite_anchor];
@@ -1481,14 +1478,18 @@ impl Actor {
                     ));
                     return true;
                 } else {
-                    println!("[RESERVE V2 DEBUG]   Opposite reservation also FAILED");
+                    if track_movement {
+                        println!("[RESERVE V2 DEBUG]   Opposite reservation also FAILED");
+                    }
                     self.diagnostic_messages.push(format!(
                         "[DIAG RESERVE] Actor {} candidate {} OPPOSITE FAILED: opposite anchor blocked by actor {:?}",
                         self.id, idx + 1, opp_anchor_owner
                     ));
                 }
             } else {
-                println!("[RESERVE V2 DEBUG]   No opposite anchor available (affinity was BOTH)");
+                if track_movement {
+                    println!("[RESERVE V2 DEBUG]   No opposite anchor available (affinity was BOTH)");
+                }
                 self.diagnostic_messages.push(format!(
                     "[DIAG RESERVE] Actor {} candidate {} no opposite anchor (affinity was BOTH)",
                     self.id, idx + 1
@@ -2802,12 +2803,14 @@ impl Actor {
                     );
 
                     // DEBUG: Log diagonal PSC selection with high precision
-                    println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
-                        reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
-                        anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
-                    println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6} diff={:.6}",
-                        dist_reserved, dist_anchor, (dist_reserved - dist_anchor).abs());
+                    if always_trace || track_movement {
+                        println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
+                            current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                            reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
+                            anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+                        println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6} diff={:.6}",
+                            dist_reserved, dist_anchor, (dist_reserved - dist_anchor).abs());
+                    }
 
                     if always_trace || (self.id == 0 && track_movement) {
                         println!("  [PSC SELECTION] reserved={:?} dist={:.6}, anchor={:?} dist={:.6}",
@@ -2818,16 +2821,20 @@ impl Actor {
                     // Three-way comparison: require epsilon margin for one to be "clearly better"
                     let (chosen, chosen_name) = if dist_reserved < dist_anchor - HYSTERESIS_EPSILON {
                         // Reserved is clearly better (farther from anchor by more than epsilon)
-                        println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) < dist_anchor ({:.6}) - epsilon",
-                            dist_reserved, dist_anchor);
+                        if always_trace || track_movement {
+                            println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) < dist_anchor ({:.6}) - epsilon",
+                                dist_reserved, dist_anchor);
+                        }
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
                         }
                         (reserved, "Reserved".to_string())
                     } else if dist_anchor < dist_reserved - HYSTERESIS_EPSILON {
                         // Anchor is clearly better (farther from reserved by more than epsilon)
-                        println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6}) - epsilon",
-                            dist_anchor, dist_reserved);
+                        if always_trace || track_movement {
+                            println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6}) - epsilon",
+                                dist_anchor, dist_reserved);
+                        }
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
                         }
@@ -2836,8 +2843,10 @@ impl Actor {
                         // Within epsilon - effectively equidistant
                         if self.enable_lookahead {
                             // Use look-ahead to break deadlock
-                            println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                                HYSTERESIS_EPSILON);
+                            if always_trace || track_movement {
+                                println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
+                                    HYSTERESIS_EPSILON);
+                            }
 
                             // Evaluate 2-step paths from both candidates
                             let lookahead_reserved = Self::evaluate_lookahead_candidate(
@@ -2866,15 +2875,21 @@ impl Actor {
                         // Choose based on look-ahead results
                         let (chosen, chosen_name) = match (lookahead_reserved, lookahead_anchor) {
                             (Some(dist_r), Some(dist_a)) => {
-                                println!("  [LOOKAHEAD] reserved_2step={:.6} anchor_2step={:.6}", dist_r, dist_a);
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] reserved_2step={:.6} anchor_2step={:.6}", dist_r, dist_a);
+                                }
                                 if dist_r < dist_a {
-                                    println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    if always_trace || track_movement {
+                                        println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    }
                                     if always_trace || (self.id == 0 && track_movement) {
                                         println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC (lookahead)");
                                     }
                                     (reserved, "Reserved (lookahead)".to_string())
                                 } else {
-                                    println!("  [LOOKAHEAD] Breaking deadlock: chose ANCHOR (better 2-step)");
+                                    if always_trace || track_movement {
+                                        println!("  [LOOKAHEAD] Breaking deadlock: chose ANCHOR (better 2-step)");
+                                    }
                                     if always_trace || (self.id == 0 && track_movement) {
                                         println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC (lookahead)");
                                     }
@@ -2882,21 +2897,27 @@ impl Actor {
                                 }
                             }
                             (Some(_), None) => {
-                                println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Chose RESERVED (only valid lookahead)");
                                 }
                                 (reserved, "Reserved (only valid lookahead)".to_string())
                             }
                             (None, Some(_)) => {
-                                println!("  [LOOKAHEAD] Only anchor has valid 2-step");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Only anchor has valid 2-step");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Chose ANCHOR (only valid lookahead)");
                                 }
                                 (anchor, "Anchor (only valid lookahead)".to_string())
                             }
                             (None, None) => {
-                                println!("  [LOOKAHEAD] Both blocked, falling back to reserved (diagonal)");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Both blocked, falling back to reserved (diagonal)");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Chose RESERVED (deadlock, both blocked)");
                                 }
@@ -2907,8 +2928,10 @@ impl Actor {
                             (chosen, chosen_name)
                         } else {
                             // Fallback when look-ahead disabled: prefer reserved for diagonal progress
-                            println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, preferring reserved",
-                                HYSTERESIS_EPSILON);
+                            if always_trace || track_movement {
+                                println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, preferring reserved",
+                                    HYSTERESIS_EPSILON);
+                            }
                             if always_trace || (self.id == 0 && track_movement) {
                                 println!("  [PSC SELECTION] Chose RESERVED (hysteresis fallback)");
                             }
@@ -2956,17 +2979,21 @@ impl Actor {
                     );
 
                     // DEBUG: Log H/V PSC selection with high precision
-                    println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
-                        reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
-                    println!("  [PSC_HV] dist_current={:.6} dist_reserved={:.6} diff={:.6}",
-                        dist_current, dist_reserved, (dist_reserved - dist_current).abs());
+                    if always_trace || track_movement {
+                        println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
+                            current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                            reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+                        println!("  [PSC_HV] dist_current={:.6} dist_reserved={:.6} diff={:.6}",
+                            dist_current, dist_reserved, (dist_reserved - dist_current).abs());
+                    }
 
                     // Apply hysteresis: only switch if reserved is clearly better
                     let (chosen, chosen_name) = if dist_reserved < dist_current - HYSTERESIS_EPSILON {
                         // Reserved is clearly better (more than epsilon closer)
-                        println!("  [PSC_HV] Chose RESERVED - dist_reserved ({:.6}) < dist_current ({:.6}) - epsilon",
-                            dist_reserved, dist_current);
+                        if always_trace || track_movement {
+                            println!("  [PSC_HV] Chose RESERVED - dist_reserved ({:.6}) < dist_current ({:.6}) - epsilon",
+                                dist_reserved, dist_current);
+                        }
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
                         }
@@ -2975,8 +3002,10 @@ impl Actor {
                         // Within epsilon - effectively equidistant
                         if self.enable_lookahead {
                             // Use look-ahead to break deadlock
-                            println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                                HYSTERESIS_EPSILON);
+                            if always_trace || track_movement {
+                                println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
+                                    HYSTERESIS_EPSILON);
+                            }
 
                             // Evaluate 2-step paths from both candidates
                             let lookahead_current = Self::evaluate_lookahead_candidate(
@@ -3005,15 +3034,21 @@ impl Actor {
                         // Choose based on look-ahead results
                         let (chosen, chosen_name) = match (lookahead_current, lookahead_reserved) {
                             (Some(dist_c), Some(dist_r)) => {
-                                println!("  [LOOKAHEAD] current_2step={:.6} reserved_2step={:.6}", dist_c, dist_r);
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] current_2step={:.6} reserved_2step={:.6}", dist_c, dist_r);
+                                }
                                 if dist_r < dist_c {
-                                    println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    if always_trace || track_movement {
+                                        println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
+                                    }
                                     if always_trace || (self.id == 0 && track_movement) {
                                         println!("  [PSC SELECTION] H/V move, using reserved as new PSC (lookahead)");
                                     }
                                     (reserved, "Reserved (lookahead)".to_string())
                                 } else {
-                                    println!("  [LOOKAHEAD] Staying at CURRENT (better 2-step)");
+                                    if always_trace || track_movement {
+                                        println!("  [LOOKAHEAD] Staying at CURRENT (better 2-step)");
+                                    }
                                     if always_trace || (self.id == 0 && track_movement) {
                                         println!("  [PSC SELECTION] H/V move, staying at current PSC (lookahead)");
                                     }
@@ -3021,21 +3056,27 @@ impl Actor {
                                 }
                             }
                             (Some(_), None) => {
-                                println!("  [LOOKAHEAD] Only current has valid 2-step");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Only current has valid 2-step");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Staying at current (only valid lookahead)");
                                 }
                                 (current, "Current (only valid lookahead)".to_string())
                             }
                             (None, Some(_)) => {
-                                println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Only reserved has valid 2-step");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Using reserved (only valid lookahead)");
                                 }
                                 (reserved, "Reserved (only valid lookahead)".to_string())
                             }
                             (None, None) => {
-                                println!("  [LOOKAHEAD] Both blocked, staying at current");
+                                if always_trace || track_movement {
+                                    println!("  [LOOKAHEAD] Both blocked, staying at current");
+                                }
                                 if always_trace || (self.id == 0 && track_movement) {
                                     println!("  [PSC SELECTION] Staying at current (deadlock, both blocked)");
                                 }
@@ -3046,8 +3087,10 @@ impl Actor {
                             (chosen, chosen_name)
                         } else {
                             // Fallback when look-ahead disabled: stay at current (conservative)
-                            println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, staying at current",
-                                HYSTERESIS_EPSILON);
+                            if always_trace || track_movement {
+                                println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, staying at current",
+                                    HYSTERESIS_EPSILON);
+                            }
                             if always_trace || (self.id == 0 && track_movement) {
                                 println!("  [PSC SELECTION] Staying at current (hysteresis fallback)");
                             }
