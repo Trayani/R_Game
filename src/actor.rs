@@ -2392,25 +2392,8 @@ impl Actor {
         //     }
         // }
 
-        // Check if we have a destination
-        let dest = match self.subcell_destination {
-            Some(d) => {
-                if always_trace {
-                    println!("[DestDirect] Destination: ({},{})", d.x, d.y);
-                }
-                unsafe { LOGGED_NO_DEST = false; } // Reset flag when destination is set
-                d
-            },
-            None => {
-                if always_trace && unsafe { !LOGGED_NO_DEST } {
-                    println!("[DestDirect] Actor {} has NO DESTINATION", self.id);
-                    unsafe { LOGGED_NO_DEST = true; }
-                }
-                return true; // No destination, we're done
-            }
-        };
-
-        // Ensure we have current sub-cell
+        // Ensure we have current sub-cell FIRST (before checking destination)
+        // This allows PscAlignment to proceed even without a destination
         let current = match self.current_subcell {
             Some(c) => c,
             None => {
@@ -2498,6 +2481,26 @@ impl Actor {
                 }
             }
         }
+
+        // After PscAlignment, check if we have a destination for navigation
+        // If no destination, actor stays in Idle state at subcell center
+        let dest = match self.subcell_destination {
+            Some(d) => {
+                if always_trace {
+                    println!("[DestDirect] Destination: ({},{})", d.x, d.y);
+                }
+                unsafe { LOGGED_NO_DEST = false; } // Reset flag when destination is set
+                d
+            },
+            None => {
+                // No destination - actor stays at current position (Idle state)
+                if always_trace && unsafe { !LOGGED_NO_DEST } {
+                    println!("[DestDirect] Actor {} has NO DESTINATION (Idle at subcell center)", self.id);
+                    unsafe { LOGGED_NO_DEST = true; }
+                }
+                return true; // No destination, stay at current position
+            }
+        };
 
         // Get destination screen position and quantize to subcell grid point
         // Convert cell coordinates to screen coordinates (use cell CENTER, not corner)
