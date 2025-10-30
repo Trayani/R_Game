@@ -38,6 +38,7 @@ fn test_affinity_spawn_136_525_dest_16_31() {
         16.0, 64.0, 8.0,
         cell_width, cell_height,
         2, 0.0, 0.0,
+        false, 0.0,
     );
     actor.use_directing_v2 = true;
 
@@ -64,6 +65,7 @@ fn test_affinity_spawn_136_525_dest_16_31() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             iteration < 20, // track_movement for first 20 frames
             0.0,
             ReservationEagerness::Center,

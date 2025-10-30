@@ -141,6 +141,7 @@ struct VisState {
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
     filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
+    enable_anti_cross: bool,  // If true, explicitly check for diagonal crossing (disabled to test if 3-cell reservation prevents it)
     use_directing_v2: bool,  // If true, use ray-rectangle intersection (v2), else legacy alignment-based
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
@@ -221,6 +222,7 @@ impl VisState {
             show_subcell_markers: config.subcell.show_markers,
             early_reservation_enabled: config.subcell.early_reservation_enabled,
             filter_backward_moves: true,  // Enabled by default
+            enable_anti_cross: false,  // Disabled by default - test if 3-cell reservation prevents crossing
             use_directing_v2: true,  // Enabled by default (ray-rectangle intersection)
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
@@ -1496,6 +1498,7 @@ async fn main() {
     println!("Sub-cell movement: {}", if state.subcell_movement_enabled { "ENABLED" } else { "DISABLED" });
     println!("Early reservation: {}", if state.early_reservation_enabled { "ON" } else { "OFF" });
     println!("Filter backward: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
+    println!("Anti-cross check: {} (tests if 3-cell reservation prevents crossing)", if state.enable_anti_cross { "ON" } else { "OFF" });
     println!("Actor directing v2: {}", if state.use_directing_v2 { "ON" } else { "OFF" });
     println!("Tracking mode: {:?}", state.tracking_mode);
     println!("Actor speed: {}", state.actor_speed);
@@ -1697,6 +1700,14 @@ async fn main() {
         if is_key_pressed(KeyCode::F) {
             state.filter_backward_moves = !state.filter_backward_moves;
             let msg = format!("Filter Backward Moves: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
+            println!("{}", msg);
+            state.action_log.log_message(&msg);
+        }
+
+        // Toggle anti-cross checking on Q key
+        if is_key_pressed(KeyCode::Q) {
+            state.enable_anti_cross = !state.enable_anti_cross;
+            let msg = format!("Anti-Cross Check: {} (testing if 3-cell reservation prevents crossing)", if state.enable_anti_cross { "ON" } else { "OFF" });
             println!("{}", msg);
             state.action_log.log_message(&msg);
         }
@@ -2167,6 +2178,7 @@ async fn main() {
                     &mut state.subcell_reservation_manager,
                     state.early_reservation_enabled,
                     state.filter_backward_moves,
+                    state.enable_anti_cross,
                     track_movement,
                     config.subcell.reservation_threshold_distance,
                     config.subcell.reservation_eagerness,

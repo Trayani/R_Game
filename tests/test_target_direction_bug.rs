@@ -39,6 +39,7 @@ fn test_target_direction_spawn_208_473_dest_20_27() {
         16.0, 64.0, 8.0,
         cell_width, cell_height,
         2, 0.0, 0.0,
+        false, 0.0,
     );
     actor.use_directing_v2 = true;
 
@@ -65,6 +66,7 @@ fn test_target_direction_spawn_208_473_dest_20_27() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             true,  // track_movement = true to see logs
             0.0,
             ReservationEagerness::Center,

@@ -50,12 +50,13 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
         2,      // subcell_grid_size
         0.0,    // offset_x
         0.0,    // offset_y
+        false, 0.0,
     );
     actor.use_directing_v2 = true;
 
     // Set starting subcell
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
     actor.current_subcell = Some(start_subcell.clone());
 
@@ -88,6 +89,7 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
             &mut reservation_mgr,
             false, // enable_early_reservation (default, should work now)
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.0,
             ReservationEagerness::Center,

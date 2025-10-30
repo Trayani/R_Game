@@ -33,6 +33,8 @@ fn create_actor(id: usize, x: f32, y: f32, cell_width: f32, cell_height: f32, su
         subcell_grid_size,
         subcell_offset_x,
         subcell_offset_y,
+        false, // enable_lookahead
+        0.0,   // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
     actor
@@ -115,6 +117,7 @@ fn test_multi_step_path_0_0_to_3_1() {
             &mut reservation_manager,
             false,  // enable_early_reservation
             false,  // filter_backward
+            false, // enable_anti_cross
             false,  // track_movement
             10.0,   // reservation_threshold_distance
             rustgame3::config::ReservationEagerness::Center,
@@ -192,6 +195,7 @@ fn test_diagonal_ne_prefer_horizontal() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -244,6 +248,7 @@ fn test_diagonal_ne_prefer_vertical() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -295,6 +300,7 @@ fn test_cardinal_east() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -346,6 +352,7 @@ fn test_cardinal_north() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -397,6 +404,7 @@ fn test_diagonal_se() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -448,6 +456,7 @@ fn test_diagonal_sw() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,
@@ -499,6 +508,7 @@ fn test_diagonal_nw() {
             delta_time,
             &mut reservation_manager,
             false, false, false, // enable_early_reservation, filter_backward, track_movement
+            false, // enable_anti_cross
             10.0,
             rustgame3::config::ReservationEagerness::Center,
             rustgame3::config::ReleaseEagerness::Center,

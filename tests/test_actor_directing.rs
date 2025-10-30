@@ -270,6 +270,7 @@ fn run_alternative_test(
         reservation_mgr,
         false,              // enable_early_reservation
         false,              // filter_backward
+            false, // enable_anti_cross
         false,              // track_movement
         0.1,                // reservation_threshold_distance
         config::ReservationEagerness::Round,

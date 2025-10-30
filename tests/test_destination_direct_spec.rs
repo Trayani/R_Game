@@ -39,7 +39,6 @@ fn test_q11_primary_subcell_concept() {
         0.0,   // offset_x
         0.0,   // offset_y
         true,  // enable_lookahead
-            0.5,  // psc_switch_threshold
         0.5,   // psc_switch_threshold
     );
 
@@ -427,8 +426,8 @@ fn test_destination_direct_basic_movement() {
         grid_size,
         0.0,
         0.0,
-        true  // enable_lookahead
-            0.5,  // psc_switch_threshold
+        true,  // enable_lookahead
+        0.5,   // psc_switch_threshold
     );
 
     // Set destination to (3, 3)
@@ -444,6 +443,7 @@ fn test_destination_direct_basic_movement() {
             &mut reservation_mgr,
             true,  // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.1,   // reservation_threshold_distance
             rustgame3::ReservationEagerness::Center,

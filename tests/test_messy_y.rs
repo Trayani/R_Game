@@ -211,7 +211,7 @@ fn test_6_messy_y() {
         println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x, variant_obs_y + 1);
 
         // Run raycasting with messy_y=true
-        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true, 0.5);
+        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true);
         let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
             .map(|&id| variant_grid.get_coords(id))
             .collect();
@@ -312,7 +312,7 @@ fn test_7_messy_y2() {
         println!("  Observer at ({}, {}) + ({}, {})", variant_obs_x, variant_obs_y, variant_obs_x, variant_obs_y + 1);
 
         // Run raycasting with messy_y=true
-        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true, 0.5);
+        let visible_cells = raycast(&variant_grid, variant_obs_x, variant_obs_y, false, true);
         let visible_positions: HashSet<(i32, i32)> = visible_cells.iter()
             .map(|&id| variant_grid.get_coords(id))
             .collect();

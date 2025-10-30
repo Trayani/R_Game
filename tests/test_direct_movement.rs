@@ -68,6 +68,7 @@ fn test_simple_diagonal_movement_ne() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,
@@ -275,6 +276,7 @@ fn test_simple_diagonal_movement_se() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,
@@ -482,6 +484,7 @@ fn test_simple_diagonal_movement_sw() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,
@@ -689,6 +692,7 @@ fn test_simple_diagonal_movement_nw() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             false, // track_movement
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,

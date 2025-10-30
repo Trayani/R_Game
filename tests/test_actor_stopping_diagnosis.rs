@@ -56,12 +56,13 @@ fn test_diagnose_actor_stopping() {
         2,                  // subcell_grid_size (2x2)
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
+        false, 0.0,
     );
     actor.use_directing_v2 = true;
 
     // Set starting subcell
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
     actor.current_subcell = Some(start_subcell.clone());
 
@@ -97,6 +98,7 @@ fn test_diagnose_actor_stopping() {
             &mut reservation_mgr,
             false, // enable_early_reservation
             false, // filter_backward
+            false, // enable_anti_cross
             iteration >= 140 && iteration <= 160, // track_movement - only log around failure
             0.0,   // reservation_threshold_distance
             ReservationEagerness::Center,

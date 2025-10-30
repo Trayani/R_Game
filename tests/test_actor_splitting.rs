@@ -46,6 +46,7 @@ fn test_five_actors_split_from_same_start() {
             subcell_grid_size,
             0.0, // offset_x
             0.0, // offset_y
+            false, 0.0,
         );
         actor.set_subcell_destination(dest);
         actor
@@ -74,6 +75,7 @@ fn test_five_actors_split_from_same_start() {
                 &mut reservation_mgr,
                 true,  // enable_early_reservation
                 false, // filter_backward
+            false, // enable_anti_cross
                 false, // track_movement
                 0.1,   // reservation_threshold_distance
                 ReservationEagerness::Center,
@@ -242,6 +244,8 @@ fn test_actors_dont_overlap_during_movement() {
             subcell_grid_size,
             0.0, // offset_x
             0.0, // offset_y
+            false, // enable_lookahead
+            0.0,   // psc_switch_threshold
         );
         actor.set_subcell_destination(dest);
         actor
@@ -264,6 +268,7 @@ fn test_actors_dont_overlap_during_movement() {
                 &mut reservation_mgr,
                 true,  // enable_early_reservation
                 false, // filter_backward
+            false, // enable_anti_cross
                 false, // track_movement
                 0.1,
                 ReservationEagerness::Center,

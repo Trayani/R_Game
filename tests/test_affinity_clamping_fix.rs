@@ -43,6 +43,7 @@ fn create_test_actor(id: usize, x: f32, y: f32) -> Actor {
         subcell_grid_size,
         subcell_offset_x,
         subcell_offset_y,
+        false, 0.0,
     )
 }
 

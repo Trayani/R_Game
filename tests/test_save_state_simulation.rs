@@ -128,6 +128,7 @@ fn test_f9_load_and_p_destination() {
                 &mut reservation_mgr,
                 early_reservation, // enable_early_reservation (from config!)
                 true,  // filter_backward (GUI default)
+                false, // enable_anti_cross (disabled to test if 3-cell reservation prevents crossing)
                 false, // track_movement
                 config.subcell.reservation_threshold_distance, // from config!
                 config.subcell.reservation_eagerness, // from config!
