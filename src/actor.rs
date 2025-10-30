@@ -557,6 +557,46 @@ impl Actor {
         cells
     }
 
+    /// Generate spiral offsets for searching nearby cells
+    /// Returns offsets in order: (0,0), then ring 1, then ring 2, etc.
+    /// Ring N contains all cells at Chebyshev distance N from origin
+    ///
+    /// Example for radius=2:
+    /// Ring 0: (0,0)
+    /// Ring 1: (1,0), (1,1), (0,1), (-1,1), (-1,0), (-1,-1), (0,-1), (1,-1)
+    /// Ring 2: (2,-1), (2,0), ..., (-2,-2), ...
+    fn generate_spiral_offsets(radius: i32) -> Vec<(i32, i32)> {
+        let mut offsets = Vec::new();
+
+        // Start with center
+        offsets.push((0, 0));
+
+        // Add rings outward
+        for ring in 1..=radius {
+            // Top edge: from (ring, -ring+1) to (ring, ring)
+            for dy in (-ring + 1)..=ring {
+                offsets.push((ring, dy));
+            }
+
+            // Right edge: from (ring-1, ring) to (-ring, ring)
+            for dx in ((-ring)..=(ring - 1)).rev() {
+                offsets.push((dx, ring));
+            }
+
+            // Bottom edge: from (-ring, ring-1) to (-ring, -ring)
+            for dy in ((-ring)..=(ring - 1)).rev() {
+                offsets.push((-ring, dy));
+            }
+
+            // Left edge: from (-ring+1, -ring) to (ring-1, -ring)
+            for dx in (-ring + 1)..ring {
+                offsets.push((dx, -ring));
+            }
+        }
+
+        offsets
+    }
+
     /// Check if a position is valid (doesn't occupy any blocked cells)
     /// Used for Next Position Validation (NPV)
     fn is_position_valid(&self, fpos_x: f32, fpos_y: f32, grid: &Grid) -> bool {
@@ -2400,23 +2440,35 @@ impl Actor {
                     self.subcell_offset_y,
                 );
 
-                // Try to reserve one of the 4 subcells in this cell, sorted by distance
-                let mut subcells_in_cell: Vec<SubCellCoord> = Vec::new();
-                for sub_y in 0..self.subcell_grid_size {
-                    for sub_x in 0..self.subcell_grid_size {
-                        let sc = SubCellCoord::new(
-                            cell_coord.cell_x,
-                            cell_coord.cell_y,
-                            sub_x,
-                            sub_y,
-                            self.subcell_grid_size,
-                        );
-                        subcells_in_cell.push(sc);
+                // Try to reserve subcells in nearby cells using spiral search pattern
+                // Spiral: (0,0) → (1,0) → (1,1) → (0,1) → (-1,1) → (-1,0) → (-1,-1) → (0,-1) → (1,-1) → ...
+                let search_radius = 5; // Search up to 5 cells away
+                let spiral_offsets = Self::generate_spiral_offsets(search_radius);
+
+                let mut all_candidate_subcells: Vec<SubCellCoord> = Vec::new();
+
+                // For each cell in spiral pattern
+                for (cell_dx, cell_dy) in spiral_offsets {
+                    let target_cell_x = cell_coord.cell_x + cell_dx;
+                    let target_cell_y = cell_coord.cell_y + cell_dy;
+
+                    // Generate all 4 subcells in this cell
+                    for sub_y in 0..self.subcell_grid_size {
+                        for sub_x in 0..self.subcell_grid_size {
+                            let sc = SubCellCoord::new(
+                                target_cell_x,
+                                target_cell_y,
+                                sub_x,
+                                sub_y,
+                                self.subcell_grid_size,
+                            );
+                            all_candidate_subcells.push(sc);
+                        }
                     }
                 }
 
-                // Sort by distance to actor's position
-                subcells_in_cell.sort_by(|a, b| {
+                // Sort ALL candidate subcells by distance to actor's position
+                all_candidate_subcells.sort_by(|a, b| {
                     let (a_x, a_y) = a.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
@@ -2434,24 +2486,32 @@ impl Actor {
                     dist_a.partial_cmp(&dist_b).unwrap()
                 });
 
-                // Try to reserve the nearest available subcell
+                // Try to reserve the nearest available subcell (across all cells in spiral)
                 let mut reserved_subcell = None;
-                for sc in &subcells_in_cell {
+                for sc in &all_candidate_subcells {
                     if reservation_manager.try_reserve(*sc, self.id) {
                         reserved_subcell = Some(*sc);
                         if always_trace {
-                            println!("[ALIGN] Actor {} reserved nearest subcell ({},{},{},{}) at ({:.1},{:.1})",
-                                self.id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y, self.fpos_x, self.fpos_y);
+                            println!("[ALIGN] Actor {} reserved subcell ({},{},{},{}) at distance {:.1}px from ({:.1},{:.1})",
+                                self.id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y,
+                                {
+                                    let (cx, cy) = sc.to_screen_center_with_offset(
+                                        self.cell_width, self.cell_height,
+                                        self.subcell_offset_x, self.subcell_offset_y
+                                    );
+                                    ((cx - self.fpos_x).powi(2) + (cy - self.fpos_y).powi(2)).sqrt()
+                                },
+                                self.fpos_x, self.fpos_y);
                         }
                         break;
                     }
                 }
 
-                // If no subcell could be reserved, stay in NoSubcell state and wait
+                // If no subcell could be reserved even with spiral search, stay in NoSubcell state
                 if reserved_subcell.is_none() {
                     if always_trace {
-                        println!("[ALIGN] Actor {} could NOT reserve any subcell in cell ({},{}) - all occupied, will retry",
-                            self.id, cell_coord.cell_x, cell_coord.cell_y);
+                        println!("[ALIGN] Actor {} could NOT reserve ANY subcell within radius {} - all occupied, will retry",
+                            self.id, search_radius);
                     }
                     return false; // Stay in NoSubcell state, retry next frame
                 }
