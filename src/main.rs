@@ -1025,6 +1025,10 @@ impl VisState {
                 // Draw current sub-cell (PSC - bright cyan with thick border)
                 if let Some(current_sc) = actor.current_subcell {
                     let (cx, cy) = current_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
+
+                    // Draw line from actor to PSC
+                    draw_line(actor.fpos_x, actor.fpos_y, cx, cy, 1.5, SKYBLUE);
+
                     // PSC gets a thicker, brighter cyan border to stand out
                     draw_circle(cx, cy, 5.0, SKYBLUE);
                     draw_circle_lines(cx, cy, 8.0, 2.5, SKYBLUE);
