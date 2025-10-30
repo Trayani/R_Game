@@ -14,6 +14,28 @@ pub enum Affinity {
     Both,
 }
 
+/// Type of movement target the actor is using
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum TargetType {
+    /// Direct target: Using locked_target from actor_directing_v2
+    Direct,
+    /// Subcell point target: Fallback to subcell point (H/V or no reservation)
+    SubcellPoint,
+}
+
+/// Cardinal direction in 8-way movement (45° sectors)
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum CardinalDirection {
+    N,   // North (up)
+    NE,  // Northeast
+    E,   // East (right)
+    SE,  // Southeast
+    S,   // South (down)
+    SW,  // Southwest
+    W,   // West (left)
+    NW,  // Northwest
+}
+
 /// Result of affinity calculation using ray-rectangle intersection
 /// (actor_directing_v2.txt Section B: Rectangle Intersection Formula)
 #[derive(Clone, Debug)]
@@ -148,6 +170,14 @@ pub struct Actor {
     /// Controls when actor switches from current PSC to reserved PSC
     /// 0.0 = switch only when reaching reserved exactly, 0.5 = switch at midpoint
     pub psc_switch_threshold: f32,
+
+    // Direction change tracking (for detecting indirect pathfinding)
+    /// Target position from two frames ago
+    previous_old_target: Option<(f32, f32)>,
+    /// Target position from last frame
+    old_target: Option<(f32, f32)>,
+    /// Type of target being used
+    target_type: TargetType,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -160,6 +190,44 @@ pub struct CellPosition {
     /// Messy state flags
     pub messy_x: bool,
     pub messy_y: bool,
+}
+
+/// Get the cardinal direction from one point to another using 8-way directional sectors
+/// Each sector spans 45 degrees (PI/4 radians)
+fn get_cardinal_direction(from_x: f32, from_y: f32, to_x: f32, to_y: f32) -> CardinalDirection {
+    use std::f32::consts::PI;
+
+    let dx = to_x - from_x;
+    let dy = to_y - from_y;
+
+    // Handle zero vector (no movement)
+    if dx.abs() < 0.0001 && dy.abs() < 0.0001 {
+        return CardinalDirection::N; // Default to North for zero vector
+    }
+
+    // Calculate angle: atan2(dy, dx) returns angle in radians
+    // East = 0°, North = +90° (PI/2), West = ±180° (PI), South = -90° (-PI/2)
+    let angle = dy.atan2(dx);
+
+    // Map angle to 8 directions using 45° sectors
+    // Each direction spans from -22.5° to +22.5° around its center angle
+    if angle >= -PI / 8.0 && angle < PI / 8.0 {
+        CardinalDirection::E  // 0° (east/right)
+    } else if angle >= PI / 8.0 && angle < 3.0 * PI / 8.0 {
+        CardinalDirection::SE  // 45° (southeast)
+    } else if angle >= 3.0 * PI / 8.0 && angle < 5.0 * PI / 8.0 {
+        CardinalDirection::S  // 90° (south/down)
+    } else if angle >= 5.0 * PI / 8.0 && angle < 7.0 * PI / 8.0 {
+        CardinalDirection::SW  // 135° (southwest)
+    } else if angle >= 7.0 * PI / 8.0 || angle < -7.0 * PI / 8.0 {
+        CardinalDirection::W  // 180° (west/left)
+    } else if angle >= -7.0 * PI / 8.0 && angle < -5.0 * PI / 8.0 {
+        CardinalDirection::NW  // -135° (northwest)
+    } else if angle >= -5.0 * PI / 8.0 && angle < -3.0 * PI / 8.0 {
+        CardinalDirection::N  // -90° (north/up)
+    } else {
+        CardinalDirection::NE  // -45° (northeast)
+    }
 }
 
 impl Actor {
@@ -208,6 +276,9 @@ impl Actor {
             distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
             enable_lookahead,
             psc_switch_threshold,
+            previous_old_target: None,
+            old_target: None,
+            target_type: TargetType::SubcellPoint,  // Default to SubcellPoint
         }
     }
 
@@ -2457,6 +2528,44 @@ impl Actor {
                 self.subcell_offset_y,
             )
         };
+
+        // DIRECTION CHANGE DETECTION
+        // Track when actors change direction mid-journey (indicates indirect pathfinding)
+        let new_target = (target_x, target_y);
+        let new_target_type = if self.locked_target.is_some() {
+            TargetType::Direct
+        } else {
+            TargetType::SubcellPoint
+        };
+
+        // Check for direction change using the 3-rule logic
+        if let Some(old_tgt) = self.old_target {
+            let direction_changed = if new_target_type == TargetType::Direct &&
+                                       self.target_type == TargetType::Direct {
+                // Rule 1: Both targets are Direct → no direction change
+                false
+            } else if let Some(prev_old_tgt) = self.previous_old_target {
+                // Rule 2: Check if same cardinal direction
+                let old_direction = get_cardinal_direction(prev_old_tgt.0, prev_old_tgt.1, old_tgt.0, old_tgt.1);
+                let new_direction = get_cardinal_direction(old_tgt.0, old_tgt.1, new_target.0, new_target.1);
+                old_direction != new_direction
+            } else {
+                // First frame with history, can't check yet
+                false
+            };
+
+            if direction_changed {
+                self.diagnostic_messages.push(format!(
+                    "[DIRECTION CHANGE] Actor {} changed direction! old_target=({:.1},{:.1}) new_target=({:.1},{:.1}) old_type={:?} new_type={:?}",
+                    self.id, old_tgt.0, old_tgt.1, new_target.0, new_target.1, self.target_type, new_target_type
+                ));
+            }
+        }
+
+        // Update history
+        self.previous_old_target = self.old_target;
+        self.old_target = Some(new_target);
+        self.target_type = new_target_type;
 
         // Calculate distance to target (used for both movement and switching)
         let dx_to_target = target_x - self.fpos_x;
