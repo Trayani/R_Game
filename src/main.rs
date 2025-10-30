@@ -1425,10 +1425,108 @@ impl VisState {
             }
         }
     }
+
+    /// Spawn an actor at the specified screen position (for automation)
+    fn spawn_actor_at(&mut self, x: f32, y: f32) {
+        self.action_log.log_start(Action::SpawnActor { x, y });
+        let actor_size = self.cell_width.min(self.cell_height) * self.actor_size_ratio;
+        let actor_id = self.next_actor_id;
+        self.next_actor_id += 1;
+        let collision_radius = self.cell_width.min(self.cell_height) * self.actor_collision_radius_ratio;
+        let subcell_grid_size = self.subcell_reservation_manager.grid_size();
+        let (offset_x, offset_y) = self.subcell_offset.get_offsets();
+        let mut actor = Actor::new(actor_id, x, y, actor_size, self.actor_speed, collision_radius, self.cell_width, self.cell_height, subcell_grid_size, offset_x, offset_y, self.enable_lookahead, self.psc_switch_threshold);
+        actor.use_directing_v2 = self.use_directing_v2;
+        actor.distance_tolerance_multiplier = self.actor_distance_tolerance_multiplier;
+        self.actors.push(actor);
+        self.action_log.log_finish(Action::SpawnActor { x, y });
+    }
+
+    /// Set destination for all actors (for automation)
+    fn set_all_actors_destination(&mut self, x: f32, y: f32) {
+        if self.actors.is_empty() {
+            return;
+        }
+
+        let target_grid_x = (x / self.cell_width) as i32;
+        let target_grid_y = (y / self.cell_height) as i32;
+
+        self.action_log.log_start(Action::SetActorDestination {
+            x: target_grid_x,
+            y: target_grid_y,
+            actor_count: self.actors.len(),
+        });
+
+        if self.subcell_movement_enabled {
+            // Sub-cell movement mode - spread actors across different cells
+            let cell_destinations = spread_cell_destinations(
+                target_grid_x,
+                target_grid_y,
+                self.actors.len(),
+            );
+            for (actor, (dest_x, dest_y)) in self.actors.iter_mut().zip(cell_destinations.iter()) {
+                let dest_pos = Position { x: *dest_x, y: *dest_y };
+                actor.set_subcell_destination(dest_pos);
+            }
+            println!("[AUTO] Sub-cell destinations set: ({}, {}) for {} actors (spread across {} cells)",
+                target_grid_x, target_grid_y, self.actors.len(), cell_destinations.len());
+        }
+
+        self.action_log.log_finish(Action::SetActorDestination {
+            x: target_grid_x,
+            y: target_grid_y,
+            actor_count: self.actors.len(),
+        });
+    }
+}
+
+/// Parse coordinates from string like "400,300"
+fn parse_coords(s: &str) -> Option<(f32, f32)> {
+    let parts: Vec<&str> = s.split(',').collect();
+    if parts.len() == 2 {
+        if let (Ok(x), Ok(y)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
+            return Some((x, y));
+        }
+    }
+    None
 }
 
 #[macroquad::main("RustGame3 - Raycasting")]
 async fn main() {
+    // Parse command-line arguments for automation
+    let args: Vec<String> = std::env::args().collect();
+    let mut spawn_at: Option<(f32, f32)> = None;
+    let mut dest_at: Option<(f32, f32)> = None;
+    let mut run_for_secs: Option<f32> = None;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--spawn-at" if i + 1 < args.len() => {
+                if let Some((x, y)) = parse_coords(&args[i + 1]) {
+                    spawn_at = Some((x, y));
+                    println!("[AUTO] Will spawn actor at ({}, {})", x, y);
+                }
+                i += 2;
+            }
+            "--dest-at" if i + 1 < args.len() => {
+                if let Some((x, y)) = parse_coords(&args[i + 1]) {
+                    dest_at = Some((x, y));
+                    println!("[AUTO] Will set destination at ({}, {})", x, y);
+                }
+                i += 2;
+            }
+            "--run-for" if i + 1 < args.len() => {
+                if let Ok(secs) = args[i + 1].parse::<f32>() {
+                    run_for_secs = Some(secs);
+                    println!("[AUTO] Will run for {} seconds", secs);
+                }
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+
     // Load configuration from config.toml (or use defaults)
     let config = Config::load();
 
@@ -1446,7 +1544,35 @@ async fn main() {
     println!("Actor speed: {}", state.actor_speed);
     println!("============================");
 
+    let start_time = get_time();
+    let mut auto_actions_done = false;
+
     loop {
+        // Execute automated actions once
+        if !auto_actions_done && spawn_at.is_some() {
+            if let Some((x, y)) = spawn_at {
+                // Spawn actor at specified position
+                state.spawn_actor_at(x, y);
+                println!("[AUTO] Spawned actor at ({}, {})", x, y);
+            }
+
+            if let Some((dx, dy)) = dest_at {
+                // Set destination for all actors
+                state.set_all_actors_destination(dx, dy);
+                println!("[AUTO] Set destination at ({}, {})", dx, dy);
+            }
+
+            auto_actions_done = true;
+        }
+
+        // Check if we should exit after run_for_secs
+        if let Some(duration) = run_for_secs {
+            if get_time() - start_time >= duration as f64 {
+                println!("[AUTO] Ran for {} seconds, exiting...", duration);
+                break;
+            }
+        }
+
         // Handle input continuously
         let (mouse_x, mouse_y) = mouse_position();
         state.handle_mouse(mouse_x, mouse_y);
