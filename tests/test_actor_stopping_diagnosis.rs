@@ -61,7 +61,7 @@ fn test_diagnose_actor_stopping() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(start_subcell.clone());
 

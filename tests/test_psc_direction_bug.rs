@@ -237,13 +237,14 @@ fn test_original_bug_case_175_477_to_19_28() {
         2,     // subcell_grid_size (2x2)
         0.0, 0.0,  // subcell offsets
         true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         0.5,   // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 
     // Calculate actual PSC from spawn position
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     // Set initial current_subcell (this will be the "stored" PSC)
@@ -277,7 +278,7 @@ fn test_original_bug_case_175_477_to_19_28() {
 
     // Calculate current actual PSC (after any movement)
     let current_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     // Print diagnostic report
@@ -309,12 +310,12 @@ fn test_actor_at_subcell_boundary() {
         0, spawn_x, spawn_y,
         16.0, 64.0, 8.0,
         cell_width, cell_height,
-        2, 0.0, 0.0,
+        2, 0.0, 0.0, true, 0.5
     );
     actor.use_directing_v2 = true;
 
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(actual_psc.clone());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -329,7 +330,7 @@ fn test_actor_at_subcell_boundary() {
     );
 
     let current_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     print_diagnostic_report(
@@ -358,12 +359,12 @@ fn test_diagonal_movement_northeast() {
         0, spawn_x, spawn_y,
         16.0, 64.0, 8.0,
         cell_width, cell_height,
-        2, 0.0, 0.0,
+        2, 0.0, 0.0, true, 0.5
     );
     actor.use_directing_v2 = true;
 
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(actual_psc.clone());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -378,7 +379,7 @@ fn test_diagonal_movement_northeast() {
     );
 
     let current_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     print_diagnostic_report(
@@ -407,12 +408,12 @@ fn test_diagonal_movement_southwest() {
         0, spawn_x, spawn_y,
         16.0, 64.0, 8.0,
         cell_width, cell_height,
-        2, 0.0, 0.0,
+        2, 0.0, 0.0, true, 0.5
     );
     actor.use_directing_v2 = true;
 
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(actual_psc.clone());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -427,7 +428,7 @@ fn test_diagonal_movement_southwest() {
     );
 
     let current_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     print_diagnostic_report(
@@ -456,12 +457,12 @@ fn test_multiple_updates_psc_lag() {
         0, spawn_x, spawn_y,
         16.0, 64.0, 8.0,
         cell_width, cell_height,
-        2, 0.0, 0.0,
+        2, 0.0, 0.0, true, 0.5
     );
     actor.use_directing_v2 = true;
 
     let initial_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(initial_psc.clone());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -480,7 +481,7 @@ fn test_multiple_updates_psc_lag() {
 
         let psc_before = actor.current_subcell.clone();
         let actual_psc_before = SubCellCoord::from_screen_pos_with_offset(
-            actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+            actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
         );
 
         actor.update_subcell_destination_direct(
@@ -493,7 +494,7 @@ fn test_multiple_updates_psc_lag() {
 
         let psc_after = actor.current_subcell.clone();
         let actual_psc_after = SubCellCoord::from_screen_pos_with_offset(
-            actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+            actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
         );
 
         if let (Some(stored), actual) = (&psc_after, &actual_psc_after) {
@@ -520,7 +521,7 @@ fn test_multiple_updates_psc_lag() {
 
     // Final diagnostic report
     let final_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     print_diagnostic_report(
@@ -552,12 +553,12 @@ fn test_high_speed_amplified_psc_lag() {
         0, spawn_x, spawn_y,
         16.0, high_speed, 8.0,
         cell_width, cell_height,
-        2, 0.0, 0.0,
+        2, 0.0, 0.0, true, 0.5
     );
     actor.use_directing_v2 = true;
 
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(actual_psc.clone());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -572,7 +573,7 @@ fn test_high_speed_amplified_psc_lag() {
     );
 
     let current_actual_psc = SubCellCoord::from_screen_pos_with_offset(
-        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
+        actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
 
     print_diagnostic_report(

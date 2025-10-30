@@ -24,6 +24,7 @@ fn test_simple_diagonal_movement_ne() {
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 
@@ -237,6 +238,7 @@ fn test_simple_diagonal_movement_se() {
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 
@@ -450,6 +452,7 @@ fn test_simple_diagonal_movement_sw() {
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 
@@ -663,6 +666,7 @@ fn test_simple_diagonal_movement_nw() {
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 

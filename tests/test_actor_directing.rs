@@ -149,6 +149,7 @@ fn run_alternative_test(
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 
@@ -403,6 +404,7 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
         true,               // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
 
     // Ensure directing v2 is enabled
@@ -977,7 +979,7 @@ fn test_specific_diagonal_cases() {
     // Using cell_width=1 to match coordinate system (5.3 means position 5.3)
     let mut actor = Actor::new(
         0, 5.3, 4.1, 0.5, 100.0, 0.25,
-        1.0, 1.0, 2, 0.0, 0.0, true  // cell_width=1, cell_height=1, enable_lookahead
+        1.0, 1.0, 2, 0.0, 0.0, true, 0.5  // cell_width=1, cell_height=1, enable_lookahead, psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 

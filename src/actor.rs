@@ -789,13 +789,13 @@ impl Actor {
         let rect_min_y = psc_y.min(diag_y);
         let rect_max_y = psc_y.max(diag_y);
 
-        // Step 2: Calculate ray direction
-        let dir_x = dest_x - actor_x;
-        let dir_y = dest_y - actor_y;
-        let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
+        // Step 2: Calculate destination direction
+        let dest_dx = dest_x - actor_x;
+        let dest_dy = dest_y - actor_y;
+        let dest_len = (dest_dx * dest_dx + dest_dy * dest_dy).sqrt();
 
         // Handle edge case: actor already at destination
-        if dir_len < EPSILON {
+        if dest_len < EPSILON {
             // Choose anchor based on actor position offset from PSC
             let offset_x = (actor_x - psc_x).abs();
             let offset_y = (actor_y - psc_y).abs();
@@ -814,32 +814,36 @@ impl Actor {
             };
         }
 
-        let ray_x = dir_x / dir_len;
-        let ray_y = dir_y / dir_len;
+        let dest_ray_x = dest_dx / dest_len;
+        let dest_ray_y = dest_dy / dest_len;
 
-        // Step 3: Ray-rectangle intersection (parametric t values)
+        // Step 3: Compute target on rectangle boundary toward destination
+        // Instead of finding where ray exits rectangle, find point on boundary
+        // that moves actor toward destination
+
+        // Determine which boundaries the destination ray passes through
         let mut t_vertical = f32::INFINITY;
         let mut t_horizontal = f32::INFINITY;
 
-        // Vertical edges (left and right)
-        if ray_x.abs() > EPSILON {
-            if ray_x > 0.0 {
-                // Moving right → check right edge
-                t_vertical = (rect_max_x - actor_x) / ray_x;
+        // Vertical edges (left and right) - which edge faces the destination?
+        if dest_ray_x.abs() > EPSILON {
+            if dest_ray_x > 0.0 {
+                // Destination is to the right → target right edge
+                t_vertical = (rect_max_x - actor_x) / dest_ray_x;
             } else {
-                // Moving left → check left edge
-                t_vertical = (rect_min_x - actor_x) / ray_x;
+                // Destination is to the left → target left edge
+                t_vertical = (rect_min_x - actor_x) / dest_ray_x;
             }
         }
 
-        // Horizontal edges (top and bottom)
-        if ray_y.abs() > EPSILON {
-            if ray_y > 0.0 {
-                // Moving down → check bottom edge
-                t_horizontal = (rect_max_y - actor_y) / ray_y;
+        // Horizontal edges (top and bottom) - which edge faces the destination?
+        if dest_ray_y.abs() > EPSILON {
+            if dest_ray_y > 0.0 {
+                // Destination is below → target bottom edge
+                t_horizontal = (rect_max_y - actor_y) / dest_ray_y;
             } else {
-                // Moving up → check top edge
-                t_horizontal = (rect_min_y - actor_y) / ray_y;
+                // Destination is above → target top edge
+                t_horizontal = (rect_min_y - actor_y) / dest_ray_y;
             }
         }
 
@@ -895,8 +899,8 @@ impl Actor {
         if (t_vertical - t_horizontal).abs() < EPSILON {
             // BOTH: Hits corner (both edges at same t)
             affinity = Affinity::Both;
-            target_x = actor_x + ray_x * t_vertical;
-            target_y = actor_y + ray_y * t_vertical;
+            target_x = actor_x + dest_ray_x * t_vertical;
+            target_y = actor_y + dest_ray_y * t_vertical;
 
             // Choose anchor based on actor's position offset from PSC
             // If actor is more horizontally offset, use horizontal anchor
@@ -910,14 +914,14 @@ impl Actor {
         } else if t_vertical < t_horizontal {
             // H-affinity: Hits vertical edge first
             affinity = Affinity::Horizontal;
-            target_x = actor_x + ray_x * t_vertical;
-            target_y = actor_y + ray_y * t_vertical;
+            target_x = actor_x + dest_ray_x * t_vertical;
+            target_y = actor_y + dest_ray_y * t_vertical;
             anchor = Self::get_horizontal_anchor(psc, diagonal);
         } else {
             // V-affinity: Hits horizontal edge first
             affinity = Affinity::Vertical;
-            target_x = actor_x + ray_x * t_horizontal;
-            target_y = actor_y + ray_y * t_horizontal;
+            target_x = actor_x + dest_ray_x * t_horizontal;
+            target_y = actor_y + dest_ray_y * t_horizontal;
             anchor = Self::get_vertical_anchor(psc, diagonal);
         }
 
@@ -3263,6 +3267,7 @@ mod tests {
             0.0,  // No offset
             0.0,
             true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3292,6 +3297,7 @@ mod tests {
             0.0,  // No offset
             0.0,
             true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3319,6 +3325,7 @@ mod tests {
             0.0,  // No offset
             0.0,
             true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3346,6 +3353,7 @@ mod tests {
             0.0,  // No offset
             0.0,
             true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3360,7 +3368,7 @@ mod tests {
         // Start actor at cell (0,0) center
         let start_x = 0.0 * cell_width + cell_width / 2.0;
         let start_y = 0.0 * cell_height + cell_height / 2.0;
-        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3, 0.0, 0.0, true);
+        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3, 0.0, 0.0, true, 0.5);
 
         // Create a simple path: (1,0) -> (2,0) -> (2,1)
         let path = vec![

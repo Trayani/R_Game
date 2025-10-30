@@ -39,6 +39,7 @@ fn test_q11_primary_subcell_concept() {
         0.0,   // offset_x
         0.0,   // offset_y
         true,  // enable_lookahead
+            0.5,  // psc_switch_threshold
         0.5,   // psc_switch_threshold
     );
 
@@ -427,6 +428,7 @@ fn test_destination_direct_basic_movement() {
         0.0,
         0.0,
         true  // enable_lookahead
+            0.5,  // psc_switch_threshold
     );
 
     // Set destination to (3, 3)

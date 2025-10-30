@@ -55,7 +55,7 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
-        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
+        spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0, true, 0.5
     );
     actor.current_subcell = Some(start_subcell.clone());
 
