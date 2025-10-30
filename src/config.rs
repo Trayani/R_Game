@@ -110,6 +110,8 @@ pub struct ActorsConfig {
     pub distance_tolerance_multiplier: f32,
     #[serde(default = "default_enable_lookahead")]
     pub enable_lookahead: bool,
+    #[serde(default = "default_psc_switch_threshold")]
+    pub psc_switch_threshold: f32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -158,6 +160,7 @@ fn default_size_ratio() -> f32 { 0.9 }
 fn default_collision_radius_ratio() -> f32 { 0.3 }
 fn default_distance_tolerance_multiplier() -> f32 { 0.6 }
 fn default_enable_lookahead() -> bool { true }
+fn default_psc_switch_threshold() -> f32 { 0.5 }
 fn default_window_title() -> String { "RustGame3 - Grid Raycasting Demo".to_string() }
 fn default_bg_r() -> u8 { 30 }
 fn default_bg_g() -> u8 { 30 }
@@ -213,6 +216,7 @@ impl Default for ActorsConfig {
             collision_radius_ratio: default_collision_radius_ratio(),
             distance_tolerance_multiplier: default_distance_tolerance_multiplier(),
             enable_lookahead: default_enable_lookahead(),
+            psc_switch_threshold: default_psc_switch_threshold(),
         }
     }
 }

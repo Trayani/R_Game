@@ -116,7 +116,20 @@ distance_tolerance_multiplier = 0.0
 # Possible values: true, false
 # Default: true
 # Toggle at runtime: Not available (requires restart)
-enable_lookahead = true
+enable_lookahead = false
+
+# PSC (Primary SubCell) switching threshold
+# Controls when actor switches from current PSC to reserved PSC
+# Value represents the remaining distance ratio threshold:
+#   0.0 = switch only when reaching reserved exactly (100% progress)
+#   0.4 = switch when 40% of distance remains (60% progress made)
+#   0.5 = switch at midpoint (50% progress, default behavior)
+#   1.0 = switch immediately (0% progress)
+# Lower values = later switching (more conservative)
+# Higher values = earlier switching (more aggressive)
+# Default: 0.5 (midpoint, maintains current behavior)
+# Toggle at runtime: Not available (requires restart)
+psc_switch_threshold = 0.5
 
 [visual]
 # Window title

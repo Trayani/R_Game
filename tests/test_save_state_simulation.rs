@@ -47,7 +47,8 @@ fn test_f9_load_and_p_destination() {
         0.0, // subcell_offset_y
         50.0, // configured_speed
         0.6, // distance_tolerance_multiplier
-        true // enable_lookahead
+        true // enable_lookahead,
+        0.5  // psc_switch_threshold
     );
     let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
 

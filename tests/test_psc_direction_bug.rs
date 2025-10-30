@@ -237,6 +237,7 @@ fn test_original_bug_case_175_477_to_19_28() {
         2,     // subcell_grid_size (2x2)
         0.0, 0.0,  // subcell offsets
         true,  // enable_lookahead
+        0.5,   // psc_switch_threshold
     );
     actor.use_directing_v2 = true;
 

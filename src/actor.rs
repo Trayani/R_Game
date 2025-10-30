@@ -144,6 +144,11 @@ pub struct Actor {
     /// Enable look-ahead (2-step) evaluation for deadlock breaking (default: true)
     /// When hysteresis detects equidistant candidates, evaluate 2-step paths to break deadlocks
     pub enable_lookahead: bool,
+
+    /// PSC switching threshold - remaining distance ratio (default: 0.5)
+    /// Controls when actor switches from current PSC to reserved PSC
+    /// 0.0 = switch only when reaching reserved exactly, 0.5 = switch at midpoint
+    pub psc_switch_threshold: f32,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -160,7 +165,7 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, enable_lookahead: bool) -> Self {
+    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, enable_lookahead: bool, psc_switch_threshold: f32) -> Self {
         // Initialize sub-cell position with offset
         let current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
             fpos_x,
@@ -203,6 +208,7 @@ impl Actor {
             diagnostic_messages: Vec::new(),
             distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
             enable_lookahead,
+            psc_switch_threshold,
         }
     }
 
@@ -2198,8 +2204,23 @@ impl Actor {
             let dy_to_current = current_y - self.fpos_y;
             let dist_to_current = (dx_to_current * dx_to_current + dy_to_current * dy_to_current).sqrt();
 
-            // If closer to reserved than current, switch
-            if dist_to_reserved <= dist_to_current {
+            // Calculate total distance from current subcell to reserved subcell
+            let dx_current_to_reserved = reserved_x - current_x;
+            let dy_current_to_reserved = reserved_y - current_y;
+            let total_distance = (dx_current_to_reserved * dx_current_to_reserved + dy_current_to_reserved * dy_current_to_reserved).sqrt();
+
+            // Calculate remaining distance ratio (0.0 = at reserved, 1.0 = at current)
+            let remaining_ratio = if total_distance > 0.001 {
+                dist_to_reserved / total_distance
+            } else {
+                0.0  // Already at target, switch immediately
+            };
+
+            // Switch when remaining distance ratio <= threshold
+            // threshold=0.5 means switch at midpoint (default behavior)
+            // threshold=0.4 means switch when 60% of distance traveled (early switching)
+            // threshold=0.0 means switch only when reaching reserved exactly
+            if remaining_ratio <= self.psc_switch_threshold {
                 // Save the previous current for anti-cross checking in early reservation
                 let previous_current = current;
 
@@ -2572,23 +2593,32 @@ impl Actor {
             if always_trace || (self.id == 0 && track_movement) {
                 println!("  [STATE] Has reservation: {:?}", reserved);
             }
-            // Triangle-based movement: switch based on boundary proximity, not center proximity
+            // Triangle-based movement: switch based on boundary proximity using threshold
             let should_switch = if enable_early_reservation {
-                // Early mode: Switch when closer to boundary than to current center
+                // Early mode: Use threshold-based switching
+                // Calculate total distance from current center to target boundary
                 let (current_x, current_y) = current.to_screen_center_with_offset(
                     self.cell_width,
                     self.cell_height,
                     self.subcell_offset_x,
                     self.subcell_offset_y,
                 );
-                let dx_to_curr = current_x - self.fpos_x;
-                let dy_to_curr = current_y - self.fpos_y;
-                let dist_to_current_center = (dx_to_curr * dx_to_curr + dy_to_curr * dy_to_curr).sqrt();
+                let dx_curr_to_target = target_x - current_x;
+                let dy_curr_to_target = target_y - current_y;
+                let total_distance = (dx_curr_to_target * dx_curr_to_target + dy_curr_to_target * dy_curr_to_target).sqrt();
 
-                let switch = dist_to_target_after <= dist_to_current_center;
+                // Calculate remaining distance ratio (0.0 = at target, 1.0 = at current center)
+                let remaining_ratio = if total_distance > 0.001 {
+                    dist_to_target_after / total_distance
+                } else {
+                    0.0  // Already at target, switch immediately
+                };
+
+                // Switch when remaining distance ratio <= threshold
+                let switch = remaining_ratio <= self.psc_switch_threshold;
                 if always_trace || (self.id == 0 && track_movement) {
-                    println!("  [SWITCH CHECK] EARLY MODE: dist_boundary={:.4} <= dist_center={:.4} = {}",
-                        dist_to_target_after, dist_to_current_center, switch);
+                    println!("  [SWITCH CHECK] EARLY MODE: remaining_ratio={:.4} <= threshold={:.4} = {}",
+                        remaining_ratio, self.psc_switch_threshold, switch);
                 }
                 switch
             } else {
