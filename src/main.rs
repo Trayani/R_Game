@@ -1128,33 +1128,6 @@ impl VisState {
                 }
             }
         }
-
-        // Draw reserved subcells and PSCs AFTER actors (so they appear on top)
-        if self.subcell_movement_enabled && self.show_subcell_markers {
-            let (offset_x, offset_y) = self.subcell_offset.get_offsets();
-
-            // Draw all reserved subcells as black dots
-            for reserved_sc in self.subcell_reservation_manager.get_all_reservations() {
-                let (rx, ry) = reserved_sc.to_screen_center_with_offset(
-                    self.cell_width,
-                    self.cell_height,
-                    offset_x,
-                    offset_y
-                );
-                draw_circle(rx, ry, 3.0, BLACK);
-            }
-
-            // Draw all PSCs (current subcells) as yellow dots on top
-            for psc in self.subcell_reservation_manager.get_all_current_subcells() {
-                let (px, py) = psc.to_screen_center_with_offset(
-                    self.cell_width,
-                    self.cell_height,
-                    offset_x,
-                    offset_y
-                );
-                draw_circle(px, py, 3.0, YELLOW);
-            }
-        }
     }
 
     fn draw(&self) {
@@ -1175,7 +1148,7 @@ impl VisState {
                 } else if self.grid.is_blocked(x, y) {
                     RED // Blocked
                 } else if self.visible_cells.contains(&cell_id) {
-                    Color::from_rgba(100, 200, 100, 255) // Visible
+                    Color::from_rgba(80, 100, 80, 255) // Visible (pale green)
                 } else {
                     Color::from_rgba(60, 60, 60, 255) // Not visible
                 };
@@ -1308,6 +1281,33 @@ impl VisState {
 
         // Draw actor on top of everything
         self.draw_actor();
+
+        // Draw reserved subcells and PSCs AFTER actors (so they appear on top)
+        if self.subcell_movement_enabled && self.show_subcell_markers {
+            let (offset_x, offset_y) = self.subcell_offset.get_offsets();
+
+            // Draw all reserved subcells as black dots
+            for reserved_sc in self.subcell_reservation_manager.get_all_reservations() {
+                let (rx, ry) = reserved_sc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    offset_x,
+                    offset_y
+                );
+                draw_circle(rx, ry, 3.0, BLACK);
+            }
+
+            // Draw all PSCs (current subcells) as yellow dots on top
+            for psc in self.subcell_reservation_manager.get_all_current_subcells() {
+                let (px, py) = psc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    offset_x,
+                    offset_y
+                );
+                draw_circle(px, py, 3.0, YELLOW);
+            }
+        }
 
         // Draw info
         let messy_status = match (self.messy_x, self.messy_y) {
