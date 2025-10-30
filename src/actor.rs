@@ -1249,12 +1249,25 @@ impl Actor {
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
+        // Log function entry for diagnostics
+        let dx_to_dest = dest_screen_x - self.fpos_x;
+        let dy_to_dest = dest_screen_y - self.fpos_y;
+        self.diagnostic_messages.push(format!(
+            "[DIAG RESERVE] Actor {} trying diagonal+affinity from ({},{},{},{}) toward dest dir=({:.1},{:.1})",
+            self.id, current.cell_x, current.cell_y, current.sub_x, current.sub_y, dx_to_dest, dy_to_dest
+        ));
+
         let neighbors = current.get_neighbors();
 
         // Collect diagonal candidates with distance rule filter
-        let diagonal_candidates: Vec<SubCellCoord> = neighbors
+        let all_diagonals: Vec<SubCellCoord> = neighbors
             .iter()
             .filter(|n| Self::is_diagonal_move(current, n))
+            .copied()
+            .collect();
+
+        let diagonal_candidates: Vec<SubCellCoord> = all_diagonals
+            .iter()
             .filter(|n| {
                 // DESIGN DOC RULE: Filter candidates that would increase distance
                 !current.violates_distance_rule(
@@ -1273,6 +1286,20 @@ impl Actor {
             .copied()
             .collect();
 
+        // Log distance rule filtering results
+        self.diagnostic_messages.push(format!(
+            "[DIAG RESERVE] Actor {} distance filter: {} diagonal neighbors, {} passed distance rule, {} filtered out",
+            self.id, all_diagonals.len(), diagonal_candidates.len(), all_diagonals.len() - diagonal_candidates.len()
+        ));
+
+        if diagonal_candidates.is_empty() {
+            self.diagnostic_messages.push(format!(
+                "[DIAG RESERVE] Actor {} NO diagonal candidates passed distance rule - all would increase distance",
+                self.id
+            ));
+            return false;
+        }
+
         // Try each diagonal with affinity-calculated anchor
         println!("[RESERVE V2 DEBUG] Actor {} has {} diagonal candidates to try", self.id, diagonal_candidates.len());
         for (idx, diagonal) in diagonal_candidates.iter().enumerate() {
@@ -1280,14 +1307,37 @@ impl Actor {
                 self.id, idx + 1, diagonal_candidates.len(),
                 diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y);
 
+            self.diagnostic_messages.push(format!(
+                "[DIAG RESERVE] Actor {} candidate {}/{}: trying diagonal ({},{},{},{})",
+                self.id, idx + 1, diagonal_candidates.len(),
+                diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y
+            ));
+
             // Anti-cross check for diagonal
             if enable_anti_cross {
                 if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                    // Get counter-diagonal cells for logging
+                    let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
+                    let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                    let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                    self.diagnostic_messages.push(format!(
+                        "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
+                        self.id, idx + 1,
+                        counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
+                        counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
+                    ));
                     println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
                     continue;
                 }
                 if let Some(prev) = previous_current {
                     if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
+                        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                        self.diagnostic_messages.push(format!(
+                            "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
+                            self.id, idx + 1, owner1, owner2
+                        ));
                         println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
                         continue;
                     }
@@ -1318,6 +1368,17 @@ impl Actor {
                 affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
                 affinity_result.anchor.sub_x, affinity_result.anchor.sub_y);
 
+            // Check ownership before attempting reservation
+            let diag_owner = reservation_manager.get_owner(diagonal);
+            let anchor_owner = reservation_manager.get_owner(&affinity_result.anchor);
+            self.diagnostic_messages.push(format!(
+                "[DIAG RESERVE] Actor {} candidate {}: affinity={:?} anchor=({},{},{},{}) | Ownership: diagonal={:?} anchor={:?}",
+                self.id, idx + 1, affinity_result.affinity,
+                affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
+                affinity_result.anchor.sub_x, affinity_result.anchor.sub_y,
+                diag_owner, anchor_owner
+            ));
+
             // Try to reserve diagonal + calculated anchor
             println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
             if reservation_manager.try_reserve_multiple(&[*diagonal, affinity_result.anchor], self.id) {
@@ -1343,9 +1404,24 @@ impl Actor {
                 println!("[RESERVE V2] Actor {} affinity={:?} target=({:.2},{:.2}) reserved={:?} anchor={:?}",
                     self.id, affinity_result.affinity, affinity_result.target_x, affinity_result.target_y,
                     diagonal, affinity_result.anchor);
+                self.diagnostic_messages.push(format!(
+                    "[DIAG RESERVE] Actor {} candidate {} SUCCESS: Reserved diagonal+anchor with affinity={:?}",
+                    self.id, idx + 1, affinity_result.affinity
+                ));
                 return true;
             } else {
                 println!("[RESERVE V2 DEBUG]   Primary reservation FAILED");
+                let blocking_cell = if diag_owner.is_some() && diag_owner != Some(self.id) {
+                    "diagonal"
+                } else if anchor_owner.is_some() && anchor_owner != Some(self.id) {
+                    "anchor"
+                } else {
+                    "unknown"
+                };
+                self.diagnostic_messages.push(format!(
+                    "[DIAG RESERVE] Actor {} candidate {} PRIMARY RESERVATION FAILED: {} blocked (diag_owner={:?}, anchor_owner={:?})",
+                    self.id, idx + 1, blocking_cell, diag_owner, anchor_owner
+                ));
             }
 
             // Phase 4: Try opposite affinity fallback (actor_directing_v2.txt Section C1)
@@ -1354,6 +1430,17 @@ impl Actor {
                 println!("[RESERVE V2 DEBUG]   Opposite anchor=({},{},{},{})",
                     opposite_anchor.cell_x, opposite_anchor.cell_y,
                     opposite_anchor.sub_x, opposite_anchor.sub_y);
+
+                // Check ownership of opposite anchor
+                let opp_anchor_owner = reservation_manager.get_owner(&opposite_anchor);
+                self.diagnostic_messages.push(format!(
+                    "[DIAG RESERVE] Actor {} candidate {} trying OPPOSITE affinity: opposite_anchor=({},{},{},{}) owner={:?}",
+                    self.id, idx + 1,
+                    opposite_anchor.cell_x, opposite_anchor.cell_y,
+                    opposite_anchor.sub_x, opposite_anchor.sub_y,
+                    opp_anchor_owner
+                ));
+
                 println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
                 if reservation_manager.try_reserve_multiple(&[*diagonal, opposite_anchor], self.id) {
                     self.reserved_subcell = Some(*diagonal);
@@ -1386,17 +1473,33 @@ impl Actor {
 
                     println!("[RESERVE V2 OPPOSITE] Actor {} flipped affinity to opposite, reserved={:?} anchor={:?}",
                         self.id, diagonal, opposite_anchor);
+                    self.diagnostic_messages.push(format!(
+                        "[DIAG RESERVE] Actor {} candidate {} OPPOSITE SUCCESS: Reserved with flipped affinity",
+                        self.id, idx + 1
+                    ));
                     return true;
                 } else {
                     println!("[RESERVE V2 DEBUG]   Opposite reservation also FAILED");
+                    self.diagnostic_messages.push(format!(
+                        "[DIAG RESERVE] Actor {} candidate {} OPPOSITE FAILED: opposite anchor blocked by actor {:?}",
+                        self.id, idx + 1, opp_anchor_owner
+                    ));
                 }
             } else {
                 println!("[RESERVE V2 DEBUG]   No opposite anchor available (affinity was BOTH)");
+                self.diagnostic_messages.push(format!(
+                    "[DIAG RESERVE] Actor {} candidate {} no opposite anchor (affinity was BOTH)",
+                    self.id, idx + 1
+                ));
             }
         }
 
         println!("[RESERVE V2] Actor {} DIAGONAL+AFFINITY: ALL BLOCKED (tried {} candidates)",
             self.id, diagonal_candidates.len());
+        self.diagnostic_messages.push(format!(
+            "[DIAG RESERVE] Actor {} ALL {} DIAGONAL CANDIDATES EXHAUSTED - no successful reservation",
+            self.id, diagonal_candidates.len()
+        ));
         false
     }
 
