@@ -255,17 +255,8 @@ fn get_cardinal_direction(from_x: f32, from_y: f32, to_x: f32, to_y: f32) -> Car
 impl Actor {
     /// Create a new actor at the given floating-point position
     pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, enable_lookahead: bool, psc_switch_threshold: f32) -> Self {
-        // Initialize sub-cell position with offset
-        let current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
-            fpos_x,
-            fpos_y,
-            cell_width,
-            cell_height,
-            subcell_grid_size,
-            subcell_offset_x,
-            subcell_offset_y,
-        ));
-
+        // Start with no current_subcell - actor will reserve one on first update
+        // This ensures proper reservation through the reservation manager
         Actor {
             id,
             size,
@@ -283,7 +274,7 @@ impl Actor {
             subcell_grid_size,
             subcell_offset_x,
             subcell_offset_y,
-            current_subcell,
+            current_subcell: None,  // Will be reserved on first update
             reserved_subcell: None,
             extra_reserved_subcells: Vec::new(),
             subcell_destination: None,
@@ -298,9 +289,9 @@ impl Actor {
             distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
             enable_lookahead,
             psc_switch_threshold,
-            // PSC Alignment State Machine - start in PscAlignment since current_subcell is initialized
-            alignment_state: AlignmentState::PscAlignment,
-            alignment_target: None,  // Will be set on first update
+            // PSC Alignment State Machine - start in NoSubcell state
+            alignment_state: AlignmentState::NoSubcell,
+            alignment_target: None,  // Will be set when subcell is reserved
             alignment_threshold: 2.0,  // 2.0 pixels - per actor_states.txt PSC_ALIGNMENT_THRESHOLD
             previous_old_target: None,
             old_target: None,
@@ -2397,8 +2388,9 @@ impl Actor {
         let current = match self.current_subcell {
             Some(c) => c,
             None => {
-                // Initialize from current position
-                let c = SubCellCoord::from_screen_pos_with_offset(
+                // Actor is in NoSubcell state - try to reserve a nearby subcell
+                // Get the cell actor is in based on position
+                let cell_coord = SubCellCoord::from_screen_pos_with_offset(
                     self.fpos_x,
                     self.fpos_y,
                     self.cell_width,
@@ -2407,8 +2399,65 @@ impl Actor {
                     self.subcell_offset_x,
                     self.subcell_offset_y,
                 );
+
+                // Try to reserve one of the 4 subcells in this cell, sorted by distance
+                let mut subcells_in_cell: Vec<SubCellCoord> = Vec::new();
+                for sub_y in 0..self.subcell_grid_size {
+                    for sub_x in 0..self.subcell_grid_size {
+                        let sc = SubCellCoord::new(
+                            cell_coord.cell_x,
+                            cell_coord.cell_y,
+                            sub_x,
+                            sub_y,
+                            self.subcell_grid_size,
+                        );
+                        subcells_in_cell.push(sc);
+                    }
+                }
+
+                // Sort by distance to actor's position
+                subcells_in_cell.sort_by(|a, b| {
+                    let (a_x, a_y) = a.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let (b_x, b_y) = b.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let dist_a = ((a_x - self.fpos_x).powi(2) + (a_y - self.fpos_y).powi(2)).sqrt();
+                    let dist_b = ((b_x - self.fpos_x).powi(2) + (b_y - self.fpos_y).powi(2)).sqrt();
+                    dist_a.partial_cmp(&dist_b).unwrap()
+                });
+
+                // Try to reserve the nearest available subcell
+                let mut reserved_subcell = None;
+                for sc in &subcells_in_cell {
+                    if reservation_manager.try_reserve(*sc, self.id) {
+                        reserved_subcell = Some(*sc);
+                        if always_trace {
+                            println!("[ALIGN] Actor {} reserved nearest subcell ({},{},{},{}) at ({:.1},{:.1})",
+                                self.id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y, self.fpos_x, self.fpos_y);
+                        }
+                        break;
+                    }
+                }
+
+                // If no subcell could be reserved, stay in NoSubcell state and wait
+                if reserved_subcell.is_none() {
+                    if always_trace {
+                        println!("[ALIGN] Actor {} could NOT reserve any subcell in cell ({},{}) - all occupied, will retry",
+                            self.id, cell_coord.cell_x, cell_coord.cell_y);
+                    }
+                    return false; // Stay in NoSubcell state, retry next frame
+                }
+
+                let c = reserved_subcell.unwrap();
                 self.current_subcell = Some(c);
-                // Register the initial current subcell
                 reservation_manager.set_current(c, self.id);
 
                 // Enter PscAlignment state (NoSubcell → PscAlignment transition)
@@ -2421,8 +2470,8 @@ impl Actor {
                 );
                 self.alignment_target = Some((center_x, center_y));
                 if always_trace {
-                    println!("[ALIGN] Actor {} initialized current_subcell ({},{},{},{}), entering PscAlignment to center ({:.1},{:.1})",
-                        self.id, c.cell_x, c.cell_y, c.sub_x, c.sub_y, center_x, center_y);
+                    println!("[ALIGN] Actor {} entering PscAlignment to subcell center ({:.1},{:.1})",
+                        self.id, center_x, center_y);
                 }
 
                 c
