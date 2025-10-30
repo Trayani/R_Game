@@ -342,6 +342,16 @@ impl SubCellReservationManager {
     pub fn reservation_count(&self) -> usize {
         self.reservations.len()
     }
+
+    /// Get all reserved subcells for rendering
+    pub fn get_all_reservations(&self) -> impl Iterator<Item = &SubCellCoord> {
+        self.reservations.keys()
+    }
+
+    /// Get all current subcells (PSCs) for rendering
+    pub fn get_all_current_subcells(&self) -> impl Iterator<Item = &SubCellCoord> {
+        self.current_subcells.values()
+    }
 }
 
 /// Find four sub-cells in a square configuration toward the primary direction

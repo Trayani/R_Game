@@ -1128,6 +1128,33 @@ impl VisState {
                 }
             }
         }
+
+        // Draw reserved subcells and PSCs AFTER actors (so they appear on top)
+        if self.subcell_movement_enabled && self.show_subcell_markers {
+            let (offset_x, offset_y) = self.subcell_offset.get_offsets();
+
+            // Draw all reserved subcells as black dots
+            for reserved_sc in self.subcell_reservation_manager.get_all_reservations() {
+                let (rx, ry) = reserved_sc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    offset_x,
+                    offset_y
+                );
+                draw_circle(rx, ry, 3.0, BLACK);
+            }
+
+            // Draw all PSCs (current subcells) as yellow dots on top
+            for psc in self.subcell_reservation_manager.get_all_current_subcells() {
+                let (px, py) = psc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    offset_x,
+                    offset_y
+                );
+                draw_circle(px, py, 3.0, YELLOW);
+            }
+        }
     }
 
     fn draw(&self) {
