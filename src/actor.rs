@@ -2128,9 +2128,9 @@ impl Actor {
         };
 
         // Get destination screen position and quantize to subcell grid point
-        // Convert cell coordinates to screen coordinates
-        let dest_screen_x_raw = dest.x as f32 * self.cell_width;
-        let dest_screen_y_raw = dest.y as f32 * self.cell_height;
+        // Convert cell coordinates to screen coordinates (use cell CENTER, not corner)
+        let dest_screen_x_raw = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+        let dest_screen_y_raw = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
 
         // Quantize destination to nearest subcell grid point
         // This ensures destinations are properly aligned with the subcell pathfinding grid
@@ -2483,9 +2483,9 @@ impl Actor {
         };
 
         // Get destination screen position and quantize to subcell grid point
-        // Convert cell coordinates to screen coordinates
-        let dest_screen_x_raw = dest.x as f32 * self.cell_width;
-        let dest_screen_y_raw = dest.y as f32 * self.cell_height;
+        // Convert cell coordinates to screen coordinates (use cell CENTER, not corner)
+        let dest_screen_x_raw = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+        let dest_screen_y_raw = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
 
         // Quantize destination to nearest subcell grid point
         // This ensures destinations are properly aligned with the subcell pathfinding grid
