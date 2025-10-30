@@ -140,6 +140,10 @@ pub struct Actor {
     /// Applied as: tolerance = subcell_width * distance_tolerance_multiplier
     /// Set to 0.0 for strict monotonic distance decrease enforcement
     pub distance_tolerance_multiplier: f32,
+
+    /// Enable look-ahead (2-step) evaluation for deadlock breaking (default: true)
+    /// When hysteresis detects equidistant candidates, evaluate 2-step paths to break deadlocks
+    pub enable_lookahead: bool,
 }
 
 /// Cell position state describing which cell(s) the actor occupies
@@ -156,7 +160,7 @@ pub struct CellPosition {
 
 impl Actor {
     /// Create a new actor at the given floating-point position
-    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32) -> Self {
+    pub fn new(id: usize, fpos_x: f32, fpos_y: f32, size: f32, speed: f32, collision_radius: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, enable_lookahead: bool) -> Self {
         // Initialize sub-cell position with offset
         let current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
             fpos_x,
@@ -198,6 +202,7 @@ impl Actor {
             last_psc_selection: None,
             diagnostic_messages: Vec::new(),
             distance_tolerance_multiplier: 0.6,  // Default: 60% of subcell width
+            enable_lookahead,
         }
     }
 
@@ -2666,12 +2671,14 @@ impl Actor {
                         }
                         (anchor, "Anchor".to_string())
                     } else {
-                        // Within epsilon - effectively equidistant, use look-ahead to break deadlock
-                        println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                            HYSTERESIS_EPSILON);
+                        // Within epsilon - effectively equidistant
+                        if self.enable_lookahead {
+                            // Use look-ahead to break deadlock
+                            println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
+                                HYSTERESIS_EPSILON);
 
-                        // Evaluate 2-step paths from both candidates
-                        let lookahead_reserved = Self::evaluate_lookahead_candidate(
+                            // Evaluate 2-step paths from both candidates
+                            let lookahead_reserved = Self::evaluate_lookahead_candidate(
                             &reserved,
                             dest_screen_x,
                             dest_screen_y,
@@ -2735,7 +2742,16 @@ impl Actor {
                             }
                         };
 
-                        (chosen, chosen_name)
+                            (chosen, chosen_name)
+                        } else {
+                            // Fallback when look-ahead disabled: prefer reserved for diagonal progress
+                            println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, preferring reserved",
+                                HYSTERESIS_EPSILON);
+                            if always_trace || (self.id == 0 && track_movement) {
+                                println!("  [PSC SELECTION] Chose RESERVED (hysteresis fallback)");
+                            }
+                            (reserved, "Reserved (hysteresis)".to_string())
+                        }
                     };
 
                     // Create PSC selection info for logging
@@ -2794,12 +2810,14 @@ impl Actor {
                         }
                         (reserved, "Reserved".to_string())
                     } else {
-                        // Within epsilon - use look-ahead to break deadlock
-                        println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                            HYSTERESIS_EPSILON);
+                        // Within epsilon - effectively equidistant
+                        if self.enable_lookahead {
+                            // Use look-ahead to break deadlock
+                            println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
+                                HYSTERESIS_EPSILON);
 
-                        // Evaluate 2-step paths from both candidates
-                        let lookahead_current = Self::evaluate_lookahead_candidate(
+                            // Evaluate 2-step paths from both candidates
+                            let lookahead_current = Self::evaluate_lookahead_candidate(
                             &current,
                             dest_screen_x,
                             dest_screen_y,
@@ -2863,7 +2881,16 @@ impl Actor {
                             }
                         };
 
-                        (chosen, chosen_name)
+                            (chosen, chosen_name)
+                        } else {
+                            // Fallback when look-ahead disabled: stay at current (conservative)
+                            println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, staying at current",
+                                HYSTERESIS_EPSILON);
+                            if always_trace || (self.id == 0 && track_movement) {
+                                println!("  [PSC SELECTION] Staying at current (hysteresis fallback)");
+                            }
+                            (current, "Current (hysteresis)".to_string())
+                        }
                     };
 
                     let info = PSCSelectionInfo {
@@ -3086,6 +3113,7 @@ mod tests {
             3,  // subcell_grid_size
             0.0,  // No offset
             0.0,
+            true,  // enable_lookahead
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3114,6 +3142,7 @@ mod tests {
             3,  // subcell_grid_size
             0.0,  // No offset
             0.0,
+            true,  // enable_lookahead
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3140,6 +3169,7 @@ mod tests {
             3,  // subcell_grid_size
             0.0,  // No offset
             0.0,
+            true,  // enable_lookahead
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3166,6 +3196,7 @@ mod tests {
             3,  // subcell_grid_size
             0.0,  // No offset
             0.0,
+            true,  // enable_lookahead
         );
 
         let cpos = actor.calculate_cell_position(&grid, cell_width, cell_height);
@@ -3180,7 +3211,7 @@ mod tests {
         // Start actor at cell (0,0) center
         let start_x = 0.0 * cell_width + cell_width / 2.0;
         let start_y = 0.0 * cell_height + cell_height / 2.0;
-        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3, 0.0, 0.0);
+        let mut actor = Actor::new(0, start_x, start_y, 10.0, 100.0, 6.0, cell_width, cell_height, 3, 0.0, 0.0, true);
 
         // Create a simple path: (1,0) -> (2,0) -> (2,1)
         let path = vec![

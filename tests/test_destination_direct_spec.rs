@@ -38,6 +38,7 @@ fn test_q11_primary_subcell_concept() {
         grid_size,
         0.0,   // offset_x
         0.0,   // offset_y
+        true,  // enable_lookahead
     );
 
     // Check that actor has initialized PSC
@@ -60,8 +61,8 @@ fn test_q12_spawn_without_psc_contention() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let actor1 = Actor::new(0, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
-    let actor2 = Actor::new(1, 46.0, 46.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor1 = Actor::new(0, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
+    let actor2 = Actor::new(1, 46.0, 46.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
 
     // Both actors should have PSC
     assert!(actor1.current_subcell.is_some());
@@ -175,7 +176,7 @@ fn test_q27_dynamic_discovery() {
     let _reservation_mgr = SubCellReservationManager::new(grid_size);
 
     // Create actor at position A
-    let mut actor_a = Actor::new(1, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let mut actor_a = Actor::new(1, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
     actor_a.set_subcell_destination(Position { x: 3, y: 3 });
 
     // Actor should have PSC but NO predetermined path
@@ -183,7 +184,7 @@ fn test_q27_dynamic_discovery() {
     assert!(actor_a.reserved_subcell.is_none(), "No reservation before update");
 
     // Create identical actor at position B (same PSC, different history)
-    let mut actor_b = Actor::new(2, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let mut actor_b = Actor::new(2, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
     actor_b.set_subcell_destination(Position { x: 3, y: 3 });
 
     // Both actors should behave identically from this position forward
@@ -208,7 +209,7 @@ fn test_q31_target_depends_on_reservation() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let actor = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
 
     // Case A: No reservation
     if actor.reserved_subcell.is_none() {
@@ -229,7 +230,7 @@ fn test_q35_psc_change_on_boundary_cross() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let mut actor = Actor::new(0, 14.9, 14.9, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let mut actor = Actor::new(0, 14.9, 14.9, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
     let initial_psc = actor.current_subcell.unwrap();
 
     // Move actor across subcell boundary
@@ -276,7 +277,7 @@ fn test_q51_destination_in_psc() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let mut actor = Actor::new(0, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let mut actor = Actor::new(0, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
     let psc = actor.current_subcell.unwrap();
 
     // Set destination to cell containing PSC
@@ -312,7 +313,7 @@ fn test_q56_grid_boundary() {
     let grid_size = 2;
 
     // Spawn at top-left corner (0, 0)
-    let actor = Actor::new(0, 5.0, 5.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor = Actor::new(0, 5.0, 5.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
     let psc = actor.current_subcell.unwrap();
 
     assert_eq!(psc.cell_x, 0);
@@ -359,8 +360,8 @@ fn test_q63_invariant_psc_exclusivity() {
     let grid_size = 2;
     let mut reservation_mgr = SubCellReservationManager::new(grid_size);
 
-    let actor1 = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
-    let actor2 = Actor::new(1, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor1 = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
+    let actor2 = Actor::new(1, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
 
     // Both actors must have PSC
     assert!(actor1.current_subcell.is_some());
@@ -384,7 +385,7 @@ fn test_q63_invariant_finite_reservations() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let actor = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
 
     // Count reservations
     let mut count = 0;
@@ -423,7 +424,8 @@ fn test_destination_direct_basic_movement() {
         cell_height,
         grid_size,
         0.0,
-        0.0
+        0.0,
+        true  // enable_lookahead
     );
 
     // Set destination to (3, 3)
@@ -472,8 +474,8 @@ fn test_organic_principle_position_invariant() {
     // Scenario: Two actors at identical positions with identical destinations
     // should make identical next moves
 
-    let actor1 = Actor::new(0, 60.0, 60.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
-    let actor2 = Actor::new(1, 60.0, 60.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0);
+    let actor1 = Actor::new(0, 60.0, 60.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
+    let actor2 = Actor::new(1, 60.0, 60.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true);
 
     // Both should have identical PSC
     assert_eq!(actor1.current_subcell, actor2.current_subcell,

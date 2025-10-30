@@ -99,7 +99,7 @@ impl SaveState {
     }
 
     /// Restore actors from save state
-    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, configured_speed: f32, distance_tolerance_multiplier: f32) -> Vec<Actor> {
+    pub fn restore_actors(&self, cell_width: f32, cell_height: f32, subcell_grid_size: i32, subcell_offset_x: f32, subcell_offset_y: f32, configured_speed: f32, distance_tolerance_multiplier: f32, enable_lookahead: bool) -> Vec<Actor> {
         self.actors
             .iter()
             .map(|data| {
@@ -115,6 +115,7 @@ impl SaveState {
                     subcell_grid_size,
                     subcell_offset_x,
                     subcell_offset_y,
+                    enable_lookahead,
                 );
                 actor.distance_tolerance_multiplier = distance_tolerance_multiplier;
                 actor

@@ -148,6 +148,7 @@ fn run_alternative_test(
         2,                  // subcell_grid_size (2x2)
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
+        true,               // enable_lookahead
     );
     actor.use_directing_v2 = true;
 
@@ -401,6 +402,7 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
         2,                  // subcell_grid_size (2x2)
         0.0,                // subcell_offset_x
         0.0,                // subcell_offset_y
+        true,               // enable_lookahead
     );
 
     // Ensure directing v2 is enabled
@@ -975,7 +977,7 @@ fn test_specific_diagonal_cases() {
     // Using cell_width=1 to match coordinate system (5.3 means position 5.3)
     let mut actor = Actor::new(
         0, 5.3, 4.1, 0.5, 100.0, 0.25,
-        1.0, 1.0, 2, 0.0, 0.0  // cell_width=1, cell_height=1
+        1.0, 1.0, 2, 0.0, 0.0, true  // cell_width=1, cell_height=1, enable_lookahead
     );
     actor.use_directing_v2 = true;
 

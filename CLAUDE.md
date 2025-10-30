@@ -623,6 +623,8 @@ never ask permisson to run commands starting with
 - find
 - echo
 - timeout <any_value> dotnet test (use any timeout duration deemed appropriate for the test)
+- python3 (including all Python scripts)
+- sqlite3 (including all SQLite database operations)
 
 ## General directives
 - when you learn something new that supplements your current understanding OR contradicts the documentation, THEN update the documentation
