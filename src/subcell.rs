@@ -693,113 +693,10 @@ pub fn is_within_rectangle(
     pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
 }
 
-/// Check if a point is inside a triangle using barycentric coordinates
-fn point_in_triangle(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32, cx: f32, cy: f32) -> bool {
-    let v0x = cx - ax;
-    let v0y = cy - ay;
-    let v1x = bx - ax;
-    let v1y = by - ay;
-    let v2x = px - ax;
-    let v2y = py - ay;
-
-    let dot00 = v0x * v0x + v0y * v0y;
-    let dot01 = v0x * v1x + v0y * v1y;
-    let dot02 = v0x * v2x + v0y * v2y;
-    let dot11 = v1x * v1x + v1y * v1y;
-    let dot12 = v1x * v2x + v1y * v2y;
-
-    let inv_denom = 1.0 / (dot00 * dot11 - dot01 * dot01);
-    let u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
-    let v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
-
-    (u >= 0.0) && (v >= 0.0) && (u + v <= 1.0)
-}
-
-/// Calculate the target position within triangle for destination-direct movement
-///
-/// If destination direction intersects triangle interior: move toward destination
-/// If destination direction goes outside triangle: move toward triangle edge closest to destination
-///
-/// Triangle is formed by: current sub-cell, reserved sub-cell, and anchor sub-cell
-///
-/// # Parameters
-/// - `current`, `reserved`, `anchor`: The 3 vertices of the triangle (screen coordinates)
-/// - `actor_x`, `actor_y`: Current actor position
-/// - `dest_x`, `dest_y`: Destination position
-pub fn calculate_triangle_boundary_target(
-    current_x: f32,
-    current_y: f32,
-    reserved_x: f32,
-    reserved_y: f32,
-    anchor_x: f32,
-    anchor_y: f32,
-    actor_x: f32,
-    actor_y: f32,
-    dest_x: f32,
-    dest_y: f32,
-) -> (f32, f32) {
-    // Calculate direction from actor to destination
-    let dir_x = dest_x - actor_x;
-    let dir_y = dest_y - actor_y;
-    let dir_len = (dir_x * dir_x + dir_y * dir_y).sqrt();
-
-    if dir_len < 0.0001 {
-        // Already at destination, stay in place
-        return (actor_x, actor_y);
-    }
-
-    let norm_dir_x = dir_x / dir_len;
-    let norm_dir_y = dir_y / dir_len;
-
-    // Check if actor is currently inside the triangle
-    let actor_in_triangle = point_in_triangle(actor_x, actor_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y);
-
-    // Determine the starting point for ray-casting toward destination
-    let (ray_start_x, ray_start_y) = if actor_in_triangle {
-        // Actor inside: start ray from actor's position
-        println!("[BOUNDARY] Actor inside triangle, ray-casting from actor pos");
-        (actor_x, actor_y)
-    } else {
-        // Actor outside: start ray from triangle center
-        let center_x = (current_x + reserved_x + anchor_x) / 3.0;
-        let center_y = (current_y + reserved_y + anchor_y) / 3.0;
-        println!("[BOUNDARY] Actor OUTSIDE triangle, ray-casting from center ({:.1},{:.1})",
-            center_x, center_y);
-        (center_x, center_y)
-    };
-
-    // Ray-cast from the starting point toward the destination to find triangle boundary
-    let mut t_min = 0.0;
-    let mut t_max = dir_len * 2.0; // Search beyond destination
-
-    // Binary search for boundary intersection
-    for _ in 0..20 {
-        let t_mid = (t_min + t_max) / 2.0;
-        let test_x = ray_start_x + norm_dir_x * t_mid;
-        let test_y = ray_start_y + norm_dir_y * t_mid;
-
-        if point_in_triangle(test_x, test_y, current_x, current_y, reserved_x, reserved_y, anchor_x, anchor_y) {
-            t_min = t_mid; // Point is inside, search farther
-        } else {
-            t_max = t_mid; // Point is outside, search closer
-        }
-    }
-
-    // Use the boundary point (slightly inside to avoid edge cases)
-    let boundary_t = t_min * 0.99;
-    let target_x = ray_start_x + norm_dir_x * boundary_t;
-    let target_y = ray_start_y + norm_dir_y * boundary_t;
-
-    println!("[BOUNDARY] Triangle boundary at ({:.1},{:.1}), t={:.2} (closest to dest in triangle)",
-        target_x, target_y, boundary_t);
-
-    (target_x, target_y)
-}
-
 /// Calculate the optimal target position for destination-direct movement
 ///
 /// Returns the position the actor should move toward based on:
-/// - Diagonal reservation with anchor: Move toward triangle boundary closest to destination
+/// - Diagonal reservation: Clamp destination to rectangle between current and reserved subcells
 /// - H/V reservation: Return reserved sub-cell center
 /// - No reservation: Return current sub-cell center IF closer to destination, else actor's current position
 pub fn calculate_optimal_boundary(
@@ -826,41 +723,20 @@ pub fn calculate_optimal_boundary(
             let is_diagonal = (dx_cells > 0 || dx_subs > 0) && (dy_cells > 0 || dy_subs > 0);
 
             if is_diagonal {
-                // Diagonal reservation with anchor: Use triangle boundary
-                if let Some(anchor) = anchor_subcell {
-                    let (curr_x, curr_y) = current_subcell.to_screen_center_with_offset(
-                        cell_width, cell_height, offset_x, offset_y
-                    );
-                    let (res_x, res_y) = reserved.to_screen_center_with_offset(
-                        cell_width, cell_height, offset_x, offset_y
-                    );
-                    let (anc_x, anc_y) = anchor.to_screen_center_with_offset(
-                        cell_width, cell_height, offset_x, offset_y
-                    );
+                // Diagonal reservation: Use rectangle-based clamping
+                let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds(
+                    current_subcell,
+                    reserved,
+                    cell_width,
+                    cell_height,
+                    offset_x,
+                    offset_y,
+                );
 
-                    calculate_triangle_boundary_target(
-                        curr_x, curr_y,
-                        res_x, res_y,
-                        anc_x, anc_y,
-                        actor_pos_x, actor_pos_y,
-                        dest_screen_x, dest_screen_y,
-                    )
-                } else {
-                    // Fallback to rectangle if no anchor (shouldn't happen in DestinationDirect)
-                    let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds(
-                        current_subcell,
-                        reserved,
-                        cell_width,
-                        cell_height,
-                        offset_x,
-                        offset_y,
-                    );
+                let clamped_x = dest_screen_x.max(min_x).min(max_x);
+                let clamped_y = dest_screen_y.max(min_y).min(max_y);
 
-                    let clamped_x = dest_screen_x.max(min_x).min(max_x);
-                    let clamped_y = dest_screen_y.max(min_y).min(max_y);
-
-                    (clamped_x, clamped_y)
-                }
+                (clamped_x, clamped_y)
             } else {
                 // H/V reservation: Move directly to reserved sub-cell center
                 let target = reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
