@@ -817,41 +817,60 @@ impl Actor {
         let dest_ray_x = dest_dx / dest_len;
         let dest_ray_y = dest_dy / dest_len;
 
-        // Step 3: Compute target on rectangle boundary toward destination
-        // Instead of finding where ray exits rectangle, find point on boundary
-        // that moves actor toward destination
+        // Step 3: Ray-rectangle intersection
+        // Calculate t for ALL 4 edges, pick smallest positive t with valid intersection
 
-        // Determine which boundaries the destination ray passes through
         let mut t_vertical = f32::INFINITY;
         let mut t_horizontal = f32::INFINITY;
 
-        // Vertical edges (left and right) - which edge faces the destination?
+        // Vertical edges - calculate BOTH left and right
         if dest_ray_x.abs() > EPSILON {
-            if dest_ray_x > 0.0 {
-                // Destination is to the right → target right edge
-                t_vertical = (rect_max_x - actor_x) / dest_ray_x;
-            } else {
-                // Destination is to the left → target left edge
-                t_vertical = (rect_min_x - actor_x) / dest_ray_x;
+            let t_left = (rect_min_x - actor_x) / dest_ray_x;
+            let t_right = (rect_max_x - actor_x) / dest_ray_x;
+
+            // Check which intersections are valid (positive t, y within bounds)
+            let y_at_left = actor_y + t_left * dest_ray_y;
+            let y_at_right = actor_y + t_right * dest_ray_y;
+
+            let left_valid = t_left > 0.0 && y_at_left >= rect_min_y && y_at_left <= rect_max_y;
+            let right_valid = t_right > 0.0 && y_at_right >= rect_min_y && y_at_right <= rect_max_y;
+
+            // Pick smallest valid t
+            if left_valid && right_valid {
+                t_vertical = t_left.min(t_right);
+            } else if left_valid {
+                t_vertical = t_left;
+            } else if right_valid {
+                t_vertical = t_right;
             }
         }
 
-        // Horizontal edges (top and bottom) - which edge faces the destination?
+        // Horizontal edges - calculate BOTH top and bottom
         if dest_ray_y.abs() > EPSILON {
-            if dest_ray_y > 0.0 {
-                // Destination is below → target bottom edge
-                t_horizontal = (rect_max_y - actor_y) / dest_ray_y;
-            } else {
-                // Destination is above → target top edge
-                t_horizontal = (rect_min_y - actor_y) / dest_ray_y;
+            let t_top = (rect_min_y - actor_y) / dest_ray_y;
+            let t_bottom = (rect_max_y - actor_y) / dest_ray_y;
+
+            // Check which intersections are valid (positive t, x within bounds)
+            let x_at_top = actor_x + t_top * dest_ray_x;
+            let x_at_bottom = actor_x + t_bottom * dest_ray_x;
+
+            let top_valid = t_top > 0.0 && x_at_top >= rect_min_x && x_at_top <= rect_max_x;
+            let bottom_valid = t_bottom > 0.0 && x_at_bottom >= rect_min_x && x_at_bottom <= rect_max_x;
+
+            // Pick smallest valid t
+            if top_valid && bottom_valid {
+                t_horizontal = t_top.min(t_bottom);
+            } else if top_valid {
+                t_horizontal = t_top;
+            } else if bottom_valid {
+                t_horizontal = t_bottom;
             }
         }
 
-        // Handle edge case: actor on or past boundary (t ≤ 0)
-        // Note: t ≈ 0 means actor is ON the boundary. This is valid if ray exits through it.
-        // We should only reject if BOTH boundaries have t ≤ 0 (actor at corner/outside).
-        if t_vertical <= EPSILON && t_horizontal <= EPSILON {
-            // Actor at corner or outside rectangle
+        // Handle edge case: no valid intersection found
+        if t_vertical.is_infinite() && t_horizontal.is_infinite() {
+            // No valid ray-rectangle intersection (shouldn't happen in normal cases)
+            // Clamp actor position to rectangle as fallback
             let offset_x = (actor_x - psc_x).abs();
             let offset_y = (actor_y - psc_y).abs();
             let anchor = if offset_x > offset_y {
@@ -866,27 +885,6 @@ impl Actor {
                 anchor,
                 t_vertical: 0.0,
                 t_horizontal: 0.0,
-            };
-        }
-        // Don't filter out t ≈ 0 cases - they're valid when actor is on boundary
-
-        // Handle edge case: both t values are infinity (ray parallel to edges or no intersection)
-        // This happens when actor is at boundary and ray is perpendicular to that boundary
-        if t_vertical.is_infinite() && t_horizontal.is_infinite() {
-            let offset_x = (actor_x - psc_x).abs();
-            let offset_y = (actor_y - psc_y).abs();
-            let anchor = if offset_x > offset_y {
-                Self::get_horizontal_anchor(psc, diagonal)
-            } else {
-                Self::get_vertical_anchor(psc, diagonal)
-            };
-            return AffinityResult {
-                affinity: Affinity::Both,
-                target_x: actor_x,  // Already at boundary
-                target_y: actor_y,
-                anchor,
-                t_vertical,
-                t_horizontal,
             };
         }
 
