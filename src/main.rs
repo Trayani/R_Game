@@ -1507,6 +1507,7 @@ async fn main() {
     let mut spawn_at: Option<(f32, f32)> = None;
     let mut dest_at: Option<(f32, f32)> = None;
     let mut run_for_secs: Option<f32> = None;
+    let mut load_save_state = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -1531,6 +1532,11 @@ async fn main() {
                     println!("[AUTO] Will run for {} seconds", secs);
                 }
                 i += 2;
+            }
+            "--load-save-state" => {
+                load_save_state = true;
+                println!("[AUTO] Will load save_state.json");
+                i += 1;
             }
             _ => i += 1,
         }
@@ -1558,17 +1564,70 @@ async fn main() {
 
     loop {
         // Execute automated actions once
-        if !auto_actions_done && spawn_at.is_some() {
-            if let Some((x, y)) = spawn_at {
-                // Spawn actor at specified position
+        if !auto_actions_done && (spawn_at.is_some() || load_save_state) {
+            // Load save state if requested
+            if load_save_state {
+                match SaveState::load_from_file("save_state.json") {
+                    Ok(save_state) => {
+                        println!("[AUTO] Loaded save_state.json: {} actors", save_state.actors.len());
+
+                        // Restore actors using current config
+                        let (offset_x, offset_y) = state.subcell_offset.get_offsets();
+                        let mut restored_actors = save_state.restore_actors(
+                            state.cell_width,
+                            state.cell_height,
+                            state.subcell_reservation_manager.grid_size(),
+                            offset_x,
+                            offset_y,
+                            state.actor_speed,
+                            state.actor_distance_tolerance_multiplier,
+                            state.enable_lookahead,
+                            state.psc_switch_threshold,
+                        );
+
+                        // Apply current state settings to restored actors
+                        for actor in &mut restored_actors {
+                            actor.use_directing_v2 = state.use_directing_v2;
+                        }
+
+                        // Add actors to state
+                        state.actors.extend(restored_actors);
+                        state.next_actor_id += save_state.actors.len();
+
+                        println!("[AUTO] Restored {} actors from save state", save_state.actors.len());
+                    }
+                    Err(e) => {
+                        eprintln!("[AUTO] Failed to load save_state.json: {}", e);
+                    }
+                }
+            } else if let Some((x, y)) = spawn_at {
+                // Spawn single actor at specified position
                 state.spawn_actor_at(x, y);
                 println!("[AUTO] Spawned actor at ({}, {})", x, y);
             }
 
             if let Some((dx, dy)) = dest_at {
-                // Set destination for all actors
-                state.set_all_actors_destination(dx, dy);
-                println!("[AUTO] Set destination at ({}, {})", dx, dy);
+                if load_save_state && state.actors.len() > 1 {
+                    // Spread destinations across cells (like the test does)
+                    let grid_x = (dx / state.cell_width) as i32;
+                    let grid_y = (dy / state.cell_height) as i32;
+                    let cell_destinations = rustgame3::subcell::spread_cell_destinations(
+                        grid_x,
+                        grid_y,
+                        state.actors.len(),
+                    );
+
+                    println!("[AUTO] Spreading {} actors to cells around ({}, {})",
+                        state.actors.len(), grid_x, grid_y);
+
+                    for (actor, (dest_x, dest_y)) in state.actors.iter_mut().zip(cell_destinations.iter()) {
+                        actor.set_subcell_destination(Position { x: *dest_x, y: *dest_y });
+                    }
+                } else {
+                    // Set same destination for all actors
+                    state.set_all_actors_destination(dx, dy);
+                    println!("[AUTO] Set destination at ({}, {})", dx, dy);
+                }
             }
 
             auto_actions_done = true;
@@ -1578,7 +1637,25 @@ async fn main() {
         if let Some(duration) = run_for_secs {
             if get_time() - start_time >= duration as f64 {
                 println!("[AUTO] Ran for {} seconds, exiting...", duration);
-                break;
+
+                // Report statistics if we loaded save state
+                if load_save_state {
+                    let total_actors = state.actors.len();
+                    let reached = state.actors.iter().filter(|a| a.subcell_destination.is_none()).count();
+                    let success_ratio = if total_actors > 0 {
+                        (reached as f32 / total_actors as f32) * 100.0
+                    } else {
+                        0.0
+                    };
+
+                    println!("\n[AUTO STATISTICS]");
+                    println!("  Total actors: {}", total_actors);
+                    println!("  Reached destination: {}", reached);
+                    println!("  Success ratio: {:.1}%", success_ratio);
+                }
+
+                // Force exit when automation is complete
+                std::process::exit(0);
             }
         }
 
