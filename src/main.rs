@@ -22,58 +22,6 @@ enum SubCellOffset {
     XY,      // Offset by 0.5 sub-cells in both directions
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum ReservationMode {
-    Square,              // Reserve 2×2 square in movement direction
-    Diagonal,            // Diagonal moves require H/V anchor reservation
-    NoDiagonal,          // Diagonal moves not allowed (skip diagonal candidates)
-    AntiCross,           // Diagonal moves blocked only if same actor owns both counter-diagonal cells
-    Basic3,              // Limit to 3 candidates (best + ±45° alternatives)
-    Basic3AntiCross,     // Basic3 + anti-cross checking
-    DestinationDirect,   // Move directly toward destination within reservation boundaries
-}
-
-impl ReservationMode {
-    fn to_string(&self) -> &'static str {
-        match self {
-            ReservationMode::Square => "Square",
-            ReservationMode::Diagonal => "Diagonal",
-            ReservationMode::NoDiagonal => "NoDiagonal",
-            ReservationMode::AntiCross => "AntiCross",
-            ReservationMode::Basic3 => "Basic3",
-            ReservationMode::Basic3AntiCross => "Basic3AntiCross",
-            ReservationMode::DestinationDirect => "DestinationDirect",
-        }
-    }
-
-    fn from_string(s: &str) -> ReservationMode {
-        match s {
-            "Square" => ReservationMode::Square,
-            "Diagonal" => ReservationMode::Diagonal,
-            "NoDiagonal" => ReservationMode::NoDiagonal,
-            "AntiCross" => ReservationMode::AntiCross,
-            "Basic3" => ReservationMode::Basic3,
-            "Basic3AntiCross" => ReservationMode::Basic3AntiCross,
-            "DestinationDirect" => ReservationMode::DestinationDirect,
-            _ => {
-                eprintln!("Warning: Invalid reservation mode '{}', defaulting to Square", s);
-                ReservationMode::Square
-            }
-        }
-    }
-
-    fn next(&self) -> ReservationMode {
-        match self {
-            ReservationMode::Square => ReservationMode::Diagonal,
-            ReservationMode::Diagonal => ReservationMode::NoDiagonal,
-            ReservationMode::NoDiagonal => ReservationMode::AntiCross,
-            ReservationMode::AntiCross => ReservationMode::Basic3,
-            ReservationMode::Basic3 => ReservationMode::Basic3AntiCross,
-            ReservationMode::Basic3AntiCross => ReservationMode::DestinationDirect,
-            ReservationMode::DestinationDirect => ReservationMode::Square,
-        }
-    }
-}
 
 impl SubCellOffset {
     fn next(&self) -> Self {
@@ -191,10 +139,8 @@ struct VisState {
     subcell_movement_enabled: bool,
     subcell_reservation_manager: SubCellReservationManager,
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
-    reservation_mode: ReservationMode,  // Square or Diagonal reservation strategy
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
     filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
-    basic3_fallback_enabled: bool,  // If true, Basic3 modes fall back to best move when all filtered
     use_directing_v2: bool,  // If true, use ray-rectangle intersection (v2), else legacy alignment-based
     // Random subset destination feature
     highlighted_actors: HashSet<usize>,
@@ -273,10 +219,8 @@ impl VisState {
             subcell_movement_enabled: config.subcell.movement_enabled,
             subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
             show_subcell_markers: config.subcell.show_markers,
-            reservation_mode: ReservationMode::from_string(&config.subcell.reservation_mode),
             early_reservation_enabled: config.subcell.early_reservation_enabled,
             filter_backward_moves: true,  // Enabled by default
-            basic3_fallback_enabled: false,  // Disabled by default (wait when blocked)
             use_directing_v2: true,  // Enabled by default (ray-rectangle intersection)
             highlighted_actors: HashSet::new(),
             highlight_timer: 0.0,
@@ -1550,10 +1494,8 @@ async fn main() {
     // Log initial configuration state
     println!("=== INITIAL CONFIGURATION ===");
     println!("Sub-cell movement: {}", if state.subcell_movement_enabled { "ENABLED" } else { "DISABLED" });
-    println!("Reservation mode: {:?}", state.reservation_mode);
     println!("Early reservation: {}", if state.early_reservation_enabled { "ON" } else { "OFF" });
     println!("Filter backward: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
-    println!("Basic3 fallback: {}", if state.basic3_fallback_enabled { "ON" } else { "OFF" });
     println!("Actor directing v2: {}", if state.use_directing_v2 { "ON" } else { "OFF" });
     println!("Tracking mode: {:?}", state.tracking_mode);
     println!("Actor speed: {}", state.actor_speed);
@@ -1743,14 +1685,6 @@ async fn main() {
             state.action_log.log_message(&msg);
         }
 
-        // Cycle reservation mode (Square → Diagonal → NoDiagonal → AntiCross → Basic3 → Basic3AntiCross → Square) on Q key
-        if is_key_pressed(KeyCode::Q) {
-            state.reservation_mode = state.reservation_mode.next();
-            let msg = format!("Reservation Mode: {}", state.reservation_mode.to_string());
-            println!("{}", msg);
-            state.action_log.log_message(&msg);
-        }
-
         // Toggle early reservation on E key
         if is_key_pressed(KeyCode::E) {
             state.early_reservation_enabled = !state.early_reservation_enabled;
@@ -1763,14 +1697,6 @@ async fn main() {
         if is_key_pressed(KeyCode::F) {
             state.filter_backward_moves = !state.filter_backward_moves;
             let msg = format!("Filter Backward Moves: {}", if state.filter_backward_moves { "ON" } else { "OFF" });
-            println!("{}", msg);
-            state.action_log.log_message(&msg);
-        }
-
-        // Toggle Basic3 fallback on X key
-        if is_key_pressed(KeyCode::X) {
-            state.basic3_fallback_enabled = !state.basic3_fallback_enabled;
-            let msg = format!("Basic3 Fallback: {}", if state.basic3_fallback_enabled { "ON (allow backward when blocked)" } else { "OFF (wait when blocked)" });
             println!("{}", msg);
             state.action_log.log_message(&msg);
         }
