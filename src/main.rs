@@ -1761,24 +1761,7 @@ async fn main() {
             let msg = format!("SubCell Offset: {}", state.subcell_offset.to_string());
             println!("{}", msg);
             state.action_log.log_message(&msg);
-            // Update all existing actors with the new offset
-            let (offset_x, offset_y) = state.subcell_offset.get_offsets();
-            for actor in &mut state.actors {
-                actor.subcell_offset_x = offset_x;
-                actor.subcell_offset_y = offset_y;
-                // Recalculate current sub-cell with new offset
-                if actor.current_subcell.is_some() {
-                    actor.current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
-                        actor.fpos_x,
-                        actor.fpos_y,
-                        actor.cell_width,
-                        actor.cell_height,
-                        actor.subcell_grid_size,
-                        offset_x,
-                        offset_y,
-                    ));
-                }
-            }
+            // Note: Offset only affects NEW actors/spawns, not existing runtime state
         }
 
         // Set destination on D key (to current mouse position)
