@@ -1,15 +1,52 @@
 /// Headless simulation of F9 (load save state) + P (set destination) workflow
 /// This test is CRITICAL - simulates real usage scenario with obstacles and multiple actors
+///
+/// IMPORTANT: This test now loads config.toml to match GUI behavior exactly!
+/// If config.toml doesn't exist, it falls back to default values.
 
-use rustgame3::{SaveState, Grid, SubCellReservationManager, ReservationEagerness, ReleaseEagerness};
+use rustgame3::{SaveState, Grid, SubCellReservationManager, ReservationEagerness, ReleaseEagerness, Config};
 use rustgame3::pathfinding::Position;
 use rustgame3::subcell::spread_cell_destinations;
 use std::collections::HashMap;
+
+/// Helper function to convert config offset string to (f32, f32)
+fn offset_from_config(offset_str: &str) -> (f32, f32) {
+    match offset_str {
+        "None" | "none" => (0.0, 0.0),
+        "X" | "x" => (0.5, 0.0),
+        "Y" | "y" => (0.0, 0.5),
+        "XY" | "xy" => (0.5, 0.5),
+        _ => {
+            eprintln!("Warning: Invalid subcell offset '{}', defaulting to (0.0, 0.0)", offset_str);
+            (0.0, 0.0)
+        }
+    }
+}
 
 #[test]
 fn test_f9_load_and_p_destination() {
     println!("\n=== F9 + P Simulation Test ===");
     println!("Loading save_state.json and directing actors to bottom-left destination");
+    println!("NOW USING CONFIG.TOML to match GUI behavior!");
+
+    // Step 0: Load config (just like the GUI does!)
+    let config = Config::load();
+
+    // Extract config values
+    let configured_speed = config.actors.default_speed;
+    let distance_tolerance_multiplier = config.actors.distance_tolerance_multiplier;
+    let enable_lookahead = config.actors.enable_lookahead;
+    let psc_switch_threshold = config.actors.psc_switch_threshold;
+    let (subcell_offset_x, subcell_offset_y) = offset_from_config(&config.subcell.offset);
+    let early_reservation = config.subcell.early_reservation_enabled;
+
+    println!("\n[CONFIG] Loaded configuration:");
+    println!("  Actor speed: {}", configured_speed);
+    println!("  Distance tolerance: {}", distance_tolerance_multiplier);
+    println!("  Lookahead enabled: {}", enable_lookahead);
+    println!("  PSC switch threshold: {}", psc_switch_threshold);
+    println!("  Subcell offset: ({}, {})", subcell_offset_x, subcell_offset_y);
+    println!("  Early reservation: {}", early_reservation);
 
     // Step 1: Load save state (F9 equivalent)
     let save_state = SaveState::load_from_file("save_state.json")
@@ -34,21 +71,21 @@ fn test_f9_load_and_p_destination() {
         grid.set_cell(x, y, 1);
     }
 
-    // Recreate actors
-    let cell_width = 30.0;
-    let cell_height = 30.0;
+    // Recreate actors using config values
+    let cell_width = config.grid.cell_width;
+    let cell_height = config.grid.cell_height;
     let subcell_grid_size = 2;
 
     let mut actors = save_state.restore_actors(
         cell_width,
         cell_height,
         subcell_grid_size,
-        0.0, // subcell_offset_x
-        0.0, // subcell_offset_y
-        50.0, // configured_speed
-        0.6, // distance_tolerance_multiplier
-        true, // enable_lookahead
-        0.5  // psc_switch_threshold
+        subcell_offset_x,
+        subcell_offset_y,
+        configured_speed,
+        distance_tolerance_multiplier,
+        enable_lookahead,
+        psc_switch_threshold
     );
     let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
 
@@ -95,13 +132,13 @@ fn test_f9_load_and_p_destination() {
                 true,  // enable_anti_cross
                 false, // enable_basic3
                 false, // enable_basic3_anti_cross
-                true,  // enable_early_reservation
-                false, // filter_backward
+                early_reservation, // enable_early_reservation (from config!)
+                true,  // filter_backward (GUI default)
                 false, // basic3_fallback_enabled
                 false, // track_movement
-                0.1,   // reservation_threshold_distance
-                ReservationEagerness::Center,
-                ReleaseEagerness::Center,
+                config.subcell.reservation_threshold_distance, // from config!
+                config.subcell.reservation_eagerness, // from config!
+                config.subcell.release_eagerness, // from config!
             );
 
             if reached {
@@ -164,7 +201,8 @@ fn test_f9_load_and_p_destination() {
     if let (Some(start_positions), Some(end_positions)) =
         (progress_snapshots.get(&0), progress_snapshots.get(&900))
     {
-        for i in 0..actors.len().min(5) {
+        let max_to_show = actors.len().min(5).min(start_positions.len()).min(end_positions.len());
+        for i in 0..max_to_show {
             let (start_x, start_y) = start_positions[i];
             let (end_x, end_y) = end_positions[i];
             let distance_traveled = ((end_x - start_x).powi(2) + (end_y - start_y).powi(2)).sqrt();
@@ -192,7 +230,9 @@ fn test_f9_load_and_p_destination() {
     if let (Some(start_positions), Some(end_positions)) =
         (progress_snapshots.get(&0), progress_snapshots.get(&900))
     {
-        for i in 0..actors.len() {
+        // Only check actors that have positions recorded at both snapshots
+        let max_index = start_positions.len().min(end_positions.len());
+        for i in 0..max_index {
             let (start_x, start_y) = start_positions[i];
             let (end_x, end_y) = end_positions[i];
             let distance = ((end_x - start_x).powi(2) + (end_y - start_y).powi(2)).sqrt();
