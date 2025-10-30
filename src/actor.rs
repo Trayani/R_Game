@@ -946,6 +946,96 @@ impl Actor {
         }
     }
 
+    /// Calculate affinity and target using simple distance-based algorithm (no ray-rectangle intersection)
+    /// This is the expected simple algorithm for DestinationDirect mode
+    pub fn calculate_simple_affinity_and_target(
+        &self,
+        actor_x: f32,
+        actor_y: f32,
+        psc: &SubCellCoord,
+        diagonal: &SubCellCoord,
+        dest_x: f32,
+        dest_y: f32,
+    ) -> AffinityResult {
+        const EPSILON: f32 = 1e-6;
+
+        // Step 1: Calculate distances to destination
+        let dx = dest_x - actor_x;
+        let dy = dest_y - actor_y;
+        let abs_dx = dx.abs();
+        let abs_dy = dy.abs();
+
+        // Step 2: Determine affinity based on simple distance comparison
+        // If |dx| > |dy|, horizontal affinity (X is the dominant axis)
+        // Otherwise, vertical affinity (Y is the dominant axis)
+        let affinity = if abs_dx > abs_dy {
+            Affinity::Horizontal
+        } else {
+            Affinity::Vertical
+        };
+
+        // Step 3: Get diagonal subcell center position
+        let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
+        let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
+
+        let diag_center_x = diagonal.cell_x as f32 * self.cell_width
+            + diagonal.sub_x as f32 * sub_cell_width
+            + sub_cell_width / 2.0
+            - self.subcell_offset_x * sub_cell_width;
+        let diag_center_y = diagonal.cell_y as f32 * self.cell_height
+            + diagonal.sub_y as f32 * sub_cell_height
+            + sub_cell_height / 2.0
+            - self.subcell_offset_y * sub_cell_height;
+
+        // Step 4: Calculate target using straight-line intersection
+        let (target_x, target_y) = match affinity {
+            Affinity::Horizontal => {
+                // Horizontal affinity: target.x = diagonal_subcell.x
+                // target.y calculated from straight line through actor to destination
+                let target_x = diag_center_x;
+                let target_y = if abs_dx < EPSILON {
+                    // Avoid division by zero: if dx=0, move vertically
+                    actor_y + (target_x - actor_x) * dy.signum() * 1e6
+                } else {
+                    actor_y + (target_x - actor_x) * dy / dx
+                };
+                (target_x, target_y)
+            },
+            Affinity::Vertical => {
+                // Vertical affinity: target.y = diagonal_subcell.y
+                // target.x calculated from straight line through actor to destination
+                let target_y = diag_center_y;
+                let target_x = if abs_dy < EPSILON {
+                    // Avoid division by zero: if dy=0, move horizontally
+                    actor_x + (target_y - actor_y) * dx.signum() * 1e6
+                } else {
+                    actor_x + (target_y - actor_y) * dx / dy
+                };
+                (target_x, target_y)
+            },
+            Affinity::Both => {
+                // Should not happen in this simple algorithm
+                (diag_center_x, diag_center_y)
+            }
+        };
+
+        // Step 5: Get anchor based on affinity
+        let anchor = match affinity {
+            Affinity::Horizontal => Self::get_horizontal_anchor(psc, diagonal),
+            Affinity::Vertical => Self::get_vertical_anchor(psc, diagonal),
+            Affinity::Both => Self::get_horizontal_anchor(psc, diagonal), // Fallback
+        };
+
+        AffinityResult {
+            affinity,
+            target_x,
+            target_y,
+            anchor,
+            t_vertical: 0.0,    // Not used in simple algorithm
+            t_horizontal: 0.0,  // Not used in simple algorithm
+        }
+    }
+
     /// Get horizontal anchor for diagonal move (anchor is horizontal neighbor of PSC)
     fn get_horizontal_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
         // Horizontal anchor: shares Y coordinate with PSC, X coordinate with diagonal
@@ -1086,6 +1176,7 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         // Branch based on actor_directing_v2 feature flag
@@ -1097,6 +1188,7 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
+                enable_anti_cross,
                 track_movement,
             )
         } else {
@@ -1109,6 +1201,7 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
+                enable_anti_cross,
                 track_movement,
             )
         }
@@ -1124,6 +1217,7 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         let neighbors = current.get_neighbors();
@@ -1164,13 +1258,15 @@ impl Actor {
 
         // Try each diagonal with its H/V anchors
         for (diagonal, _score) in &diagonal_candidates {
-            // Anti-cross check for diagonal (always enabled in DestinationDirect mode)
-            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
-                continue;
-            }
-            if let Some(prev) = previous_current {
-                if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+            // Anti-cross check for diagonal (optional - disabled by default to test if 3-cell reservation prevents crossing)
+            if enable_anti_cross {
+                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
                     continue;
+                }
+                if let Some(prev) = previous_current {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        continue;
+                    }
                 }
             }
 
@@ -1219,6 +1315,7 @@ impl Actor {
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
         // Log function entry for diagnostics
@@ -1289,36 +1386,38 @@ impl Actor {
                 diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y
             ));
 
-            // Anti-cross check for diagonal (always enabled in DestinationDirect mode)
-            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
-                // Get counter-diagonal cells for logging
-                let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
-                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
-                self.diagnostic_messages.push(format!(
-                    "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
-                    self.id, idx + 1,
-                    counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
-                    counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
-                ));
-                if track_movement {
-                    println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
-                }
-                continue;
-            }
-            if let Some(prev) = previous_current {
-                if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
-                    let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
+            // Anti-cross check for diagonal (optional - disabled by default to test if 3-cell reservation prevents crossing)
+            if enable_anti_cross {
+                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                    // Get counter-diagonal cells for logging
+                    let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
                     let owner1 = reservation_manager.get_owner(&counter_diag[0]);
                     let owner2 = reservation_manager.get_owner(&counter_diag[1]);
                     self.diagnostic_messages.push(format!(
-                        "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
-                        self.id, idx + 1, owner1, owner2
+                        "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
+                        self.id, idx + 1,
+                        counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
+                        counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
                     ));
                     if track_movement {
-                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
+                        println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check failed");
                     }
                     continue;
+                }
+                if let Some(prev) = previous_current {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                        let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
+                        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                        self.diagnostic_messages.push(format!(
+                            "[DIAG RESERVE] Actor {} candidate {} BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
+                            self.id, idx + 1, owner1, owner2
+                        ));
+                        if track_movement {
+                            println!("[RESERVE V2 DEBUG]   Skipped: anti-cross check (prev) failed");
+                        }
+                        continue;
+                    }
                 }
             }
 
@@ -1332,7 +1431,7 @@ impl Actor {
                     dest_screen_x, dest_screen_y
                 ));
             }
-            let affinity_result = self.calculate_affinity_and_target(
+            let affinity_result = self.calculate_simple_affinity_and_target(
                 self.fpos_x,
                 self.fpos_y,
                 current,
@@ -1913,9 +2012,9 @@ impl Actor {
                     self.reserved_subcell = Some(*candidate);
                     self.extra_reserved_subcells.clear();
 
-                    // Calculate locked target for H/V movement using ray-rectangle intersection
-                    // Rectangle is bounded by current PSC and reserved H/V subcell
-                    let affinity_result = self.calculate_affinity_and_target(
+                    // Calculate locked target for H/V movement using simple distance-based affinity
+                    // Affinity based on |dx| vs |dy|, target via straight-line intersection
+                    let affinity_result = self.calculate_simple_affinity_and_target(
                         self.fpos_x,
                         self.fpos_y,
                         current,
@@ -2131,6 +2230,7 @@ impl Actor {
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
         enable_early_reservation: bool,
         filter_backward: bool,
+        enable_anti_cross: bool,
         track_movement: bool,
         reservation_threshold_distance: f32,
         reservation_eagerness: crate::config::ReservationEagerness,
@@ -2869,6 +2969,7 @@ impl Actor {
                             dest_screen_x,
                             dest_screen_y,
                             reservation_manager,
+                            enable_anti_cross,
                             track_movement,
                         );
 
@@ -2931,6 +3032,7 @@ impl Actor {
                 dest_screen_x,
                 dest_screen_y,
                 reservation_manager,
+                enable_anti_cross,
                 track_movement,
             );
 
