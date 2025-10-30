@@ -5,54 +5,47 @@
 
 ## Executive Summary
 
-Investigated reported backwards movements in actor navigation. Found **3 distinct categories** of backwards movement with different causes and significance:
+Investigated reported backwards movements in actor navigation. Found **3 distinct categories** with one major discovery:
 
-1. ✅ **PSC_ALIGNMENT backwards** (124 cases, 55.4% of alignment moves): EXPECTED per `actor_states.txt` design
+1. ⚠️ **"PSC_ALIGNMENT" backwards** (124 cases, 55.4% of initial moves): **MISNAMED** - DestinationDirect mode does NOT implement PSC_ALIGNMENT state. These movements need re-investigation.
 2. ✅ **Distance rule filter** for diagonal reservation: WORKING CORRECTLY (0 violations)
 3. ⚠️  **Destination overshoot** (10 cases, 0.3% of navigation moves): MINOR BUG - actors overshoot destination by 1-4 pixels
 
+**Critical Finding**: DestinationDirect implementation does not follow `actor_states.txt` 4-state design. PSC_ALIGNMENT state is not implemented.
+
 ## Investigation Details
 
-### 1. PSC_ALIGNMENT Backwards Movements (EXPECTED)
+### 1. "PSC_ALIGNMENT" Backwards Movements (MISNAMED - See Follow-up)
 
-**Count**: 124 out of 224 alignment movements (55.4%)
-**Status**: ✅ **CORRECT BEHAVIOR per actor_states.txt**
+**Count**: 124 out of 224 initial movements (55.4%)
+**Status**: ⚠️ **REQUIRES CLARIFICATION** - See Follow-up Discovery section
 
-#### Design Document Reference
+#### What the Test Actually Measured
 
-From `design/actor_states/actor_states.txt` Section 2:
+The automated simulation test (test_automated_simulation.rs) categorized movements as:
+- "PSC_ALIGNMENT phase": Movements before actor first reserves a subcell
+- "Navigation phase": Movements after actor has a reservation
 
-> **State 2: PRIMARY SUBCELL ALIGNMENT "PSC_ALIGNMENT"**
->
-> Actor has reserved a primary subcell and must align to its center.
->
-> **EVERY FRAME Behavior**:
-> Actor moves **DIRECTLY** toward the primary subcell center.
->
-> **Destination Handling**: If destination is set during PSC_ALIGNMENT, it is stored and **ignored until alignment completes**.
+**However**: DestinationDirect mode does NOT implement PSC_ALIGNMENT state (see Follow-up Discovery below). These "PSC_ALIGNMENT backwards" movements are actually:
+1. Initial movements in the very first reserved subcell
+2. Movements that happen to increase distance due to subcell boundary constraints
+3. **Not** movements toward nearest subcell center (as design document describes)
 
-#### Why This Causes Backwards Movement
+#### Design Document vs Implementation
 
-1. Actor spawns at arbitrary float position (e.g., 477.0, 250.0)
-2. Destination is set (e.g., 150.0, 600.0) - southwest direction
-3. Actor MUST first move to nearest subcell center (e.g., 457.5, 245.0)
-4. This center might be in the OPPOSITE direction from destination
-5. Actor moves toward center (backwards relative to destination)
-6. Only AFTER reaching center can navigation begin
+**Design document** (actor_states.txt) describes PSC_ALIGNMENT as:
+- Actor moves to **nearest** subcell center first
+- Destination is **ignored** during alignment
+- Backwards movement relative to destination is **expected** during this phase
 
-#### Example from Test
+**Actual implementation** (DestinationDirect):
+- Actor reserves subcells **toward destination** immediately
+- No alignment-to-center phase exists
+- "Backwards" movements in early frames are likely subcell boundary effects, not intentional alignment
 
-```
-Actor at (477.0, 250.0)
-Destination: (150.0, 600.0) - needs to go LEFT and DOWN
-Nearest subcell center: (457.5, 245.0)
-Move: (477.0, 250.0) → (475.5, 249.6)
-  - X: correct direction (left toward 150.0)
-  - Y: BACKWARDS (up from 250→249.6, away from 600.0)
+#### Conclusion
 
-Result: Y distance INCREASES from 350.0 to 350.4 (+0.4px)
-Status: ✅ EXPECTED - PSC_ALIGNMENT ignores destination
-```
+The 124 "PSC_ALIGNMENT backwards" movements are **not actually PSC_ALIGNMENT** behavior. The categorization in test_automated_simulation.rs is a misnomer. These should be re-investigated as potential navigation issues, not accepted as "by design".
 
 ### 2. Distance Rule Filter for Diagonal Reservation (WORKING)
 
@@ -158,19 +151,41 @@ Messages written to `diagnostic_messages` → `action_log.db`
 
 ## Recommendations
 
-###  1. PSC_ALIGNMENT Backwards Movements
+###  1. "PSC_ALIGNMENT" Backwards Movements (REVISED)
 
-**No action needed** - this is correct behavior per design document.
+**Priority**: HIGH - requires investigation
 
-**Documentation**: Updated test file header to explain PSC_ALIGNMENT phase.
+**Issue**: 124 backwards movements (55.4%) in early frames, previously assumed to be "PSC_ALIGNMENT by design", but PSC_ALIGNMENT state is not implemented.
 
-### 2. Distance Rule Filter
+**Action needed**:
+1. Re-investigate these 124 movements with correct understanding
+2. Determine if they are:
+   - Legitimate subcell boundary effects (acceptable)
+   - Bugs in initial reservation logic (needs fix)
+   - Side effects of missing PSC_ALIGNMENT implementation (needs design decision)
 
-**No action needed** - filter is working correctly.
+### 2. PSC_ALIGNMENT State Implementation
+
+**Priority**: MEDIUM - design decision required
+
+**Options**:
+1. **Implement PSC_ALIGNMENT**: Follow actor_states.txt 4-state design
+   - Actors align to nearest subcell center before navigating
+   - More predictable spawn behavior
+   - Adds alignment phase overhead
+
+2. **Accept current behavior**: DestinationDirect as-is
+   - Update actor_states.txt to match implementation
+   - Remove test_psc_alignment_only.rs
+   - Document that DestinationDirect skips alignment
+
+### 3. Distance Rule Filter
+
+**No action needed** - filter is working correctly (0 violations).
 
 **Consider**: Add similar distance checks to other movement contexts (e.g., H/V movement).
 
-### 3. Destination Overshoot Bug
+### 4. Destination Overshoot Bug
 
 **Priority**: Low (0.3% occurrence, minimal impact)
 
@@ -186,10 +201,51 @@ Messages written to `diagnostic_messages` → `action_log.db`
 
 ## Conclusion
 
-The original concern about backwards movements during diagonal reservation was **resolved**: the distance rule filter is working correctly.
+The original concern about backwards movements during diagonal reservation was **resolved**: the distance rule filter is working correctly (0 violations).
 
-We discovered two additional categories:
-1. PSC_ALIGNMENT backwards movements are **by design** and necessary
-2. Destination overshoot is a **minor bug** affecting 0.3% of movements near destination
+**However**, we discovered a critical gap between design and implementation:
+1. **PSC_ALIGNMENT state is not implemented** in DestinationDirect mode
+2. The 124 "PSC_ALIGNMENT backwards" movements were misnamed - they are not the intentional alignment behavior described in actor_states.txt
+3. These 124 backwards movements (55.4% of initial movements) **require re-investigation** with correct understanding
 
-The diagonal-to-cardinal fallback algorithm successfully prevents backwards diagonal movements during navigation.
+**Minor findings**:
+- Destination overshoot bug affects 0.3% of movements near destination (low priority)
+- Distance rule filter successfully prevents backwards diagonal movements during navigation
+
+## Follow-up Discovery: PSC_ALIGNMENT Not Implemented
+
+**Date**: 2025-10-30 (continued investigation)
+
+### Finding
+
+During test creation for PSC_ALIGNMENT behavior, discovered that **DestinationDirect mode does not implement the PSC_ALIGNMENT state** described in `design/actor_states/actor_states.txt`.
+
+**Design Document** (actor_states.txt Section 3):
+- State 1: NO_SUBCELL → Actor tries to reserve **nearest** subcell (within 4-cell rectangle around position)
+- State 2: PSC_ALIGNMENT → Actor moves to **center** of reserved subcell
+- State 3: IDLE → Actor waits at center, ready to navigate
+- State 4: MOVE → Actor navigates toward destination
+
+**Actual Implementation** (src/actor.rs:3099+):
+- NO_SUBCELL → Actor tries to reserve subcell **toward destination** (not nearest)
+- MOVE → Actor immediately navigates (no alignment phase)
+
+**Impact**:
+- No PSC_ALIGNMENT phase exists in current code
+- Actors never align to nearest subcell center before navigating
+- "PSC_ALIGNMENT backwards movements" category from this report actually refers to **manual testing with different mode** or **conceptual design**, not actual DestinationDirect behavior
+
+### Test Status
+
+**test_psc_alignment_only.rs**: Created to test PSC_ALIGNMENT, but fails because DestinationDirect doesn't implement this state. Test expects actors to align to nearest subcell centers, but actors immediately start reserving toward destination instead.
+
+### Recommendation
+
+**Option 1**: Accept that DestinationDirect doesn't follow actor_states.txt design
+- Mark actor_states.txt as "proposed design" not implemented
+- Remove test_psc_alignment_only.rs as testing non-existent behavior
+
+**Option 2**: Implement PSC_ALIGNMENT in DestinationDirect mode
+- Add initial alignment phase when actor first reserves a subcell
+- Follow actor_states.txt 4-state machine design
+- Retest with test_psc_alignment_only.rs
