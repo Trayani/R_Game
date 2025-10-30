@@ -1340,25 +1340,63 @@ impl Actor {
         let dy_to_dest = dest_screen_y - self.fpos_y;
 
         // Collect diagonal candidates with distance rule filter and alignment scores
-        let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = all_diagonals
-            .iter()
-            .filter(|n| {
-                // DESIGN DOC RULE: Filter candidates that would increase distance
-                !current.violates_distance_rule(
-                    n,
-                    self.fpos_x,
-                    self.fpos_y,
-                    dest_screen_x,
-                    dest_screen_y,
-                    self.cell_width,
-                    self.cell_height,
-                    self.subcell_offset_x,
-                    self.subcell_offset_y,
-                    self.distance_tolerance_multiplier,
-                )
-            })
-            .map(|n| (*n, current.alignment_score(n, dx_to_dest, dy_to_dest, self.cell_width, self.cell_height)))
-            .collect();
+        // WITH DETAILED LOGGING for debugging
+        let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = Vec::new();
+
+        for n in &all_diagonals {
+            let violates = current.violates_distance_rule(
+                n,
+                self.fpos_x,
+                self.fpos_y,
+                dest_screen_x,
+                dest_screen_y,
+                self.cell_width,
+                self.cell_height,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+                self.distance_tolerance_multiplier,
+            );
+
+            // Calculate distance details for logging
+            let (curr_x, curr_y) = current.to_screen_center_with_offset(
+                self.cell_width, self.cell_height, self.subcell_offset_x, self.subcell_offset_y
+            );
+            let (other_x, other_y) = n.to_screen_center_with_offset(
+                self.cell_width, self.cell_height, self.subcell_offset_x, self.subcell_offset_y
+            );
+            let curr_dist_x = (dest_screen_x - curr_x).abs();
+            let curr_dist_y = (dest_screen_y - curr_y).abs();
+            let new_dist_x = (dest_screen_x - other_x).abs();
+            let new_dist_y = (dest_screen_y - other_y).abs();
+            let subcell_width = self.cell_width / 2.0;
+            let tolerance = subcell_width * self.distance_tolerance_multiplier;
+            let x_change = new_dist_x - curr_dist_x;
+            let y_change = new_dist_y - curr_dist_y;
+
+            // Log detailed distance check to diagnostic messages (written to action_log.db)
+            self.diagnostic_messages.push(format!(
+                "[DIST CHECK] Actor {} candidate ({},{},{},{}): curr_center=({:.1},{:.1}) other_center=({:.1},{:.1}) dest=({:.1},{:.1})",
+                self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, curr_x, curr_y, other_x, other_y, dest_screen_x, dest_screen_y
+            ));
+            self.diagnostic_messages.push(format!(
+                "[DIST CHECK] Actor {} candidate ({},{},{},{}): curr_dist=({:.1},{:.1}) new_dist=({:.1},{:.1}) change=({:+.1},{:+.1}) tolerance={:.1} violates={}",
+                self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, curr_dist_x, curr_dist_y, new_dist_x, new_dist_y, x_change, y_change, tolerance, violates
+            ));
+
+            if !violates {
+                let alignment = current.alignment_score(n, dx_to_dest, dy_to_dest, self.cell_width, self.cell_height);
+                diagonal_candidates.push((*n, alignment));
+                self.diagnostic_messages.push(format!(
+                    "[DIST CHECK] Actor {} candidate ({},{},{},{}) PASSED - alignment={:.3}",
+                    self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, alignment
+                ));
+            } else {
+                self.diagnostic_messages.push(format!(
+                    "[DIST CHECK] Actor {} candidate ({},{},{},{}) FILTERED (violates distance rule)",
+                    self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y
+                ));
+            }
+        }
 
         // Sort by alignment score (descending - highest score first)
         diagonal_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
