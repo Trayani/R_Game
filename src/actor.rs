@@ -1920,15 +1920,26 @@ impl Actor {
                 if reservation_manager.try_reserve(*candidate, self.id) {
                     self.reserved_subcell = Some(*candidate);
                     self.extra_reserved_subcells.clear();
-                    // Clear locked values when changing reservation
-                    self.locked_target = None;
-                    self.locked_affinity = None;
+
+                    // Calculate locked target for H/V movement using ray-rectangle intersection
+                    // Rectangle is bounded by current PSC and reserved H/V subcell
+                    let affinity_result = self.calculate_affinity_and_target(
+                        self.fpos_x,
+                        self.fpos_y,
+                        current,
+                        candidate,
+                        dest_screen_x,
+                        dest_screen_y,
+                    );
+                    self.locked_target = Some((affinity_result.target_x, affinity_result.target_y));
+                    self.locked_affinity = Some(affinity_result.affinity);
+
                     if track_movement {
                         self.movement_track.push((self.fpos_x, self.fpos_y));
                     }
                     let direction = if horizontal_candidates.contains(candidate) { "H" } else { "V" };
-                    println!("[RESERVE] Actor {} {}-FALLBACK: reserved={:?} (diagonal blocked)",
-                        self.id, direction, candidate);
+                    println!("[RESERVE] Actor {} {}-FALLBACK: reserved={:?} target=({:.1},{:.1}) (diagonal blocked)",
+                        self.id, direction, candidate, affinity_result.target_x, affinity_result.target_y);
                     return true;
                 }
             }

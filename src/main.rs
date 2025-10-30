@@ -1491,7 +1491,16 @@ fn parse_coords(s: &str) -> Option<(f32, f32)> {
     None
 }
 
-#[macroquad::main("RustGame3 - Raycasting")]
+fn window_conf() -> macroquad::prelude::Conf {
+    macroquad::prelude::Conf {
+        window_title: "RustGame3 - Raycasting".to_owned(),
+        window_width: 1280,
+        window_height: 720,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     // Parse command-line arguments for automation
     let args: Vec<String> = std::env::args().collect();
