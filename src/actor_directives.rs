@@ -281,6 +281,76 @@ fn handle_psc_alignment_state(
     )
 }
 
+/// Handle Idle state - actor at subcell center, ready to move
+fn handle_idle_state(
+    actor: &mut Actor,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_anti_cross: bool,
+    track_movement: bool,
+) -> bool {
+    // Idle state: Actor is at subcell center, ready to move
+    // If destination is NOT defined, do nothing
+    // If destination exists, calculate direction and try to reserve next subcell
+    // If reservation successful, transition to Move state
+
+    // 1. Check if destination is defined
+    let dest = match actor.subcell_destination {
+        Some(d) => d,
+        None => {
+            // No destination - stay in Idle, do nothing
+            return false;
+        }
+    };
+
+    // 2. Get current subcell (must exist in Idle state)
+    let current = actor.current_subcell
+        .expect("Actor in Idle state must have current_subcell");
+
+    // 3. Calculate direction to destination
+    let dest_screen_x = dest.x as f32 * actor.cell_width + actor.cell_width / 2.0;
+    let dest_screen_y = dest.y as f32 * actor.cell_height + actor.cell_height / 2.0;
+    let dx_to_dest = dest_screen_x - actor.fpos_x;
+    let dy_to_dest = dest_screen_y - actor.fpos_y;
+
+    // 4. Try to reserve next subcell - diagonal first
+    let diagonal_success = actor.try_reserve_diagonal_with_anchor(
+        &current,
+        None,
+        dx_to_dest,
+        dy_to_dest,
+        dest_screen_x,
+        dest_screen_y,
+        reservation_manager,
+        enable_anti_cross,
+        track_movement,
+    );
+
+    if diagonal_success {
+        // 5. Success - transition Idle → Move
+        actor.alignment_state = crate::actor::AlignmentState::Move;
+        return false;
+    }
+
+    // 6. Diagonal failed, try H/V fallback
+    let hv_success = actor.try_reserve_horizontal_vertical(
+        &current,
+        dx_to_dest,
+        dy_to_dest,
+        dest_screen_x,
+        dest_screen_y,
+        reservation_manager,
+        track_movement,
+    );
+
+    if hv_success {
+        // Success - transition Idle → Move
+        actor.alignment_state = crate::actor::AlignmentState::Move;
+    }
+    // else: both failed, stay in Idle (blocked)
+
+    false // Not at destination yet
+}
+
 // ============================================================================
 // UPDATE ACTOR - DECISION ROOT
 // ============================================================================
@@ -323,69 +393,12 @@ pub fn update_actor(
             reservation_eagerness,
             release_eagerness,
         ),
-        AlignmentState::Idle => {
-            // Idle state: Actor is at subcell center, ready to move
-            // If destination is NOT defined, do nothing
-            // If destination exists, calculate direction and try to reserve next subcell
-            // If reservation successful, transition to Move state
-
-            // 1. Check if destination is defined
-            let dest = match actor.subcell_destination {
-                Some(d) => d,
-                None => {
-                    // No destination - stay in Idle, do nothing
-                    return false;
-                }
-            };
-
-            // 2. Get current subcell (must exist in Idle state)
-            let current = actor.current_subcell
-                .expect("Actor in Idle state must have current_subcell");
-
-            // 3. Calculate direction to destination
-            let dest_screen_x = dest.x as f32 * actor.cell_width + actor.cell_width / 2.0;
-            let dest_screen_y = dest.y as f32 * actor.cell_height + actor.cell_height / 2.0;
-            let dx_to_dest = dest_screen_x - actor.fpos_x;
-            let dy_to_dest = dest_screen_y - actor.fpos_y;
-
-            // 4. Try to reserve next subcell - diagonal first
-            let diagonal_success = actor.try_reserve_diagonal_with_anchor(
-                &current,
-                None,
-                dx_to_dest,
-                dy_to_dest,
-                dest_screen_x,
-                dest_screen_y,
-                reservation_manager,
-                enable_anti_cross,
-                track_movement,
-            );
-
-            if diagonal_success {
-                // 5. Success - transition Idle → Move
-                actor.alignment_state = crate::actor::AlignmentState::Move;
-                return false;
-            }
-
-            // 6. Diagonal failed, try H/V fallback
-            let hv_success = actor.try_reserve_horizontal_vertical(
-                &current,
-                dx_to_dest,
-                dy_to_dest,
-                dest_screen_x,
-                dest_screen_y,
-                reservation_manager,
-                track_movement,
-            );
-
-            if hv_success {
-                // Success - transition Idle → Move
-                actor.alignment_state = crate::actor::AlignmentState::Move;
-            }
-            // else: both failed, stay in Idle (blocked)
-
-            false // Not at destination yet
-        }
+        AlignmentState::Idle => handle_idle_state(
+            actor,
+            reservation_manager,
+            enable_anti_cross,
+            track_movement,
+        ),
         AlignmentState::Move => {
 
 
