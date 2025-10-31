@@ -22,5 +22,5 @@ pub use config::{Config, ReservationEagerness, ReleaseEagerness};
 pub use grid::Grid;
 pub use raycast::raycast;
 pub use save_state::SaveState;
-pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, find_square_reservation, spread_subcell_destinations, spread_cell_destinations, get_counter_diagonal_subpoints, calculate_rectangle_bounds_subpoint, is_within_rectangle, spread_subpoint_destinations, find_best_neighbors_subpoint, find_best_3_neighbors_subpoint, find_square_reservation_subpoint, distance_between_subpoints, is_horizontal_move_subpoint, is_vertical_move_subpoint, are_adjacent_subpoints, manhattan_distance_subpoints};
+pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, find_square_reservation, spread_subcell_destinations, spread_cell_destinations, get_counter_diagonal_subpoints, calculate_rectangle_bounds_subpoint, is_within_rectangle, spread_subpoint_destinations, find_best_neighbors_subpoint, find_best_3_neighbors_subpoint, find_square_reservation_subpoint, distance_between_subpoints, is_horizontal_move_subpoint, is_vertical_move_subpoint, are_adjacent_subpoints, manhattan_distance_subpoints, clamp_to_rectangle, closest_subpoint_to_screen, is_subpoint_in_bounds, direction_between_subpoints, get_valid_neighbors_subpoint, subpoint_from_components};
 pub use subpoint::SubPoint;

@@ -1405,6 +1405,93 @@ pub fn manhattan_distance_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::
     (p2.x - p1.x).abs() + (p2.y - p1.y).abs()
 }
 
+/// Clamp a screen position to rectangle bounds
+/// Returns the clamped (x, y) position
+pub fn clamp_to_rectangle(
+    pos_x: f32,
+    pos_y: f32,
+    min_x: f32,
+    min_y: f32,
+    max_x: f32,
+    max_y: f32,
+) -> (f32, f32) {
+    let clamped_x = pos_x.max(min_x).min(max_x);
+    let clamped_y = pos_y.max(min_y).min(max_y);
+    (clamped_x, clamped_y)
+}
+
+/// Get the closest SubPoint to a screen position (with offset support)
+pub fn closest_subpoint_to_screen(
+    screen_x: f32,
+    screen_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    offset_x: f32,
+    offset_y: f32,
+) -> crate::subpoint::SubPoint {
+    crate::subpoint::SubPoint::from_screen_pos_with_offset(
+        screen_x,
+        screen_y,
+        cell_width,
+        cell_height,
+        grid_size,
+        offset_x,
+        offset_y,
+    )
+}
+
+/// Check if a SubPoint is within grid bounds
+pub fn is_subpoint_in_bounds(
+    point: &crate::subpoint::SubPoint,
+    grid_size: i32,
+    world_cols: i32,
+    world_rows: i32,
+) -> bool {
+    let (cell_x, cell_y) = point.to_cell(grid_size);
+    cell_x >= 0 && cell_x < world_cols && cell_y >= 0 && cell_y < world_rows
+}
+
+/// Get the direction vector from one SubPoint to another (normalized)
+/// Returns (dir_x, dir_y) normalized to unit length, or (0, 0) if points are identical
+pub fn direction_between_subpoints(
+    from: &crate::subpoint::SubPoint,
+    to: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> (f32, f32) {
+    from.direction_to(to, cell_width, cell_height, grid_size)
+}
+
+/// Get all neighbors of a SubPoint that are within grid bounds
+/// Returns a Vec instead of an array since some neighbors may be out of bounds
+pub fn get_valid_neighbors_subpoint(
+    point: &crate::subpoint::SubPoint,
+    grid_size: i32,
+    world_cols: i32,
+    world_rows: i32,
+) -> Vec<crate::subpoint::SubPoint> {
+    point
+        .get_neighbors()
+        .iter()
+        .filter(|n| is_subpoint_in_bounds(n, grid_size, world_cols, world_rows))
+        .copied()
+        .collect()
+}
+
+/// Convert a cell coordinate and subcell offset to a SubPoint
+/// This is a convenience function for creating SubPoints from components
+pub fn subpoint_from_components(
+    cell_x: i32,
+    cell_y: i32,
+    sub_x: i32,
+    sub_y: i32,
+    grid_size: i32,
+) -> crate::subpoint::SubPoint {
+    crate::subpoint::SubPoint::from_cell_subcell(cell_x, cell_y, sub_x, sub_y, grid_size)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
