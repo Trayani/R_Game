@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, SubPoint, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellReservationManager, SubPoint, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
