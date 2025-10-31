@@ -2868,10 +2868,94 @@ impl Actor {
                 // For diagonal moves, we have both 'reserved' (diagonal) and 'anchor' (H or V)
                 // We must choose whichever is closer to the destination
                 let (new_psc, psc_selection_info) = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
-                    // Hysteresis epsilon for preventing oscillation when distances are effectively equal
-                    const HYSTERESIS_EPSILON: f32 = 0.001;
+                    // Diagonal move - use directives to choose between current, reserved, and anchor
 
-                    // Diagonal move - compare distances
+                    // Get subcell centers
+                    let current_center = current.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let reserved_center = reserved.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let anchor_center = anchor.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    // Use directive functions to decide - these use actor's ACTUAL POSITION
+                    let should_use_anchor = actor_directives::should_switch_to_anchor(
+                        self.id,
+                        (self.fpos_x, self.fpos_y),
+                        current_center,
+                        anchor_center,
+                        (dest_screen_x, dest_screen_y),
+                    );
+
+                    let should_use_reserved = actor_directives::should_switch_to_reserved(
+                        self.id,
+                        (self.fpos_x, self.fpos_y),
+                        current_center,
+                        reserved_center,
+                        (dest_screen_x, dest_screen_y),
+                        true, // has_anchor
+                    );
+
+                    // Choose best option based on directive results
+                    let (chosen, chosen_name) = if should_use_anchor && should_use_reserved {
+                        // Both are better than current, choose closer one to actor position
+                        let dist_to_anchor = {
+                            let dx = self.fpos_x - anchor_center.0;
+                            let dy = self.fpos_y - anchor_center.1;
+                            (dx * dx + dy * dy).sqrt()
+                        };
+                        let dist_to_reserved = {
+                            let dx = self.fpos_x - reserved_center.0;
+                            let dy = self.fpos_y - reserved_center.1;
+                            (dx * dx + dy * dy).sqrt()
+                        };
+
+                        if always_trace || track_movement {
+                            println!("  [PSC_DIAG] Both valid: dist_to_anchor={:.3} dist_to_reserved={:.3}",
+                                dist_to_anchor, dist_to_reserved);
+                        }
+
+                        if dist_to_reserved < dist_to_anchor {
+                            if always_trace || (self.id == 0 && track_movement) {
+                                println!("  [PSC SELECTION] Chose RESERVED (diagonal, closer to actor)");
+                            }
+                            (reserved, "Reserved (directive, both valid)".to_string())
+                        } else {
+                            if always_trace || (self.id == 0 && track_movement) {
+                                println!("  [PSC SELECTION] Chose ANCHOR (H/V, closer to actor)");
+                            }
+                            (anchor, "Anchor (directive, both valid)".to_string())
+                        }
+                    } else if should_use_reserved {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Chose RESERVED (diagonal, directive)");
+                        }
+                        (reserved, "Reserved (directive)".to_string())
+                    } else if should_use_anchor {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Chose ANCHOR (H/V, directive)");
+                        }
+                        (anchor, "Anchor (directive)".to_string())
+                    } else {
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] Staying at CURRENT (directive)");
+                        }
+                        (current, "Current (directive, stay)".to_string())
+                    };
+
+                    // Calculate distances for logging (using subcell centers for consistency with old logs)
                     let dist_reserved = Self::subcell_center_distance_to_destination(
                         &reserved,
                         dest_screen_x,
@@ -2891,142 +2975,15 @@ impl Actor {
                         self.subcell_offset_y,
                     );
 
-                    // DEBUG: Log diagonal PSC selection with high precision
+                    // DEBUG: Log diagonal PSC selection
                     if always_trace || track_movement {
                         println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
                             current.cell_x, current.cell_y, current.sub_x, current.sub_y,
                             reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
                             anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
-                        println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6} diff={:.6}",
-                            dist_reserved, dist_anchor, (dist_reserved - dist_anchor).abs());
+                        println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6}",
+                            dist_reserved, dist_anchor);
                     }
-
-                    if always_trace || (self.id == 0 && track_movement) {
-                        println!("  [PSC SELECTION] reserved={:?} dist={:.6}, anchor={:?} dist={:.6}",
-                            reserved, dist_reserved, anchor, dist_anchor);
-                    }
-
-                    // Choose closer subcell with hysteresis to prevent oscillation
-                    // Three-way comparison: require epsilon margin for one to be "clearly better"
-                    let (chosen, chosen_name) = if dist_reserved < dist_anchor - HYSTERESIS_EPSILON {
-                        // Reserved is clearly better (farther from anchor by more than epsilon)
-                        if always_trace || track_movement {
-                            println!("  [PSC_DIAG] Chose RESERVED (diagonal) - dist_reserved ({:.6}) < dist_anchor ({:.6}) - epsilon",
-                                dist_reserved, dist_anchor);
-                        }
-                        if always_trace || (self.id == 0 && track_movement) {
-                            println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC");
-                        }
-                        (reserved, "Reserved".to_string())
-                    } else if dist_anchor < dist_reserved - HYSTERESIS_EPSILON {
-                        // Anchor is clearly better (farther from reserved by more than epsilon)
-                        if always_trace || track_movement {
-                            println!("  [PSC_DIAG] Chose ANCHOR (H/V) - dist_anchor ({:.6}) < dist_reserved ({:.6}) - epsilon",
-                                dist_anchor, dist_reserved);
-                        }
-                        if always_trace || (self.id == 0 && track_movement) {
-                            println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC");
-                        }
-                        (anchor, "Anchor".to_string())
-                    } else {
-                        // Within epsilon - effectively equidistant
-                        if self.enable_lookahead {
-                            // Use look-ahead to break deadlock
-                            if always_trace || track_movement {
-                                println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                                    HYSTERESIS_EPSILON);
-                            }
-
-                            // Evaluate 2-step paths from both candidates
-                            let lookahead_reserved = Self::evaluate_lookahead_candidate(
-                            &reserved,
-                            dest_screen_x,
-                            dest_screen_y,
-                            self.cell_width,
-                            self.cell_height,
-                            self.subcell_offset_x,
-                            self.subcell_offset_y,
-                            reservation_manager,
-                            self.id,
-                        );
-                        let lookahead_anchor = Self::evaluate_lookahead_candidate(
-                            &anchor,
-                            dest_screen_x,
-                            dest_screen_y,
-                            self.cell_width,
-                            self.cell_height,
-                            self.subcell_offset_x,
-                            self.subcell_offset_y,
-                            reservation_manager,
-                            self.id,
-                        );
-
-                        // Choose based on look-ahead results
-                        let (chosen, chosen_name) = match (lookahead_reserved, lookahead_anchor) {
-                            (Some(dist_r), Some(dist_a)) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] reserved_2step={:.6} anchor_2step={:.6}", dist_r, dist_a);
-                                }
-                                if dist_r < dist_a {
-                                    if always_trace || track_movement {
-                                        println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
-                                    }
-                                    if always_trace || (self.id == 0 && track_movement) {
-                                        println!("  [PSC SELECTION] Chose RESERVED (diagonal) as new PSC (lookahead)");
-                                    }
-                                    (reserved, "Reserved (lookahead)".to_string())
-                                } else {
-                                    if always_trace || track_movement {
-                                        println!("  [LOOKAHEAD] Breaking deadlock: chose ANCHOR (better 2-step)");
-                                    }
-                                    if always_trace || (self.id == 0 && track_movement) {
-                                        println!("  [PSC SELECTION] Chose ANCHOR (H/V) as new PSC (lookahead)");
-                                    }
-                                    (anchor, "Anchor (lookahead)".to_string())
-                                }
-                            }
-                            (Some(_), None) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Only reserved has valid 2-step");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Chose RESERVED (only valid lookahead)");
-                                }
-                                (reserved, "Reserved (only valid lookahead)".to_string())
-                            }
-                            (None, Some(_)) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Only anchor has valid 2-step");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Chose ANCHOR (only valid lookahead)");
-                                }
-                                (anchor, "Anchor (only valid lookahead)".to_string())
-                            }
-                            (None, None) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Both blocked, falling back to reserved (diagonal)");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Chose RESERVED (deadlock, both blocked)");
-                                }
-                                (reserved, "Reserved (deadlock)".to_string())
-                            }
-                        };
-
-                            (chosen, chosen_name)
-                        } else {
-                            // Fallback when look-ahead disabled: prefer reserved for diagonal progress
-                            if always_trace || track_movement {
-                                println!("  [PSC_DIAG] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, preferring reserved",
-                                    HYSTERESIS_EPSILON);
-                            }
-                            if always_trace || (self.id == 0 && track_movement) {
-                                println!("  [PSC SELECTION] Chose RESERVED (hysteresis fallback)");
-                            }
-                            (reserved, "Reserved (hysteresis)".to_string())
-                        }
-                    };
 
                     // Create PSC selection info for logging
                     let info = PSCSelectionInfo {
