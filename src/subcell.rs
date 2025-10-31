@@ -207,6 +207,26 @@ impl SubCellCoord {
         // Violates rule if EITHER distance increases beyond tolerance
         (new_dist_x - curr_dist_x) > tolerance || (new_dist_y - curr_dist_y) > tolerance
     }
+
+    // ========== Conversion to SubPoint (for migration) ==========
+
+    /// Convert SubCellCoord to SubPoint (flat coordinates)
+    pub fn to_subpoint(&self) -> crate::subpoint::SubPoint {
+        crate::subpoint::SubPoint::from_cell_subcell(
+            self.cell_x,
+            self.cell_y,
+            self.sub_x,
+            self.sub_y,
+            self.grid_size,
+        )
+    }
+
+    /// Create SubCellCoord from SubPoint
+    pub fn from_subpoint(point: &crate::subpoint::SubPoint, grid_size: i32) -> Self {
+        let (cell_x, cell_y) = point.to_cell(grid_size);
+        let (sub_x, sub_y) = point.subcell_offset(grid_size);
+        SubCellCoord::new(cell_x, cell_y, sub_x, sub_y, grid_size)
+    }
 }
 
 /// Sub-cell reservation manager

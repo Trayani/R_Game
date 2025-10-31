@@ -13,6 +13,7 @@ pub mod ray;
 pub mod raycast;
 pub mod save_state;
 pub mod subcell;
+pub mod subpoint;  // New flat coordinate system
 
 pub use action_log::{Action, ActionLog, ActionPhase, LoggedAction};
 pub use actor::{Actor, CellPosition, MovementEvent, Affinity, AffinityResult};

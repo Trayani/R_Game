@@ -1,0 +1,650 @@
+warning: unused imports: `Actor`, `Affinity`, and `AlignmentState`
+  --> src/actor_execution.rs:10:20
+   |
+10 | use crate::actor::{Actor, Affinity, AlignmentState};
+   |                    ^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `crate::config::ReservationEagerness`
+  --> src/actor_execution.rs:12:5
+   |
+12 | use crate::config::ReservationEagerness;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `HashSet`
+ --> src/subcell.rs:1:33
+  |
+1 | use std::collections::{HashMap, HashSet};
+  |                                 ^^^^^^^
+
+warning: unused variable: `subcell`
+    --> src/actor.rs:2409:38
+     |
+2409 |     fn log_transition_to_idle(&self, subcell: &SubCellCoord, dist: f32, always_trace: bool, track_movement: bool) {
+     |                                      ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_subcell`
+     |
+     = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `filter_backward`
+    --> src/actor.rs:2517:9
+     |
+2517 |         filter_backward: bool,
+     |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_filter_backward`
+
+warning: unused variable: `actor_to_dest`
+   --> src/actor_directives.rs:149:9
+    |
+149 |     let actor_to_dest = distance(actor_pos, destination);
+    |         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actor_to_dest`
+
+warning: unused variable: `reservation_eagerness`
+   --> src/actor_directives.rs:271:5
+    |
+271 |     reservation_eagerness: ReservationEagerness,
+    |     ^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_reservation_eagerness`
+
+warning: unused variable: `release_eagerness`
+   --> src/actor_directives.rs:272:5
+    |
+272 |     release_eagerness: ReleaseEagerness,
+    |     ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_release_eagerness`
+
+warning: unused variable: `reservation_eagerness`
+   --> src/actor_directives.rs:294:5
+    |
+294 |     reservation_eagerness: ReservationEagerness,
+    |     ^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_reservation_eagerness`
+
+warning: unused variable: `release_eagerness`
+   --> src/actor_directives.rs:295:5
+    |
+295 |     release_eagerness: ReleaseEagerness,
+    |     ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_release_eagerness`
+
+warning: unused variable: `cell_width`
+  --> src/save_state.rs:32:64
+   |
+32 |     pub fn from_grid_and_actors(grid: &Grid, actors: &[Actor], cell_width: f32, cell_height: f32) -> Self {
+   |                                                                ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+
+warning: unused variable: `cell_height`
+  --> src/save_state.rs:32:81
+   |
+32 |     pub fn from_grid_and_actors(grid: &Grid, actors: &[Actor], cell_width: f32, cell_height: f32) -> Self {
+   |                                                                                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: unused variable: `actor_x`
+   --> src/subcell.rs:175:9
+    |
+175 |         actor_x: f32,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actor_x`
+
+warning: unused variable: `actor_y`
+   --> src/subcell.rs:176:9
+    |
+176 |         actor_y: f32,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actor_y`
+
+warning: unused variable: `anchor_subcell`
+   --> src/subcell.rs:715:5
+    |
+715 |     anchor_subcell: Option<&SubCellCoord>,
+    |     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_anchor_subcell`
+
+warning: unused variable: `max_index`
+   --> src/subcell.rs:849:9
+    |
+849 |     let max_index = grid_size - 1;
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_max_index`
+
+warning: unused variable: `cell_width`
+   --> src/subcell.rs:844:5
+    |
+844 |     cell_width: f32,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+
+warning: unused variable: `cell_height`
+   --> src/subcell.rs:845:5
+    |
+845 |     cell_height: f32,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: multiple associated items are never used
+    --> src/actor.rs:603:8
+     |
+256  | impl Actor {
+     | ---------- associated items in this implementation
+...
+603  |     fn is_position_valid(&self, fpos_x: f32, fpos_y: f32, grid: &Grid) -> bool {
+     |        ^^^^^^^^^^^^^^^^^
+...
+1129 |     fn evaluate_lookahead_candidate(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1904 |     fn try_reserve_any_available_in_current_cell(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+1978 |     fn should_attempt_reservation(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2198 |     fn try_reserve_next_subcell(
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2367 |     fn log_subcell_alignment(&self, subcell: &SubCellCoord, center_x: f32, center_y: f32, always_trace: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^
+...
+2377 |     fn log_no_subcell_available(&self, radius: i32, always_trace: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2385 |     fn log_entering_psc_alignment(&self, center_x: f32, center_y: f32, always_trace: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2393 |     fn log_alignment_target_set(&self, target_x: f32, target_y: f32, always_trace: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2401 |     fn log_psc_alignment_movement(&self, old_x: f32, old_y: f32, dist_to_center: f32, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+2409 |     fn log_transition_to_idle(&self, subcell: &SubCellCoord, dist: f32, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^
+...
+2417 |     fn log_no_destination(&self, always_trace: bool) {
+     |        ^^^^^^^^^^^^^^^^^^
+...
+2424 |     fn log_destination(&self, dest_x: f32, dest_y: f32, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^
+...
+2431 |     fn log_destination_reached(&self, dist: f32, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+2438 |     fn log_movement(&self, move_dist: f32, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^
+...
+2446 |     fn log_psc_switch(&self, from: &SubCellCoord, to: &SubCellCoord, reason: &str, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^
+...
+2457 |     fn log_staying_at_psc(&self, psc: &SubCellCoord, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^
+...
+2465 |     fn log_reservation_attempt(&self, reservation_type: &str, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+2472 |     fn log_reservation_success(&self, reserved: &SubCellCoord, reservation_type: &str, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+2481 |     fn log_reservation_failure(&self, reservation_type: &str, reason: &str, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+2488 |     fn log_return(&self, reached: bool, always_trace: bool, track_movement: bool) {
+     |        ^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` on by default
+
+warning: constant `HYSTERESIS_EPSILON` is never used
+    --> src/actor.rs:3138:27
+     |
+3138 |                     const HYSTERESIS_EPSILON: f32 = 0.001;
+     |                           ^^^^^^^^^^^^^^^^^^
+
+warning: function `determine_targets` is never used
+   --> src/pathfinding.rs:671:4
+    |
+671 | fn determine_targets(dest: &Position, grid: &Grid) -> HashSet<Position> {
+    |    ^^^^^^^^^^^^^^^^^
+
+warning: function `apply_offset` is never used
+   --> src/subcell.rs:483:4
+    |
+483 | fn apply_offset(base: SubCellCoord, cell_dx: i32, cell_dy: i32, sub_dx: i32, sub_dy: i32, grid_size: i32) -> SubCellCoord {
+    |    ^^^^^^^^^^^^
+
+warning: unused import: `super::*`
+   --> src/subcell.rs:912:9
+    |
+912 |     use super::*;
+    |         ^^^^^^^^
+
+warning: `rustgame3` (lib) generated 22 warnings (run `cargo fix --lib -p rustgame3` to apply 3 suggestions)
+warning: `rustgame3` (lib test) generated 23 warnings (22 duplicates) (run `cargo fix --lib -p rustgame3 --tests` to apply 1 suggestion)
+warning: unused imports: `ReleaseEagerness` and `ReservationEagerness`
+ --> tests/test_save_state_simulation.rs:7:61
+  |
+7 | use rustgame3::{SaveState, Grid, SubCellReservationManager, ReservationEagerness, ReleaseEagerness, Config};
+  |                                                             ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: variable `actors_reached_this_frame` is assigned to, but never used
+   --> tests/test_save_state_simulation.rs:118:17
+    |
+118 |         let mut actors_reached_this_frame = 0;
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_actors_reached_this_frame` instead
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: variable `stuck_actors` is assigned to, but never used
+   --> tests/test_save_state_simulation.rs:181:13
+    |
+181 |     let mut stuck_actors = 0;
+    |             ^^^^^^^^^^^^
+    |
+    = note: consider using `_stuck_actors` instead
+
+warning: unused variable: `i`
+   --> tests/test_save_state_simulation.rs:182:10
+    |
+182 |     for (i, actor) in actors.iter().enumerate() {
+    |          ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `psc_before`
+   --> tests/test_psc_direction_bug.rs:482:13
+    |
+482 |         let psc_before = actor.current_subcell.clone();
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_psc_before`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `actual_psc_before`
+   --> tests/test_psc_direction_bug.rs:483:13
+    |
+483 |         let actual_psc_before = SubCellCoord::from_screen_pos_with_offset(
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_actual_psc_before`
+
+warning: `rustgame3` (test "test_save_state_simulation") generated 4 warnings (run `cargo fix --test "test_save_state_simulation"` to apply 1 suggestion)
+warning: `rustgame3` (test "test_psc_direction_bug") generated 2 warnings
+warning: unused import: `SubCellReservationManager`
+  --> tests/test_affinity_clamping_fix.rs:18:40
+   |
+18 | use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `reached`
+   --> tests/test_diagonal_cardinal_fallback.rs:268:13
+    |
+268 |         let reached = actor.update_subcell_destination_direct(
+    |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_reached`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `epsilon`
+   --> tests/test_actor_directing.rs:126:5
+    |
+126 |     epsilon: f32,
+    |     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_epsilon`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: multiple fields are never read
+  --> tests/test_actor_directing.rs:13:5
+   |
+11 | struct ActorDirectingTest {
+   |        ------------------ fields in this struct
+12 |     test_id: String,
+13 |     base: String,
+   |     ^^^^
+...
+23 |     expected_target_x: f32,
+   |     ^^^^^^^^^^^^^^^^^
+24 |     expected_target_y: f32,
+   |     ^^^^^^^^^^^^^^^^^
+25 |     expected_affinity: String, // "H", "V", or "BOTH"
+   |     ^^^^^^^^^^^^^^^^^
+26 |     anchor_x: i32,
+   |     ^^^^^^^^
+27 |     anchor_y: i32,
+   |     ^^^^^^^^
+28 |     optimal_dir: String,
+29 |     notes: String,
+   |     ^^^^^
+...
+35 |     alt1_anchor_x: i32,
+   |     ^^^^^^^^^^^^^
+36 |     alt1_anchor_y: i32,
+   |     ^^^^^^^^^^^^^
+   |
+   = note: `ActorDirectingTest` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: variable does not need to be mutable
+  --> tests/test_pathfinding.rs:47:9
+   |
+47 |     let mut grid = Grid::new(10, 10);
+   |         ----^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> tests/test_pathfinding.rs:287:9
+    |
+287 |     let mut grid = Grid::new(15, 15);
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable `any_movement` is assigned to, but never used
+  --> tests/test_psc_alignment_only.rs:91:17
+   |
+91 |         let mut any_movement = false;
+   |                 ^^^^^^^^^^^^
+   |
+   = note: consider using `_any_movement` instead
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: value assigned to `any_movement` is never read
+   --> tests/test_psc_alignment_only.rs:130:21
+    |
+130 |                     any_movement = true;
+    |                     ^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` on by default
+
+warning: `rustgame3` (test "test_affinity_clamping_fix") generated 1 warning (run `cargo fix --test "test_affinity_clamping_fix"` to apply 1 suggestion)
+warning: `rustgame3` (test "test_diagonal_cardinal_fallback") generated 1 warning
+warning: `rustgame3` (test "test_actor_directing") generated 2 warnings
+warning: `rustgame3` (test "test_pathfinding") generated 2 warnings (run `cargo fix --test "test_pathfinding"` to apply 2 suggestions)
+warning: `rustgame3` (test "test_psc_alignment_only") generated 2 warnings
+warning: value assigned to `debug_y` is never read
+    --> src/main.rs:1399:25
+     |
+1399 |                         debug_y += 20.0;
+     |                         ^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+     = note: `#[warn(unused_assignments)]` on by default
+
+warning: unused import: `Grid`
+  --> tests/test_destination_direct_spec.rs:11:17
+   |
+11 | use rustgame3::{Grid, Actor};
+   |                 ^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `cell_width`
+   --> tests/test_destination_direct_spec.rs:105:9
+    |
+105 |     let cell_width = 30.0;
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `cell_height`
+   --> tests/test_destination_direct_spec.rs:106:9
+    |
+106 |     let cell_height = 30.0;
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: unused variable: `cell_width`
+   --> tests/test_destination_direct_spec.rs:150:9
+    |
+150 |     let cell_width = 30.0;
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_width`
+
+warning: unused variable: `cell_height`
+   --> tests/test_destination_direct_spec.rs:151:9
+    |
+151 |     let cell_height = 30.0;
+    |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cell_height`
+
+warning: function `parse_standard_test` is never used
+   --> tests/common/mod.rs:177:8
+    |
+177 | pub fn parse_standard_test(path: &Path) -> Result<(Grid, i32, i32, HashSet<i32>), Box<dyn std::error::Error>> {
+    |        ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: function `flip_standard_horizontal` is never used
+   --> tests/common/mod.rs:262:8
+    |
+262 | pub fn flip_standard_horizontal(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `flip_standard_vertical` is never used
+   --> tests/common/mod.rs:287:8
+    |
+287 | pub fn flip_standard_vertical(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `flip_standard_both` is never used
+   --> tests/common/mod.rs:312:8
+    |
+312 | pub fn flip_standard_both(grid: &Grid, start_x: i32, start_y: i32, expected: &HashSet<i32>) -> (Grid, i32, i32, HashSet<i32>) {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `load_test` is never used
+  --> tests/common/mod.rs:28:8
+   |
+28 | pub fn load_test(path: &Path) -> Result<RaycastTestData, Box<dyn std::error::Error>> {
+   |        ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: function `flip_test_horizontal` is never used
+  --> tests/common/mod.rs:46:8
+   |
+46 | pub fn flip_test_horizontal(test: &RaycastTestData) -> RaycastTestData {
+   |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `flip_test_vertical` is never used
+  --> tests/common/mod.rs:74:8
+   |
+74 | pub fn flip_test_vertical(test: &RaycastTestData) -> RaycastTestData {
+   |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `flip_test_both` is never used
+   --> tests/common/mod.rs:102:8
+    |
+102 | pub fn flip_test_both(test: &RaycastTestData) -> RaycastTestData {
+    |        ^^^^^^^^^^^^^^
+
+warning: function `run_single_test` is never used
+   --> tests/common/mod.rs:132:8
+    |
+132 | pub fn run_single_test(test_data: &RaycastTestData) -> (bool, usize, usize, HashSet<i32>, HashSet<i32>) {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `run_test` is never used
+   --> tests/common/mod.rs:152:8
+    |
+152 | pub fn run_test(test_data: &RaycastTestData) -> (bool, Option<String>, usize, usize) {
+    |        ^^^^^^^^
+
+warning: `rustgame3` (bin "rustgame3") generated 1 warning
+warning: `rustgame3` (bin "rustgame3" test) generated 1 warning (1 duplicate)
+warning: `rustgame3` (test "test_destination_direct_spec") generated 5 warnings (run `cargo fix --test "test_destination_direct_spec"` to apply 1 suggestion)
+warning: `rustgame3` (test "json_tests") generated 4 warnings
+warning: `rustgame3` (test "standard_tests") generated 6 warnings
+warning: unused import: `SubCellCoord`
+  --> tests/test_psc_switching_all_directions.rs:14:26
+   |
+14 | use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+   |                          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: `rustgame3` (test "test_psc_switching_all_directions") generated 1 warning (run `cargo fix --test "test_psc_switching_all_directions"` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running unittests src/lib.rs (target/debug/deps/rustgame3-c4baef5b3c4c47c7)
+
+running 15 tests
+test actor::tests::test_actor_clean_position ... ok
+test actor::tests::test_actor_messy_x ... ok
+test actor::tests::test_actor_messy_y ... ok
+test actor::tests::test_actor_messy_xy ... ok
+test actor::tests::test_actor_path_following ... ok
+test corners::tests::test_multi_direction_corner ... ok
+test corners::tests::test_4x3_two_blocks ... ok
+test corners::tests::test_simple_3x3_corner ... ok
+test mirror_triangle::tests::test_mirror_identification ... ok
+test mirror_triangle::tests::test_triangle_creation ... ok
+test mirror_triangle::tests::test_opposite_edge ... ok
+test ray::tests::test_ray_border_calculation ... ok
+test raycast::tests::test_empty_grid ... ok
+test ray::tests::test_ray_with_rounding ... ok
+test raycast::tests::test_blocked_start ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/decode_compact_log.rs (target/debug/deps/decode_compact_log-793bec32e6ff7583)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/rustgame3-2de66a0e4440a77d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/corner_tests.rs (target/debug/deps/corner_tests-e369c33df00bde9c)
+
+running 5 tests
+test test_2_next_corners ... ok
+test test_corners_md_example ... ok
+test test_1_base_corners ... ok
+test test_3_case_corners ... ok
+test test_4_case_corners ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/debug_corners.rs (target/debug/deps/debug_corners-c56788318ffa60a3)
+
+running 1 test
+test debug_corner_comparison_with_csharp ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/json_tests.rs (target/debug/deps/json_tests-51931e0a3f859702)
+
+running 1 test
+test json_validation_tests ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/pathfinding_destination_test.rs (target/debug/deps/pathfinding_destination_test-898249602f5680c3)
+
+running 1 test
+test test_destination_reachable_even_if_not_interesting ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/standard_tests.rs (target/debug/deps/standard_tests-2ec9e250566ebdd6)
+
+running 1 test
+test standard_format_tests ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/test2x_size1.rs (target/debug/deps/test2x_size1-1710bd00705501d9)
+
+running 19 tests
+test test2x_010_2254_to_2255 ... ok
+test test2x_009_2679_to_2768_again ... ok
+test test2x_012_5429_to_5507 ... ok
+test test2x_014_4820_to_4490 ... ok
+test test2x_008_2680_to_2768 ... ok
+test test2x_007_2597_to_2768 ... ok
+test test2x_011_4240_to_4980 ... ok
+test test2x_006_2679_to_2768 ... ok
+test test2x_019_4829_to_4750_with_blocks ... ok
+test test2x_018_4829_to_4750 ... ok
+test test2x_013_947_to_2110 ... ok
+test test2x_015_2341_to_5507_long_path ... ok
+test test2x_004_875_to_4396 ... ok
+test test2x_017_946_to_2440 ... ok
+test test2x_002_1211_to_4396 ... ok
+test test2x_003_1211_to_4310 ... ok
+test test2x_016_946_to_2437 ... ok
+test test2x_001_4396_to_1211 ... ok
+test test2x_005_4396_to_875 ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+
+     Running tests/test2x_size1_3flip.rs (target/debug/deps/test2x_size1_3flip-c0fff36cd363e9e2)
+
+running 14 tests
+test test2x_010_2254_to_2255_3flip ... ok
+test test2x_018_4829_to_4750_3flip ... ok
+test test2x_006_2679_to_2768_3flip ... ok
+test test2x_019_4829_to_4750_with_blocks_3flip ... ok
+test test2x_007_2597_to_2768_3flip ... ok
+test test2x_011_4240_to_4980_3flip ... ok
+test test2x_013_947_to_2110_3flip ... ok
+test test2x_004_875_to_4396_3flip ... ok
+test test2x_002_1211_to_4396_3flip ... ok
+test test2x_017_946_to_2440_3flip ... ok
+test test2x_016_946_to_2437_3flip ... ok
+test test2x_003_1211_to_4310_3flip ... ok
+test test2x_001_4396_to_1211_3flip ... ok
+test test2x_005_4396_to_875_3flip ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.18s
+
+     Running tests/test2x_size1_messy.rs (target/debug/deps/test2x_size1_messy-5666362b9660fe08)
+
+running 32 tests
+test test2x_messy_003_1208_to_1205 ... ok
+test test2x_messy_002_1205_to_1208 ... ok
+test test2x_messy_008_6388_to_6139_again ... ok
+test test2x_messy_004_1207_to_1210 ... ok
+test test2x_messy_001_6388_to_6139 ... ok
+test test2x_messy_011_4062_to_4231 ... ok
+test test2x_messy_009_6552_to_6720 ... ok
+test test2x_messy_016_4891_to_5142 ... ok
+test test2x_messy_019_3768_to_2440 ... ok
+test test2x_messy_024_2679_to_2684 ... ok
+test test2x_messy_010_6637_to_6552 ... ok
+test test2x_messy_006_4638_to_4641 ... ok
+test test2x_messy_012_5476_to_5556 ... ok
+test test2x_messy_007_6302_to_6383 ... ok
+test test2x_messy_022_2762_to_2768 ... ok
+test test2x_messy_015_4890_to_5142 ... ok
+test test2x_messy_013_4887_to_5051 ... ok
+test test2x_messy_005_4638_to_4719 ... ok
+test test2x_messy_025_2679_to_2270 ... ok
+test test2x_messy_020_2341_to_2591 ... ok
+test test2x_messy_017_5721_to_5719 ... ok
+test test2x_messy_023_2596_to_2768 ... ok
+test test2x_messy_029_3008_to_2674_messyx ... ok
+test test2x_messy_018_5721_to_5725 ... ok
+test test2x_messy_031_6062_to_6309_messyx ... ok
+test test2x_messy_028_1348_to_1185_messyx ... ok
+test test2x_messy_021_2679_to_2768 ... ok
+test test2x_messy_027_2845_to_2270 ... ok
+test test2x_messy_026_2762_to_2270 ... ok
+test test2x_messy_014_4888_to_5051 ... ok
+test test2x_messy_030_6061_to_6309_messyx ... ok
+test test2x_messy_032_2596_to_2768_both ... ok
+
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/test_actor3_backwards.rs (target/debug/deps/test_actor3_backwards-2e0bee20f9f09b8b)
+
+running 1 test
+test test_actor3_se_diagonal_should_be_filtered ... FAILED
+
+failures:
+
+---- test_actor3_se_diagonal_should_be_filtered stdout ----
+[BOUNDARY] No reservation: staying at current position
+
+thread 'test_actor3_se_diagonal_should_be_filtered' panicked at tests/test_actor3_backwards.rs:96:9:
+Actor should have reserved something
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_actor3_se_diagonal_should_be_filtered
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test test_actor3_backwards`
