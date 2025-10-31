@@ -8,10 +8,35 @@
 use crate::actor::{Actor, AlignmentState};
 use crate::subcell::{SubCellCoord, SubCellReservationManager};
 use crate::config::{ReservationEagerness, ReleaseEagerness};
+use crate::pathfinding::Position;
 
 /// Calculate Euclidean distance between two points
 fn distance(p1: (f32, f32), p2: (f32, f32)) -> f32 {
     ((p1.0 - p2.0).powi(2) + (p1.1 - p2.1).powi(2)).sqrt()
+}
+
+/// Check if destination is cardinally aligned with current subcell
+///
+/// Returns Some(is_horizontal) if destination is cardinally aligned:
+/// - Some(false) for vertical alignment (same X, different Y) → NORTH/SOUTH
+/// - Some(true) for horizontal alignment (same Y, different X) → EAST/WEST
+///
+/// Returns None if destination requires diagonal movement (different X AND Y)
+/// or if already at destination (same X AND Y)
+fn check_cardinal_alignment(
+    current: &SubCellCoord,
+    dest: &Position,
+) -> Option<bool> {
+    let same_x = dest.x == current.cell_x;
+    let same_y = dest.y == current.cell_y;
+
+    if same_x && !same_y {
+        Some(false) // Vertical alignment (NORTH/SOUTH)
+    } else if same_y && !same_x {
+        Some(true)  // Horizontal alignment (EAST/WEST)
+    } else {
+        None        // Diagonal movement or at destination
+    }
 }
 
 // ============================================================================
@@ -312,41 +337,86 @@ fn handle_idle_state(
     let dx_to_dest = dest_screen_x - actor.fpos_x;
     let dy_to_dest = dest_screen_y - actor.fpos_y;
 
-    // 4. Try to reserve next subcell - diagonal first
-    let diagonal_success = actor.try_reserve_diagonal_with_anchor(
-        &current,
-        None,
-        dx_to_dest,
-        dy_to_dest,
-        dest_screen_x,
-        dest_screen_y,
-        reservation_manager,
-        enable_anti_cross,
-        track_movement,
-    );
+    // 4. Check cardinal alignment per actor_directing_v2.txt Spec A1
+    // If destination is cardinally aligned (same X or same Y), try cardinal direction FIRST
+    if let Some(_is_horizontal) = check_cardinal_alignment(&current, &dest) {
+        // CARDINAL CASE: Destination is cardinally aligned with PSC
+        // Per Spec A1 - try H/V (cardinal direction) FIRST
 
-    if diagonal_success {
-        // 5. Success - transition Idle → Move
-        actor.alignment_state = crate::actor::AlignmentState::Move;
-        return false;
+        let hv_success = actor.try_reserve_horizontal_vertical(
+            &current,
+            dx_to_dest,
+            dy_to_dest,
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            track_movement,
+        );
+
+        if hv_success {
+            // Cardinal reservation succeeded - transition Idle → Move
+            actor.alignment_state = crate::actor::AlignmentState::Move;
+            return false;
+        }
+
+        // H/V failed - try diagonal as fallback
+        let diagonal_success = actor.try_reserve_diagonal_with_anchor(
+            &current,
+            None,
+            dx_to_dest,
+            dy_to_dest,
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            enable_anti_cross,
+            track_movement,
+        );
+
+        if diagonal_success {
+            // Diagonal fallback succeeded - transition Idle → Move
+            actor.alignment_state = crate::actor::AlignmentState::Move;
+        }
+        // else: both failed, stay in Idle (blocked)
+
+    } else {
+        // DIAGONAL CASE: Destination requires movement in both X and Y
+        // Per Spec A2 - try diagonal FIRST
+
+        let diagonal_success = actor.try_reserve_diagonal_with_anchor(
+            &current,
+            None,
+            dx_to_dest,
+            dy_to_dest,
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            enable_anti_cross,
+            track_movement,
+        );
+
+        if diagonal_success {
+            // Diagonal reservation succeeded - transition Idle → Move
+            actor.alignment_state = crate::actor::AlignmentState::Move;
+            return false;
+        }
+
+        // Diagonal failed - try H/V fallback per Spec C2
+        let hv_success = actor.try_reserve_horizontal_vertical(
+            &current,
+            dx_to_dest,
+            dy_to_dest,
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            track_movement,
+        );
+
+        if hv_success {
+            // H/V fallback succeeded - transition Idle → Move
+            actor.alignment_state = crate::actor::AlignmentState::Move;
+        }
+        // else: both failed, stay in Idle (blocked)
     }
-
-    // 6. Diagonal failed, try H/V fallback
-    let hv_success = actor.try_reserve_horizontal_vertical(
-        &current,
-        dx_to_dest,
-        dy_to_dest,
-        dest_screen_x,
-        dest_screen_y,
-        reservation_manager,
-        track_movement,
-    );
-
-    if hv_success {
-        // Success - transition Idle → Move
-        actor.alignment_state = crate::actor::AlignmentState::Move;
-    }
-    // else: both failed, stay in Idle (blocked)
 
     false // Not at destination yet
 }
