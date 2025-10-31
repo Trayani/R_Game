@@ -2870,6 +2870,7 @@ impl Actor {
                 self.fpos_y,
                 self.cell_width,
                 self.cell_height,
+                self.subcell_grid_size,
                 self.subcell_offset_x,
                 self.subcell_offset_y,
             )

@@ -111,16 +111,18 @@ fn test_four_actors_psc_alignment_no_destination() {
             // Check if actor has current subcell (should always be true after initialization)
             if let Some(current) = actor.current_subcell {
                 // Calculate distance to current subcell center (where actor aligns to)
-                let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
+                let (center_x, center_y) = current.to_screen_center(cell_width, cell_height, 2);
                 let dist_to_center = ((new_pos.0 - center_x).powi(2) + (new_pos.1 - center_y).powi(2)).sqrt();
 
                 // Check if aligned (distance < 2.0 pixels - matching alignment_threshold)
                 if !actors_aligned[i] && dist_to_center < 2.0 {
                     actors_aligned[i] = true;
                     alignment_complete_frame[i] = Some(iteration);
+                    let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+                    let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
                     println!("[{:4}ms] Actor {} ALIGNED to current subcell ({},{},{},{}) at ({:.1},{:.1}) - dist={:.3}px",
                         iteration * 16, actor.id,
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                        cell_x, cell_y, sub_x, sub_y,
                         new_pos.0, new_pos.1, dist_to_center);
                 }
 
@@ -165,13 +167,15 @@ fn test_four_actors_psc_alignment_no_destination() {
 
     for (i, actor) in actors.iter().enumerate() {
         if let Some(current) = actor.current_subcell {
-            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
+            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height, 2);
             let dist = ((actor.fpos_x - center_x).powi(2) + (actor.fpos_y - center_y).powi(2)).sqrt();
             let aligned_frame = alignment_complete_frame[i].unwrap_or(0);
             let aligned_ms = aligned_frame * 16;
 
             println!("Actor {}:", actor.id);
-            println!("  Current Subcell: ({},{},{},{})", current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+            let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+            let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
+            println!("  Current Subcell: ({},{},{},{})", cell_x, cell_y, sub_x, sub_y);
             println!("  Position: ({:.2}, {:.2})", actor.fpos_x, actor.fpos_y);
             println!("  Center: ({:.2}, {:.2})", center_x, center_y);
             println!("  Distance: {:.3}px", dist);
@@ -199,7 +203,7 @@ fn test_four_actors_psc_alignment_no_destination() {
     // Verify all actors are within alignment threshold (2.0 pixels)
     for actor in &actors {
         if let Some(current) = actor.current_subcell {
-            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
+            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height, 2);
             let dist = ((actor.fpos_x - center_x).powi(2) + (actor.fpos_y - center_y).powi(2)).sqrt();
             assert!(dist < 2.0,
                 "Actor {} not properly aligned: distance {:.3}px > 2.0px threshold",

@@ -739,6 +739,7 @@ pub fn calculate_optimal_boundary(
     actor_pos_y: f32,
     cell_width: f32,
     cell_height: f32,
+    grid_size: i32,
     offset_x: f32,
     offset_y: f32,
 ) -> (f32, f32) {
@@ -769,21 +770,38 @@ pub fn calculate_optimal_boundary(
                 (clamped_x, clamped_y)
             } else {
                 // H/V reservation: Move directly to reserved sub-cell center
-                let target = reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
+                let sub_cell_width = cell_width / grid_size as f32;
+                let sub_cell_height = cell_height / grid_size as f32;
+
+                let (intersection_x, intersection_y) = reserved.to_screen_center_with_offset(cell_width, cell_height, offset_x, offset_y);
+
+                // Convert from intersection to true center by adding half a subcell
+                let target_x = intersection_x + sub_cell_width / 2.0;
+                let target_y = intersection_y + sub_cell_height / 2.0;
+
                 println!("[BOUNDARY] H/V reservation: target=reserved center ({:.1},{:.1})",
-                    target.0, target.1);
-                target
+                    target_x, target_y);
+                (target_x, target_y)
             }
         }
         None => {
             // No reservation: Stay at current subcell center
             // Per design documentation: actors should stay in place when they cannot move/reserve
-            let (center_x, center_y) = current_subcell.to_screen_center_with_offset(
+            // Note: SubCellCoord.to_screen_center_with_offset returns grid intersection, not true center
+            // We need to add +0.5 subcell offset to get the actual center
+            let sub_cell_width = cell_width / grid_size as f32;
+            let sub_cell_height = cell_height / grid_size as f32;
+
+            let (intersection_x, intersection_y) = current_subcell.to_screen_center_with_offset(
                 cell_width,
                 cell_height,
                 offset_x,
                 offset_y,
             );
+
+            // Convert from intersection to true center by adding half a subcell
+            let center_x = intersection_x + sub_cell_width / 2.0;
+            let center_y = intersection_y + sub_cell_height / 2.0;
 
             // Check if already at center - if so, just stay
             let dx_to_center = center_x - actor_pos_x;

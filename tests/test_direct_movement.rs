@@ -30,6 +30,7 @@ fn test_simple_diagonal_movement_ne() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
+    let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (NE direction, 4+ cells away)
@@ -57,7 +58,7 @@ fn test_simple_diagonal_movement_ne() {
     let mut reached = false;
 
     positions.push((actor.fpos_x, actor.fpos_y));
-    subcells_visited.push(start_subcell.clone());
+    subcells_visited.push(start_subpoint);
 
     // Run simulation
     println!("\nSimulating movement...\n");
@@ -83,16 +84,13 @@ fn test_simple_diagonal_movement_ne() {
 
             if let Some(current) = &actor.current_subcell {
                 // Check if subcell changed
-                if subcells_visited.last().map(|last| {
-                    last.cell_x != current.cell_x ||
-                    last.cell_y != current.cell_y ||
-                    last.sub_x != current.sub_x ||
-                    last.sub_y != current.sub_y
-                }).unwrap_or(true) {
-                    subcells_visited.push(current.clone());
+                if subcells_visited.last().map(|last| last != current).unwrap_or(true) {
+                    subcells_visited.push(*current);
+                    let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+                    let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
                     println!("  [Iter {}] Position: ({:.2}, {:.2}) → Subcell ({},{},{},{})",
                         iteration, actor.fpos_x, actor.fpos_y,
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+                        cell_x, cell_y, sub_x, sub_y);
                 }
             }
         }
@@ -168,14 +166,17 @@ fn test_simple_diagonal_movement_ne() {
         let curr = &subcells_visited[i];
 
         // Check if we moved closer to destination
-        let prev_dist = ((dest.x as f32 - prev.cell_x as f32).powi(2) +
-                        (dest.y as f32 - prev.cell_y as f32).powi(2)).sqrt();
-        let curr_dist = ((dest.x as f32 - curr.cell_x as f32).powi(2) +
-                        (dest.y as f32 - curr.cell_y as f32).powi(2)).sqrt();
+        let (prev_cell_x, prev_cell_y) = prev.to_cell(2);
+        let (curr_cell_x, curr_cell_y) = curr.to_cell(2);
+
+        let prev_dist = ((dest.x as f32 - prev_cell_x as f32).powi(2) +
+                        (dest.y as f32 - prev_cell_y as f32).powi(2)).sqrt();
+        let curr_dist = ((dest.x as f32 - curr_cell_x as f32).powi(2) +
+                        (dest.y as f32 - curr_cell_y as f32).powi(2)).sqrt();
 
         if curr_dist > prev_dist + 0.5 {
             println!("  ✗ Backtrack detected: ({},{}) → ({},{}), dist: {:.2} → {:.2}",
-                prev.cell_x, prev.cell_y, curr.cell_x, curr.cell_y, prev_dist, curr_dist);
+                prev_cell_x, prev_cell_y, curr_cell_x, curr_cell_y, prev_dist, curr_dist);
             backtracked = true;
         }
     }
@@ -238,6 +239,7 @@ fn test_simple_diagonal_movement_se() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
+    let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (SE direction, 4+ cells away)
@@ -265,7 +267,7 @@ fn test_simple_diagonal_movement_se() {
     let mut reached = false;
 
     positions.push((actor.fpos_x, actor.fpos_y));
-    subcells_visited.push(start_subcell.clone());
+    subcells_visited.push(start_subpoint);
 
     // Run simulation
     println!("\nSimulating movement...\n");
@@ -291,16 +293,13 @@ fn test_simple_diagonal_movement_se() {
 
             if let Some(current) = &actor.current_subcell {
                 // Check if subcell changed
-                if subcells_visited.last().map(|last| {
-                    last.cell_x != current.cell_x ||
-                    last.cell_y != current.cell_y ||
-                    last.sub_x != current.sub_x ||
-                    last.sub_y != current.sub_y
-                }).unwrap_or(true) {
-                    subcells_visited.push(current.clone());
+                if subcells_visited.last().map(|last| last != current).unwrap_or(true) {
+                    subcells_visited.push(*current);
+                    let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+                    let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
                     println!("  [Iter {}] Position: ({:.2}, {:.2}) → Subcell ({},{},{},{})",
                         iteration, actor.fpos_x, actor.fpos_y,
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+                        cell_x, cell_y, sub_x, sub_y);
                 }
             }
         }
@@ -376,14 +375,17 @@ fn test_simple_diagonal_movement_se() {
         let curr = &subcells_visited[i];
 
         // Check if we moved closer to destination
-        let prev_dist = ((dest.x as f32 - prev.cell_x as f32).powi(2) +
-                        (dest.y as f32 - prev.cell_y as f32).powi(2)).sqrt();
-        let curr_dist = ((dest.x as f32 - curr.cell_x as f32).powi(2) +
-                        (dest.y as f32 - curr.cell_y as f32).powi(2)).sqrt();
+        let (prev_cell_x, prev_cell_y) = prev.to_cell(2);
+        let (curr_cell_x, curr_cell_y) = curr.to_cell(2);
+
+        let prev_dist = ((dest.x as f32 - prev_cell_x as f32).powi(2) +
+                        (dest.y as f32 - prev_cell_y as f32).powi(2)).sqrt();
+        let curr_dist = ((dest.x as f32 - curr_cell_x as f32).powi(2) +
+                        (dest.y as f32 - curr_cell_y as f32).powi(2)).sqrt();
 
         if curr_dist > prev_dist + 0.5 {
             println!("  ✗ Backtrack detected: ({},{}) → ({},{}), dist: {:.2} → {:.2}",
-                prev.cell_x, prev.cell_y, curr.cell_x, curr.cell_y, prev_dist, curr_dist);
+                prev_cell_x, prev_cell_y, curr_cell_x, curr_cell_y, prev_dist, curr_dist);
             backtracked = true;
         }
     }
@@ -446,6 +448,7 @@ fn test_simple_diagonal_movement_sw() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
+    let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (SW direction, 4+ cells away)
@@ -473,7 +476,7 @@ fn test_simple_diagonal_movement_sw() {
     let mut reached = false;
 
     positions.push((actor.fpos_x, actor.fpos_y));
-    subcells_visited.push(start_subcell.clone());
+    subcells_visited.push(start_subpoint);
 
     // Run simulation
     println!("\nSimulating movement...\n");
@@ -499,16 +502,13 @@ fn test_simple_diagonal_movement_sw() {
 
             if let Some(current) = &actor.current_subcell {
                 // Check if subcell changed
-                if subcells_visited.last().map(|last| {
-                    last.cell_x != current.cell_x ||
-                    last.cell_y != current.cell_y ||
-                    last.sub_x != current.sub_x ||
-                    last.sub_y != current.sub_y
-                }).unwrap_or(true) {
-                    subcells_visited.push(current.clone());
+                if subcells_visited.last().map(|last| last != current).unwrap_or(true) {
+                    subcells_visited.push(*current);
+                    let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+                    let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
                     println!("  [Iter {}] Position: ({:.2}, {:.2}) → Subcell ({},{},{},{})",
                         iteration, actor.fpos_x, actor.fpos_y,
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+                        cell_x, cell_y, sub_x, sub_y);
                 }
             }
         }
@@ -584,14 +584,17 @@ fn test_simple_diagonal_movement_sw() {
         let curr = &subcells_visited[i];
 
         // Check if we moved closer to destination
-        let prev_dist = ((dest.x as f32 - prev.cell_x as f32).powi(2) +
-                        (dest.y as f32 - prev.cell_y as f32).powi(2)).sqrt();
-        let curr_dist = ((dest.x as f32 - curr.cell_x as f32).powi(2) +
-                        (dest.y as f32 - curr.cell_y as f32).powi(2)).sqrt();
+        let (prev_cell_x, prev_cell_y) = prev.to_cell(2);
+        let (curr_cell_x, curr_cell_y) = curr.to_cell(2);
+
+        let prev_dist = ((dest.x as f32 - prev_cell_x as f32).powi(2) +
+                        (dest.y as f32 - prev_cell_y as f32).powi(2)).sqrt();
+        let curr_dist = ((dest.x as f32 - curr_cell_x as f32).powi(2) +
+                        (dest.y as f32 - curr_cell_y as f32).powi(2)).sqrt();
 
         if curr_dist > prev_dist + 0.5 {
             println!("  ✗ Backtrack detected: ({},{}) → ({},{}), dist: {:.2} → {:.2}",
-                prev.cell_x, prev.cell_y, curr.cell_x, curr.cell_y, prev_dist, curr_dist);
+                prev_cell_x, prev_cell_y, curr_cell_x, curr_cell_y, prev_dist, curr_dist);
             backtracked = true;
         }
     }
@@ -654,6 +657,7 @@ fn test_simple_diagonal_movement_nw() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
+    let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (NW direction, 4+ cells away)
@@ -681,7 +685,7 @@ fn test_simple_diagonal_movement_nw() {
     let mut reached = false;
 
     positions.push((actor.fpos_x, actor.fpos_y));
-    subcells_visited.push(start_subcell.clone());
+    subcells_visited.push(start_subpoint);
 
     // Run simulation
     println!("\nSimulating movement...\n");
@@ -707,16 +711,13 @@ fn test_simple_diagonal_movement_nw() {
 
             if let Some(current) = &actor.current_subcell {
                 // Check if subcell changed
-                if subcells_visited.last().map(|last| {
-                    last.cell_x != current.cell_x ||
-                    last.cell_y != current.cell_y ||
-                    last.sub_x != current.sub_x ||
-                    last.sub_y != current.sub_y
-                }).unwrap_or(true) {
-                    subcells_visited.push(current.clone());
+                if subcells_visited.last().map(|last| last != current).unwrap_or(true) {
+                    subcells_visited.push(*current);
+                    let (cell_x, cell_y) = current.to_cell(actor.subcell_grid_size);
+                    let (sub_x, sub_y) = current.subcell_offset(actor.subcell_grid_size);
                     println!("  [Iter {}] Position: ({:.2}, {:.2}) → Subcell ({},{},{},{})",
                         iteration, actor.fpos_x, actor.fpos_y,
-                        current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+                        cell_x, cell_y, sub_x, sub_y);
                 }
             }
         }
@@ -792,14 +793,17 @@ fn test_simple_diagonal_movement_nw() {
         let curr = &subcells_visited[i];
 
         // Check if we moved closer to destination
-        let prev_dist = ((dest.x as f32 - prev.cell_x as f32).powi(2) +
-                        (dest.y as f32 - prev.cell_y as f32).powi(2)).sqrt();
-        let curr_dist = ((dest.x as f32 - curr.cell_x as f32).powi(2) +
-                        (dest.y as f32 - curr.cell_y as f32).powi(2)).sqrt();
+        let (prev_cell_x, prev_cell_y) = prev.to_cell(2);
+        let (curr_cell_x, curr_cell_y) = curr.to_cell(2);
+
+        let prev_dist = ((dest.x as f32 - prev_cell_x as f32).powi(2) +
+                        (dest.y as f32 - prev_cell_y as f32).powi(2)).sqrt();
+        let curr_dist = ((dest.x as f32 - curr_cell_x as f32).powi(2) +
+                        (dest.y as f32 - curr_cell_y as f32).powi(2)).sqrt();
 
         if curr_dist > prev_dist + 0.5 {
             println!("  ✗ Backtrack detected: ({},{}) → ({},{}), dist: {:.2} → {:.2}",
-                prev.cell_x, prev.cell_y, curr.cell_x, curr.cell_y, prev_dist, curr_dist);
+                prev_cell_x, prev_cell_y, curr_cell_x, curr_cell_y, prev_dist, curr_dist);
             backtracked = true;
         }
     }
