@@ -1646,6 +1646,104 @@ pub fn cardinal_neighbors_subpoint(point: &crate::subpoint::SubPoint) -> [crate:
     ]
 }
 
+/// Get the four diagonal neighbors (NE, SE, SW, NW) of a SubPoint
+/// Returns only the 4 diagonal neighbors
+pub fn diagonal_neighbors_subpoint(point: &crate::subpoint::SubPoint) -> [crate::subpoint::SubPoint; 4] {
+    [
+        crate::subpoint::SubPoint::new(point.x + 1, point.y - 1), // NE
+        crate::subpoint::SubPoint::new(point.x + 1, point.y + 1), // SE
+        crate::subpoint::SubPoint::new(point.x - 1, point.y + 1), // SW
+        crate::subpoint::SubPoint::new(point.x - 1, point.y - 1), // NW
+    ]
+}
+
+/// Convert SubPoint to screen center position with offset
+/// Returns (screen_x, screen_y) coordinates
+pub fn subpoint_to_screen_with_offset(
+    point: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    offset_x: f32,
+    offset_y: f32,
+) -> (f32, f32) {
+    point.to_screen_center_with_offset(cell_width, cell_height, grid_size, offset_x, offset_y)
+}
+
+/// Convert SubPoint to screen center position without offset
+/// Returns (screen_x, screen_y) coordinates
+pub fn subpoint_to_screen(
+    point: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> (f32, f32) {
+    point.to_screen_center(cell_width, cell_height, grid_size)
+}
+
+/// Filter SubPoints to only those within grid bounds
+/// Returns new Vec with only valid SubPoints
+pub fn filter_subpoints_in_bounds(
+    points: &[crate::subpoint::SubPoint],
+    grid_size: i32,
+    world_cols: i32,
+    world_rows: i32,
+) -> Vec<crate::subpoint::SubPoint> {
+    points
+        .iter()
+        .filter(|p| is_subpoint_in_bounds(p, grid_size, world_cols, world_rows))
+        .copied()
+        .collect()
+}
+
+/// Get all SubPoints within a cell
+/// Returns all grid_size × grid_size SubPoints for the given cell
+pub fn subpoints_in_cell(cell_x: i32, cell_y: i32, grid_size: i32) -> Vec<crate::subpoint::SubPoint> {
+    let mut points = Vec::with_capacity((grid_size * grid_size) as usize);
+    for sub_y in 0..grid_size {
+        for sub_x in 0..grid_size {
+            points.push(crate::subpoint::SubPoint::from_cell_subcell(
+                cell_x, cell_y, sub_x, sub_y, grid_size,
+            ));
+        }
+    }
+    points
+}
+
+/// Calculate the angle (in radians) from one SubPoint to another
+/// Returns angle in range [-π, π], where 0 is East, π/2 is South
+pub fn angle_between_subpoints(
+    from: &crate::subpoint::SubPoint,
+    to: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> f32 {
+    let (from_x, from_y) = from.to_screen_center(cell_width, cell_height, grid_size);
+    let (to_x, to_y) = to.to_screen_center(cell_width, cell_height, grid_size);
+    let dx = to_x - from_x;
+    let dy = to_y - from_y;
+    dy.atan2(dx)
+}
+
+/// Check if three SubPoints form a right angle at the middle point
+/// Returns true if the angle at 'middle' between 'from' and 'to' is approximately 90 degrees
+pub fn is_right_angle(
+    from: &crate::subpoint::SubPoint,
+    middle: &crate::subpoint::SubPoint,
+    to: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> bool {
+    let (dir1_x, dir1_y) = middle.direction_to(from, cell_width, cell_height, grid_size);
+    let (dir2_x, dir2_y) = middle.direction_to(to, cell_width, cell_height, grid_size);
+
+    // Dot product close to 0 means perpendicular
+    let dot = dir1_x * dir2_x + dir1_y * dir2_y;
+    dot.abs() < 0.1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
