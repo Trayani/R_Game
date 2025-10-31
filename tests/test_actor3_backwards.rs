@@ -45,6 +45,15 @@ fn test_actor3_se_diagonal_should_be_filtered() {
     // Don't block anything - let the distance filter do its job
     let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
+    // Align actor first to establish current_subcell
+    let starting_subcell = SubCellCoord::new(9, 13, 1, 1, subcell_grid_size);
+    let starting_subpoint = starting_subcell.to_subpoint();
+
+    // Manually set up actor as if they've already aligned
+    actor.current_subcell = Some(starting_subpoint);
+    actor.reserved_subcell = Some(starting_subpoint);
+    reservation_mgr.try_reserve(starting_subpoint, 3);
+
     // Update actor
     let reached = actor.update_subcell_destination_direct(
         0.016,

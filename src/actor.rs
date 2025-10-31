@@ -1172,177 +1172,54 @@ impl Actor {
         &mut self,
         current: &SubCellCoord,
         previous_current: Option<&SubCellCoord>,
-        dir_x: f32,
-        dir_y: f32,
+        _dir_x: f32,
+        _dir_y: f32,
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
-        // Branch based on actor_directing_v2 feature flag
-        if self.use_directing_v2 {
-            // NEW: Use ray-rectangle intersection for affinity calculation
-            self.try_reserve_diagonal_with_affinity(
-                current,
-                previous_current,
-                dest_screen_x,
-                dest_screen_y,
-                reservation_manager,
-                enable_anti_cross,
-                track_movement,
-            )
-        } else {
-            // OLD: Use alignment score approach
-            self.try_reserve_diagonal_with_anchor_legacy(
-                current,
-                previous_current,
-                dir_x,
-                dir_y,
-                dest_screen_x,
-                dest_screen_y,
-                reservation_manager,
-                enable_anti_cross,
-                track_movement,
-            )
-        }
+        // Convert SubCellCoord to SubPoint at boundary
+        // (Legacy v1 algorithm removed - always use v2 ray-rectangle intersection)
+        let current_sp = current.to_subpoint();
+        let previous_sp = previous_current.map(|p| p.to_subpoint());
+        self.try_reserve_diagonal_with_affinity(
+            &current_sp,
+            previous_sp.as_ref(),
+            dest_screen_x,
+            dest_screen_y,
+            reservation_manager,
+            enable_anti_cross,
+            track_movement,
+        )
     }
 
     /// LEGACY: Try to reserve diagonal using alignment score (old algorithm)
-    fn try_reserve_diagonal_with_anchor_legacy(
-        &mut self,
-        current: &SubCellCoord,
-        previous_current: Option<&SubCellCoord>,
-        dir_x: f32,
-        dir_y: f32,
-        dest_screen_x: f32,
-        dest_screen_y: f32,
-        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
-        enable_anti_cross: bool,
-        track_movement: bool,
-    ) -> bool {
-        let neighbors = current.get_neighbors();
-
-        // Temporary: convert to SubPoint for new helper functions
-        let current_subpoint = current.to_subpoint();
-
-        // Collect diagonal candidates sorted by alignment
-        let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = neighbors
-            .iter()
-            .filter(|n| is_diagonal_move(&current_subpoint, &n.to_subpoint()))
-            .filter(|n| {
-                // DESIGN DOC RULE (line 20): Filter candidates that would increase distance
-                // "individual Manhattan-like distances of X and Y float coordinates must never increase"
-                !current.violates_distance_rule(
-                    n,
-                    self.fpos_x,
-                    self.fpos_y,
-                    dest_screen_x,
-                    dest_screen_y,
-                    self.cell_width,
-                    self.cell_height,
-                    self.subcell_offset_x,
-                    self.subcell_offset_y,
-                    self.distance_tolerance_multiplier,
-                )
-            })
-            .map(|n| {
-                let score = current.alignment_score(
-                    n,
-                    dir_x,
-                    dir_y,
-                    self.cell_width,
-                    self.cell_height,
-                );
-                (*n, score)
-            })
-            .collect();
-
-        diagonal_candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-        // Try each diagonal with its H/V anchors
-        for (diagonal, _score) in &diagonal_candidates {
-            // Temporary: convert for SubPoint functions
-            let diagonal_subpoint = diagonal.to_subpoint();
-
-            // Anti-cross check for diagonal (optional - disabled by default to test if 3-cell reservation prevents crossing)
-            if enable_anti_cross {
-                if Self::check_anti_cross(&current_subpoint, &diagonal_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
-                    continue;
-                }
-                if let Some(prev) = previous_current {
-                    let prev_subpoint = prev.to_subpoint();
-                    if Self::check_anti_cross(&prev_subpoint, &current_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
-                        continue;
-                    }
-                }
-            }
-
-            // Find H/V anchor cells for this diagonal
-            // For a diagonal move, we need one H or V anchor
-            if let Some(anchor) = find_anchor_cell(&current_subpoint, &diagonal_subpoint) {
-                // Try to reserve both diagonal and anchor atomically
-                if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), anchor], self.id) {
-                    self.reserved_subcell = Some(diagonal_subpoint);
-                    self.extra_reserved_subcells = vec![anchor];
-                    if track_movement {
-                        self.movement_track.push((self.fpos_x, self.fpos_y));
-                    }
-
-                    // Check if this is an optimal triangle (for logging/debugging)
-                    let is_optimal = self.is_triangle_optimal(
-                        &current.to_subpoint(),
-                        &diagonal.to_subpoint(),
-                        &anchor,
-                        dir_x + self.fpos_x,  // Convert direction to destination position
-                        dir_y + self.fpos_y,
-                    );
-
-                    if is_optimal {
-                        println!("[RESERVE] Actor {} OPTIMAL TRIANGLE: reserved={:?} anchor={:?}",
-                            self.id, diagonal, anchor);
-                    } else {
-                        println!("[RESERVE] Actor {} NON-OPTIMAL TRIANGLE: reserved={:?} anchor={:?}",
-                            self.id, diagonal, anchor);
-                    }
-                    return true;
-                }
-            }
-        }
-
-        println!("[RESERVE] Actor {} DIAGONAL+ANCHOR: ALL BLOCKED (tried {} candidates)",
-            self.id, diagonal_candidates.len());
-        false
-    }
-
-    /// V2: Try to reserve diagonal using ray-rectangle intersection (actor_directing_v2.txt)
     fn try_reserve_diagonal_with_affinity(
         &mut self,
-        current: &SubCellCoord,
-        previous_current: Option<&SubCellCoord>,
+        current: &SubPoint,
+        previous_current: Option<&SubPoint>,
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
-        // Temporary: convert to SubPoint for new helper functions
-        let current_subpoint = current.to_subpoint();
-
         // Log function entry for diagnostics
         let dx_to_dest = dest_screen_x - self.fpos_x;
         let dy_to_dest = dest_screen_y - self.fpos_y;
         self.diagnostic_messages.push(format!(
-            "[DIAG RESERVE] Actor {} trying diagonal+affinity from ({},{},{},{}) toward dest dir=({:.1},{:.1})",
-            self.id, current.cell_x, current.cell_y, current.sub_x, current.sub_y, dx_to_dest, dy_to_dest
+            "[DIAG RESERVE] Actor {} trying diagonal+affinity from {} toward dest dir=({:.1},{:.1})",
+            self.id, Self::format_subpoint_debug(current, self.subcell_grid_size), dx_to_dest, dy_to_dest
         ));
 
         let neighbors = current.get_neighbors();
 
         // Collect diagonal candidates with distance rule filter
-        let all_diagonals: Vec<SubCellCoord> = neighbors
+        let all_diagonals: Vec<SubPoint> = neighbors
             .iter()
-            .filter(|n| is_diagonal_move(&current_subpoint, &n.to_subpoint()))
+            .filter(|n| crate::subpoint::is_diagonal_move(current, n))
             .copied()
             .collect();
 
@@ -1352,7 +1229,7 @@ impl Actor {
 
         // Collect diagonal candidates with distance rule filter and alignment scores
         // WITH DETAILED LOGGING for debugging
-        let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = Vec::new();
+        let mut diagonal_candidates: Vec<(SubPoint, f32)> = Vec::new();
 
         for n in &all_diagonals {
             let violates = current.violates_distance_rule(
@@ -1363,6 +1240,7 @@ impl Actor {
                 dest_screen_y,
                 self.cell_width,
                 self.cell_height,
+                self.subcell_grid_size,
                 self.subcell_offset_x,
                 self.subcell_offset_y,
                 self.distance_tolerance_multiplier,
@@ -1370,10 +1248,10 @@ impl Actor {
 
             // Calculate distance details for logging
             let (curr_x, curr_y) = current.to_screen_center_with_offset(
-                self.cell_width, self.cell_height, self.subcell_offset_x, self.subcell_offset_y
+                self.cell_width, self.cell_height, self.subcell_grid_size, self.subcell_offset_x, self.subcell_offset_y
             );
             let (other_x, other_y) = n.to_screen_center_with_offset(
-                self.cell_width, self.cell_height, self.subcell_offset_x, self.subcell_offset_y
+                self.cell_width, self.cell_height, self.subcell_grid_size, self.subcell_offset_x, self.subcell_offset_y
             );
             let curr_dist_x = (dest_screen_x - curr_x).abs();
             let curr_dist_y = (dest_screen_y - curr_y).abs();
@@ -1386,25 +1264,25 @@ impl Actor {
 
             // Log detailed distance check to diagnostic messages (written to action_log.db)
             self.diagnostic_messages.push(format!(
-                "[DIST CHECK] Actor {} candidate ({},{},{},{}): curr_center=({:.1},{:.1}) other_center=({:.1},{:.1}) dest=({:.1},{:.1})",
-                self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, curr_x, curr_y, other_x, other_y, dest_screen_x, dest_screen_y
+                "[DIST CHECK] Actor {} candidate {}: curr_center=({:.1},{:.1}) other_center=({:.1},{:.1}) dest=({:.1},{:.1})",
+                self.id, Self::format_subpoint_debug(n, self.subcell_grid_size), curr_x, curr_y, other_x, other_y, dest_screen_x, dest_screen_y
             ));
             self.diagnostic_messages.push(format!(
-                "[DIST CHECK] Actor {} candidate ({},{},{},{}): curr_dist=({:.1},{:.1}) new_dist=({:.1},{:.1}) change=({:+.1},{:+.1}) tolerance={:.1} violates={}",
-                self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, curr_dist_x, curr_dist_y, new_dist_x, new_dist_y, x_change, y_change, tolerance, violates
+                "[DIST CHECK] Actor {} candidate {}: curr_dist=({:.1},{:.1}) new_dist=({:.1},{:.1}) change=({:+.1},{:+.1}) tolerance={:.1} violates={}",
+                self.id, Self::format_subpoint_debug(n, self.subcell_grid_size), curr_dist_x, curr_dist_y, new_dist_x, new_dist_y, x_change, y_change, tolerance, violates
             ));
 
             if !violates {
-                let alignment = current.alignment_score(n, dx_to_dest, dy_to_dest, self.cell_width, self.cell_height);
+                let alignment = current.alignment_score(n, dx_to_dest, dy_to_dest, self.cell_width, self.cell_height, self.subcell_grid_size);
                 diagonal_candidates.push((*n, alignment));
                 self.diagnostic_messages.push(format!(
-                    "[DIST CHECK] Actor {} candidate ({},{},{},{}) PASSED - alignment={:.3}",
-                    self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y, alignment
+                    "[DIST CHECK] Actor {} candidate {} PASSED - alignment={:.3}",
+                    self.id, Self::format_subpoint_debug(n, self.subcell_grid_size), alignment
                 ));
             } else {
                 self.diagnostic_messages.push(format!(
-                    "[DIST CHECK] Actor {} candidate ({},{},{},{}) FILTERED (violates distance rule)",
-                    self.id, n.cell_x, n.cell_y, n.sub_x, n.sub_y
+                    "[DIST CHECK] Actor {} candidate {} FILTERED (violates distance rule)",
+                    self.id, Self::format_subpoint_debug(n, self.subcell_grid_size)
                 ));
             }
         }
@@ -1432,32 +1310,31 @@ impl Actor {
         let (best_diagonal, best_score) = diagonal_candidates[0];
 
         if track_movement {
-            println!("[RESERVE V2 DEBUG] Actor {} trying BEST diagonal only: ({},{},{},{}) with alignment score {:.3}",
-                self.id, best_diagonal.cell_x, best_diagonal.cell_y, best_diagonal.sub_x, best_diagonal.sub_y, best_score);
+            println!("[RESERVE V2 DEBUG] Actor {} trying BEST diagonal only: {} with alignment score {:.3}",
+                self.id, Self::format_subpoint_debug(&best_diagonal, self.subcell_grid_size), best_score);
         }
 
         self.diagnostic_messages.push(format!(
-            "[DIAG RESERVE] Actor {} trying BEST diagonal: ({},{},{},{}) alignment={:.3}",
-            self.id, best_diagonal.cell_x, best_diagonal.cell_y, best_diagonal.sub_x, best_diagonal.sub_y, best_score
+            "[DIAG RESERVE] Actor {} trying BEST diagonal: {} alignment={:.3}",
+            self.id, Self::format_subpoint_debug(&best_diagonal, self.subcell_grid_size), best_score
         ));
 
         let diagonal = &best_diagonal;
-        let diagonal_subpoint = diagonal.to_subpoint();
 
         // Anti-cross check for diagonal (optional - disabled by default to test if 3-cell reservation prevents crossing)
         // If anti-cross blocks the best diagonal, skip directly to cardinal fallback
         let mut diagonal_blocked_by_anticross = false;
         if enable_anti_cross {
-            if Self::check_anti_cross(&current_subpoint, &diagonal_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
+            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id, self.subcell_grid_size) {
                 // Get counter-diagonal cells for logging
-                let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
-                let owner1 = reservation_manager.get_owner(&counter_diag[0].to_subpoint());
-                let owner2 = reservation_manager.get_owner(&counter_diag[1].to_subpoint());
+                let counter_diag = crate::subcell::get_counter_diagonal_subpoints(current, diagonal);
+                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
                 self.diagnostic_messages.push(format!(
-                    "[DIAG RESERVE] Actor {} BEST diagonal BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
+                    "[DIAG RESERVE] Actor {} BEST diagonal BLOCKED by anti-cross: counter-diag cells {} owner={:?} and {} owner={:?}",
                     self.id,
-                    counter_diag[0].cell_x, counter_diag[0].cell_y, counter_diag[0].sub_x, counter_diag[0].sub_y, owner1,
-                    counter_diag[1].cell_x, counter_diag[1].cell_y, counter_diag[1].sub_x, counter_diag[1].sub_y, owner2
+                    Self::format_subpoint_debug(&counter_diag[0], self.subcell_grid_size), owner1,
+                    Self::format_subpoint_debug(&counter_diag[1], self.subcell_grid_size), owner2
                 ));
                 if track_movement {
                     println!("[RESERVE V2 DEBUG]   Best diagonal blocked by anti-cross check");
@@ -1466,11 +1343,10 @@ impl Actor {
             }
             if !diagonal_blocked_by_anticross {
                 if let Some(prev) = previous_current {
-                    let prev_subpoint = prev.to_subpoint();
-                    if Self::check_anti_cross(&prev_subpoint, &current_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
-                        let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
-                        let owner1 = reservation_manager.get_owner(&counter_diag[0].to_subpoint());
-                        let owner2 = reservation_manager.get_owner(&counter_diag[1].to_subpoint());
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id, self.subcell_grid_size) {
+                        let counter_diag = crate::subcell::get_counter_diagonal_subpoints(prev, current);
+                        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
+                        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
                         self.diagnostic_messages.push(format!(
                             "[DIAG RESERVE] Actor {} BEST diagonal BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
                             self.id, owner1, owner2
@@ -1490,18 +1366,18 @@ impl Actor {
             // Calculate affinity and target using ray-rectangle intersection
             if self.id == 0 {
                 self.diagnostic_messages.push(format!(
-                    "[AFFINITY INPUT] actor_pos=({:.1},{:.1}) current=({},{},{},{}) diagonal=({},{},{},{}) dest_screen=({:.1},{:.1})",
+                    "[AFFINITY INPUT] actor_pos=({:.1},{:.1}) current={} diagonal={} dest_screen=({:.1},{:.1})",
                     self.fpos_x, self.fpos_y,
-                    current.cell_x, current.cell_y, current.sub_x, current.sub_y,
-                    diagonal.cell_x, diagonal.cell_y, diagonal.sub_x, diagonal.sub_y,
+                    Self::format_subpoint_debug(current, self.subcell_grid_size),
+                    Self::format_subpoint_debug(diagonal, self.subcell_grid_size),
                     dest_screen_x, dest_screen_y
                 ));
             }
             let affinity_result = self.calculate_simple_affinity_and_target(
                 self.fpos_x,
                 self.fpos_y,
-                &current_subpoint,
-                &diagonal_subpoint,
+                current,
+                diagonal,
                 dest_screen_x,
                 dest_screen_y,
             );
@@ -1513,7 +1389,7 @@ impl Actor {
             }
 
             // Check ownership before attempting reservation
-            let diag_owner = reservation_manager.get_owner(&diagonal.to_subpoint());
+            let diag_owner = reservation_manager.get_owner(&diagonal);
             let anchor_owner = reservation_manager.get_owner(&affinity_result.anchor);
             self.diagnostic_messages.push(format!(
                 "[DIAG RESERVE] Actor {} BEST diagonal: affinity={:?} anchor={} | Ownership: diagonal={:?} anchor={:?}",
@@ -1526,8 +1402,8 @@ impl Actor {
             if track_movement {
                 println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
             }
-            if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), affinity_result.anchor], self.id) {
-                self.reserved_subcell = Some(diagonal_subpoint);
+            if reservation_manager.try_reserve_multiple(&[*diagonal, affinity_result.anchor], self.id) {
+                self.reserved_subcell = Some(*diagonal);
                 self.extra_reserved_subcells = vec![affinity_result.anchor];
                 // LOCK target position and affinity (actor_directing_v2.txt)
                 self.locked_target = Some((affinity_result.target_x, affinity_result.target_y));
@@ -1538,7 +1414,7 @@ impl Actor {
                     affinity: affinity_result.affinity,
                     target_x: affinity_result.target_x,
                     target_y: affinity_result.target_y,
-                    reserved: diagonal_subpoint,
+                    reserved: *diagonal,
                     anchor: affinity_result.anchor,
                 });
 
@@ -1575,7 +1451,7 @@ impl Actor {
             if track_movement {
                 println!("[RESERVE V2 DEBUG]   Trying opposite affinity fallback...");
             }
-            if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, &current_subpoint, &diagonal_subpoint, Some(&affinity_result.anchor)) {
+            if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, current, diagonal, Some(&affinity_result.anchor)) {
                 if track_movement {
                     println!("[RESERVE V2 DEBUG]   Opposite anchor={}",
                         Self::format_subpoint_debug(&opposite_anchor, self.subcell_grid_size));
@@ -1593,8 +1469,8 @@ impl Actor {
                 if track_movement {
                     println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
                 }
-                if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), opposite_anchor], self.id) {
-                    self.reserved_subcell = Some(diagonal_subpoint);
+                if reservation_manager.try_reserve_multiple(&[*diagonal, opposite_anchor], self.id) {
+                    self.reserved_subcell = Some(*diagonal);
                     self.extra_reserved_subcells = vec![opposite_anchor];
 
                     // Recalculate target for opposite affinity
@@ -1602,6 +1478,7 @@ impl Actor {
                     let diag_screen = diagonal.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
@@ -1614,7 +1491,7 @@ impl Actor {
                         affinity: flipped_affinity,
                         target_x: diag_screen.0,
                         target_y: diag_screen.1,
-                        reserved: diagonal_subpoint,
+                        reserved: *diagonal,
                         anchor: opposite_anchor,
                     });
 
@@ -1661,8 +1538,10 @@ impl Actor {
             self.id
         ));
 
+        // Convert back to SubCellCoord for calling legacy horizontal/vertical method
+        let current_coord = crate::subcell::SubCellCoord::from_subpoint(current, self.subcell_grid_size);
         let cardinal_success = self.try_reserve_horizontal_vertical(
-            current,
+            &current_coord,
             dx_to_dest,
             dy_to_dest,
             dest_screen_x,
@@ -1849,186 +1728,6 @@ impl Actor {
         )
     }
 
-    /// Try to reserve ANY available subcell in the current supercell (cell)
-    /// Returns true if any reservation succeeded
-    ///
-    /// This is used when preferred directions are blocked - actor tries to reserve
-    /// any available subcell in their current cell, sorted by distance to actor's position
-    fn try_reserve_any_available_in_current_cell(
-        &mut self,
-        current: &SubCellCoord,
-        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
-        track_movement: bool,
-    ) -> bool {
-        // Get all subcells in the current supercell (cell)
-        let mut subcells_in_cell: Vec<SubCellCoord> = Vec::new();
-
-        for sub_y in 0..self.subcell_grid_size {
-            for sub_x in 0..self.subcell_grid_size {
-                let sc = SubCellCoord::new(
-                    current.cell_x,
-                    current.cell_y,
-                    sub_x,
-                    sub_y,
-                    self.subcell_grid_size,
-                );
-                subcells_in_cell.push(sc);
-            }
-        }
-
-        // Sort by distance to actor's current float position
-        subcells_in_cell.sort_by(|a, b| {
-            let (a_x, a_y) = a.to_screen_center_with_offset(
-                self.cell_width,
-                self.cell_height,
-                self.subcell_offset_x,
-                self.subcell_offset_y,
-            );
-            let (b_x, b_y) = b.to_screen_center_with_offset(
-                self.cell_width,
-                self.cell_height,
-                self.subcell_offset_x,
-                self.subcell_offset_y,
-            );
-
-            let dist_a = ((a_x - self.fpos_x).powi(2) + (a_y - self.fpos_y).powi(2)).sqrt();
-            let dist_b = ((b_x - self.fpos_x).powi(2) + (b_y - self.fpos_y).powi(2)).sqrt();
-
-            dist_a.partial_cmp(&dist_b).unwrap()
-        });
-
-        // Try to reserve each subcell in order of distance
-        for sc in &subcells_in_cell {
-            // Skip if it's already our current subcell
-            if sc == current {
-                continue;
-            }
-
-            if reservation_manager.try_reserve(sc.to_subpoint(), self.id) {
-                self.reserved_subcell = Some(sc.to_subpoint());
-                self.extra_reserved_subcells.clear();
-                // Clear locked values when changing reservation
-                self.locked_target = None;
-                self.locked_affinity = None;
-                if track_movement {
-                    self.movement_track.push((self.fpos_x, self.fpos_y));
-                }
-                println!("[RESERVE] Actor {} ANY-AVAILABLE: reserved={:?} (all preferred blocked)",
-                    self.id, sc);
-                return true;
-            }
-        }
-
-        println!("[RESERVE] Actor {} ANY-AVAILABLE: ALL BLOCKED (cell too crowded)",
-            self.id);
-        false
-    }
-
-    /// Check if we should attempt reservation based on eagerness mode
-    ///
-    /// CENTER mode: Reserve when destination subcell center is within threshold distance
-    /// ROUND mode: Reserve when destination subcell center is closer than all currently reserved subcells
-    fn should_attempt_reservation(
-        &self,
-        reservation_eagerness: crate::config::ReservationEagerness,
-        reservation_threshold_distance: f32,
-        dest_screen_x: f32,
-        dest_screen_y: f32,
-    ) -> bool {
-        use crate::config::ReservationEagerness;
-
-        // Calculate destination subcell
-        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
-            dest_screen_x,
-            dest_screen_y,
-            self.cell_width,
-            self.cell_height,
-            self.subcell_grid_size,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
-
-        let (dest_sc_x, dest_sc_y) = dest_subcell.to_screen_center_with_offset(
-            self.cell_width,
-            self.cell_height,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
-
-        let dx = dest_sc_x - self.fpos_x;
-        let dy = dest_sc_y - self.fpos_y;
-        let dist_to_dest_sc = (dx * dx + dy * dy).sqrt();
-
-        match reservation_eagerness {
-            ReservationEagerness::Center => {
-                // Reserve when within threshold distance of destination subcell center
-                dist_to_dest_sc <= reservation_threshold_distance
-            },
-            ReservationEagerness::Round => {
-                // Reserve when destination subcell is closer than all currently reserved subcells
-                // Check current subcell
-                if let Some(current_sc) = self.current_subcell {
-                    let (curr_x, curr_y) = current_sc.to_screen_center_with_offset(
-                        self.cell_width,
-                        self.cell_height,
-                        self.subcell_grid_size,
-                        self.subcell_offset_x,
-                        self.subcell_offset_y,
-                    );
-                    let dx_curr = curr_x - self.fpos_x;
-                    let dy_curr = curr_y - self.fpos_y;
-                    let dist_to_curr = (dx_curr * dx_curr + dy_curr * dy_curr).sqrt();
-
-                    if dist_to_dest_sc >= dist_to_curr {
-                        return false; // Current is closer or equal, don't reserve yet
-                    }
-                }
-
-                // Check reserved subcell
-                if let Some(reserved_sc) = self.reserved_subcell {
-                    let (res_x, res_y) = reserved_sc.to_screen_center_with_offset(
-                        self.cell_width,
-                        self.cell_height,
-                        self.subcell_grid_size,
-                        self.subcell_offset_x,
-                        self.subcell_offset_y,
-                    );
-                    let dx_res = res_x - self.fpos_x;
-                    let dy_res = res_y - self.fpos_y;
-                    let dist_to_res = (dx_res * dx_res + dy_res * dy_res).sqrt();
-
-                    if dist_to_dest_sc >= dist_to_res {
-                        return false; // Reserved is closer or equal, don't reserve yet
-                    }
-                }
-
-                // Check extra reserved subcells
-                for extra_sc in &self.extra_reserved_subcells {
-                    let (extra_x, extra_y) = extra_sc.to_screen_center_with_offset(
-                        self.cell_width,
-                        self.cell_height,
-                        self.subcell_grid_size,
-                        self.subcell_offset_x,
-                        self.subcell_offset_y,
-                    );
-                    let dx_extra = extra_x - self.fpos_x;
-                    let dy_extra = extra_y - self.fpos_y;
-                    let dist_to_extra = (dx_extra * dx_extra + dy_extra * dy_extra).sqrt();
-
-                    if dist_to_dest_sc >= dist_to_extra {
-                        return false; // Extra is closer or equal, don't reserve yet
-                    }
-                }
-
-                // Destination subcell is closer than all currently reserved subcells
-                true
-            }
-        }
-    }
-
-
-    /// Try to reserve H/V sub-cell (fallback when diagonal blocked)
-    /// Returns true if reservation succeeded
     pub(crate) fn try_reserve_horizontal_vertical(
         &mut self,
         current: &SubCellCoord,
@@ -2148,189 +1847,11 @@ impl Actor {
         false
     }
 
-    /// Try to reserve next sub-cell toward destination
-    /// Returns true if reservation succeeded, false if all candidates blocked
+    /// Try to reserve ANY available subcell in the current supercell (cell)
+    /// Returns true if any reservation succeeded
     ///
-    /// # Parameters
-    /// - `previous_current`: Optional previous position before current (for early reservation anti-cross check)
-    ///   When early reservation is enabled, we need to check crossing from the true previous position,
-    ///   not just from the newly-updated current position.
-    fn try_reserve_next_subcell(
-        &mut self,
-        current: &SubCellCoord,
-        previous_current: Option<&SubCellCoord>,
-        dir_x: f32,
-        dir_y: f32,
-        dest_screen_x: f32,
-        dest_screen_y: f32,
-        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
-        enable_square_reservation: bool,
-        enable_diagonal_constraint: bool,
-        enable_no_diagonal: bool,
-        enable_anti_cross: bool,
-        enable_basic3: bool,
-        enable_basic3_anti_cross: bool,
-        filter_backward: bool,
-        basic3_fallback_enabled: bool,
-        track_movement: bool,
-    ) -> bool {
-        // Temporary: convert to SubPoint for new helper functions
-        let current_subpoint = current.to_subpoint();
-
-        // Calculate the destination sub-cell
-        let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
-            dest_screen_x,
-            dest_screen_y,
-            self.cell_width,
-            self.cell_height,
-            self.subcell_grid_size,
-            self.subcell_offset_x,
-            self.subcell_offset_y,
-        );
-
-        // Check if we're already at the destination sub-cell
-        if *current == dest_subcell {
-            return false; // Already at destination
-        }
-
-        // STEP 1: Try to reserve a 2x2 square in the primary direction (if enabled)
-        if enable_square_reservation {
-            if let Some((best, additional_cells)) = crate::subcell::find_square_reservation(
-                current,
-                dir_x,
-                dir_y,
-                self.cell_width,
-                self.cell_height,
-            ) {
-                // Try to reserve all four cells atomically
-                let mut all_cells = vec![best];
-                all_cells.extend_from_slice(&additional_cells);
-                let all_cells_subpoint: Vec<SubPoint> = all_cells.iter().map(|c| c.to_subpoint()).collect();
-
-                if reservation_manager.try_reserve_multiple(&all_cells_subpoint, self.id) {
-                    // Successfully reserved square - move to best cell
-                    self.reserved_subcell = Some(best.to_subpoint());
-                    // Track the additional 3 cells
-                    self.extra_reserved_subcells = additional_cells.iter().map(|c| c.to_subpoint()).collect();
-                    // Record position when reserving
-                    if track_movement {
-                        self.movement_track.push((self.fpos_x, self.fpos_y));
-                    }
-                    return true;
-                }
-            }
-        }
-
-        // STEP 2: Fallback to single cell reservation (with optional diagonal constraint)
-        // Get candidate neighbors in priority order
-        let candidates = if enable_basic3 || enable_basic3_anti_cross {
-            // Use limited 3-candidate search with monotonic distance filtering
-            crate::subcell::find_best_3_neighbors(
-                current,
-                dir_x,
-                dir_y,
-                self.cell_width,
-                self.cell_height,
-                filter_backward,
-                dest_screen_x,
-                dest_screen_y,
-                true,  // Always use monotonic filter for Basic3 modes
-                basic3_fallback_enabled,  // Allow fallback based on toggle
-            )
-        } else {
-            // Use standard 5-candidate search
-            crate::subcell::find_best_neighbors(
-                current,
-                dir_x,
-                dir_y,
-                self.cell_width,
-                self.cell_height,
-                filter_backward,
-            )
-        };
-
-        // Try to reserve one of the candidates
-        for candidate in &candidates {
-            let candidate_subpoint = candidate.to_subpoint();
-
-            // Check if this is a diagonal move
-            let is_diagonal = is_diagonal_move(&current_subpoint, &candidate_subpoint);
-
-            // NoDiagonal mode: skip all diagonal candidates
-            if enable_no_diagonal && is_diagonal {
-                continue;
-            }
-
-            // AntiCross mode: check for counter-diagonal crossing
-            if (enable_anti_cross || enable_basic3_anti_cross) && is_diagonal {
-                // When early reservation is enabled and we have a previous position,
-                // we need to check BOTH transitions for crossing:
-                // 1. previous_current → current (the just-completed move)
-                // 2. current → candidate (the move we're about to make)
-
-                // Check the immediate move: current → candidate
-                if Self::check_anti_cross(&current_subpoint, &candidate_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
-                    continue; // Crossing detected in immediate move
-                }
-
-                // If we have a previous position (early reservation scenario),
-                // also check the just-completed transition: previous → current
-                // This ensures we catch crossings that span across the early reservation boundary
-                if let Some(prev) = previous_current {
-                    let prev_subpoint = prev.to_subpoint();
-                    if Self::check_anti_cross(&prev_subpoint, &current_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
-                        // The just-completed move created a crossing
-                        // We shouldn't allow further moves that could compound this
-                        continue;
-                    }
-                }
-            }
-
-            if enable_diagonal_constraint && is_diagonal {
-                // Diagonal mode: must also reserve H or V anchor
-                // Try to find and reserve an anchor cell (horizontal or vertical from current)
-                if let Some(anchor) = find_anchor_cell(&current_subpoint, &candidate_subpoint) {
-                    // Try to reserve both anchor and diagonal atomically
-                    if reservation_manager.try_reserve_multiple(&[anchor, candidate.to_subpoint()], self.id) {
-                        self.reserved_subcell = Some(candidate_subpoint);
-                        // Track the anchor as extra reservation
-                        self.extra_reserved_subcells = vec![anchor];
-                        // Record position when reserving
-                        if track_movement {
-                            self.movement_track.push((self.fpos_x, self.fpos_y));
-                        }
-                        return true;
-                    }
-                }
-                // If we can't reserve with anchor, skip this diagonal candidate
-                continue;
-            } else {
-                // Non-diagonal or diagonal constraint disabled: single reservation
-                if reservation_manager.try_reserve(candidate.to_subpoint(), self.id) {
-                    self.reserved_subcell = Some(candidate_subpoint);
-                    // Clear extra reserved cells (single-cell only)
-                    self.extra_reserved_subcells.clear();
-                    // Clear locked values when changing reservation
-                    self.locked_target = None;
-                    self.locked_affinity = None;
-                    // Record position when reserving
-                    if track_movement {
-                        self.movement_track.push((self.fpos_x, self.fpos_y));
-                    }
-                    return true;
-                }
-            }
-        }
-
-        // No neighbor could be reserved
-        false
-    }
-
-    // ========================================================================
-    // LOGGING HELPERS
-    // ========================================================================
-
-    /// Log actor's alignment to subcell center
+    /// This is used when preferred directions are blocked - actor tries to reserve
+    /// any available subcell in their current cell, sorted by distance to actor's position
     fn log_subcell_alignment(&self, subcell: &SubPoint, center_x: f32, center_y: f32, always_trace: bool) {
         if always_trace {
             println!("[ALIGN] Actor {} reserved subcell {} at distance {:.1}px from ({:.1},{:.1})",

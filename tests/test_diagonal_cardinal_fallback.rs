@@ -200,7 +200,7 @@ fn test_all_directions_blocked_actor_waits() {
     ];
 
     for neighbor in &neighbors {
-        reservation_mgr.try_reserve(*neighbor.to_subpoint(), 999);
+        reservation_mgr.try_reserve(neighbor.to_subpoint(), 999);
     }
 
     let reached = actor.update_subcell_destination_direct(

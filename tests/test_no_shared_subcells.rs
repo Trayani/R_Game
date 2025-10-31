@@ -3,7 +3,6 @@
 
 use rustgame3::Actor;
 use rustgame3::SubPointReservationManager;
-use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 use std::collections::HashSet;
 

@@ -248,11 +248,11 @@ fn run_alternative_test(
 
     // Block ONLY the specific anchor subcell, not all 4 in that cell!
     // Blocking all 4 would also block the diagonal itself if they share the same cell.
-    let blocked = reservation_mgr.try_reserve(block_subcell_coord.clone(), 999);
+    let blocked = reservation_mgr.try_reserve(block_subcell_coord.to_subpoint(), 999);
     println!("    Blocked anchor: {}", blocked);
 
     // Verify it's actually blocked
-    if let Some(owner) = reservation_mgr.get_owner(&block_subcell_coord) {
+    if let Some(owner) = reservation_mgr.get_owner(&block_subcell_coord.to_subpoint()) {
         println!("      → Verified: anchor owned by actor {}", owner);
     } else {
         println!("      → WARNING: Anchor not actually reserved!");
@@ -262,7 +262,7 @@ fn run_alternative_test(
     actor.current_subcell = Some(psc.to_subpoint());
 
     // Reserve actor's current position
-    reservation_mgr.try_reserve(psc.clone(), 0);
+    reservation_mgr.try_reserve(psc.to_subpoint(), 0);
 
     // Set destination
     let dest_cell_x = (test.dest_x as i32).max(0);
@@ -351,17 +351,15 @@ fn run_alternative_test(
     }
 
     // Clean up reservations
-    reservation_mgr.release(psc, 0);
-    reservation_mgr.release(block_subcell_coord, 999);
+    reservation_mgr.release(psc.to_subpoint(), 0);
+    reservation_mgr.release(block_subcell_coord.to_subpoint(), 999);
 
     // Release the reserved diagonal and anchor if any
     if let Some(reserved) = actor.reserved_subcell {
-        let reserved_coord = SubCellCoord::from_subpoint(&reserved, 2);
-        reservation_mgr.release(reserved_coord, 0);
+        reservation_mgr.release(reserved, 0);
     }
     for extra in &actor.extra_reserved_subcells {
-        let extra_coord = SubCellCoord::from_subpoint(extra, 2);
-        reservation_mgr.release(extra_coord, 0);
+        reservation_mgr.release(*extra, 0);
     }
 
     if errors.is_empty() {

@@ -346,7 +346,7 @@ fn test_q57_atomic_reservation() {
     assert!(!reservation_mgr.try_reserve(subcell.to_subpoint(), 1), "Actor 1 should be blocked");
 
     // Verify ownership
-    assert_eq!(reservation_mgr.get_owner(&subcell), Some(0), "Subcell should be owned by actor 0");
+    assert_eq!(reservation_mgr.get_owner(&subcell.to_subpoint()), Some(0), "Subcell should be owned by actor 0");
 
     // Actor 0 can "re-reserve" (idempotent)
     assert!(reservation_mgr.try_reserve(subcell.to_subpoint(), 0), "Actor 0 can re-reserve own cell");
