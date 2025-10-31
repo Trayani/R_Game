@@ -737,12 +737,13 @@ impl Actor {
             return false; // Not diagonal, no crossing possible
         }
 
-        // Get counter-diagonal cells (temporary: convert to SubCellCoord for legacy function)
-        let from_coord = SubCellCoord::from_subpoint(from, grid_size);
-        let to_coord = SubCellCoord::from_subpoint(to, grid_size);
-        let counter_diag = crate::subcell::get_counter_diagonal_subcells(&from_coord, &to_coord);
-        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+        // Get counter-diagonal cells using SubPoint directly
+        let counter_diag_points = crate::subcell::get_counter_diagonal_subpoints(from, to);
+        // Convert to SubCellCoord for reservation manager (temporary until manager migrated)
+        let counter1_coord = SubCellCoord::from_subpoint(&counter_diag_points[0], grid_size);
+        let counter2_coord = SubCellCoord::from_subpoint(&counter_diag_points[1], grid_size);
+        let owner1 = reservation_manager.get_owner(&counter1_coord);
+        let owner2 = reservation_manager.get_owner(&counter2_coord);
 
         // Block if SAME other actor owns BOTH counter-diagonal cells
         if let (Some(id1), Some(id2)) = (owner1, owner2) {
@@ -787,23 +788,22 @@ impl Actor {
         // Step 1: Define rectangle bounds
         // Use offset coordinate system for fluid movement (matches to_screen_center_with_offset)
         // When offset=0.5, subcells are positioned at their actual screen locations in offset system
-        let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
-        let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
 
-        // Calculate subcell positions in offset coordinate system
-        let (psc_cell_x, psc_cell_y) = psc.to_cell(self.subcell_grid_size);
-        let (psc_sub_x, psc_sub_y) = psc.subcell_offset(self.subcell_grid_size);
-        let (diag_cell_x, diag_cell_y) = diagonal.to_cell(self.subcell_grid_size);
-        let (diag_sub_x, diag_sub_y) = diagonal.subcell_offset(self.subcell_grid_size);
-
-        let psc_x = psc_cell_x as f32 * self.cell_width + psc_sub_x as f32 * sub_cell_width
-            - self.subcell_offset_x * sub_cell_width;
-        let psc_y = psc_cell_y as f32 * self.cell_height + psc_sub_y as f32 * sub_cell_height
-            - self.subcell_offset_y * sub_cell_height;
-        let diag_x = diag_cell_x as f32 * self.cell_width + diag_sub_x as f32 * sub_cell_width
-            - self.subcell_offset_x * sub_cell_width;
-        let diag_y = diag_cell_y as f32 * self.cell_height + diag_sub_y as f32 * sub_cell_height
-            - self.subcell_offset_y * sub_cell_height;
+        // Calculate subcell positions in offset coordinate system using SubPoint directly
+        let (psc_x, psc_y) = psc.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
+        let (diag_x, diag_y) = diagonal.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
 
         let rect_min_x = psc_x.min(diag_x);
         let rect_max_x = psc_x.max(diag_x);
@@ -995,21 +995,14 @@ impl Actor {
             Affinity::Vertical
         };
 
-        // Step 3: Get diagonal subcell center position
-        let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
-        let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
-
-        let (diag_cell_x, diag_cell_y) = diagonal.to_cell(self.subcell_grid_size);
-        let (diag_sub_x, diag_sub_y) = diagonal.subcell_offset(self.subcell_grid_size);
-
-        let diag_center_x = diag_cell_x as f32 * self.cell_width
-            + diag_sub_x as f32 * sub_cell_width
-            + sub_cell_width / 2.0
-            - self.subcell_offset_x * sub_cell_width;
-        let diag_center_y = diag_cell_y as f32 * self.cell_height
-            + diag_sub_y as f32 * sub_cell_height
-            + sub_cell_height / 2.0
-            - self.subcell_offset_y * sub_cell_height;
+        // Step 3: Get diagonal subcell center position using SubPoint directly
+        let (diag_center_x, diag_center_y) = diagonal.to_screen_center_with_offset(
+            self.cell_width,
+            self.cell_height,
+            self.subcell_grid_size,
+            self.subcell_offset_x,
+            self.subcell_offset_y,
+        );
 
         // Step 4: Calculate target using straight-line intersection
         let (target_x, target_y) = match affinity {
@@ -1111,12 +1104,15 @@ impl Actor {
             }
 
             // Calculate distance from this 2nd-step position to destination
+            // Convert SubCellCoord to SubPoint for distance calculation
+            let neighbor_sp = neighbor.to_subpoint();
             let distance = Self::subcell_center_distance_to_destination(
-                neighbor,
+                &neighbor_sp,
                 dest_x,
                 dest_y,
                 cell_width,
                 cell_height,
+                neighbor.grid_size,
                 subcell_offset_x,
                 subcell_offset_y,
             );
@@ -1134,11 +1130,12 @@ impl Actor {
     /// Calculate Euclidean distance from subcell center to destination
     /// Used for PSC switching logic to determine which subcell is closer to destination
     fn subcell_center_distance_to_destination(
-        subcell: &SubCellCoord,
+        subcell: &SubPoint,
         dest_x: f32,
         dest_y: f32,
         cell_width: f32,
         cell_height: f32,
+        grid_size: i32,
         subcell_offset_x: f32,
         subcell_offset_y: f32,
     ) -> f32 {
@@ -1146,6 +1143,7 @@ impl Actor {
         let (center_x, center_y) = subcell.to_screen_center_with_offset(
             cell_width,
             cell_height,
+            grid_size,
             subcell_offset_x,
             subcell_offset_y,
         );
@@ -1154,6 +1152,13 @@ impl Actor {
         let dx = dest_x - center_x;
         let dy = dest_y - center_y;
         (dx * dx + dy * dy).sqrt()
+    }
+
+    /// Format SubPoint for debug logging in (cell_x, cell_y, sub_x, sub_y) format
+    fn format_subpoint_debug(point: &SubPoint, grid_size: i32) -> String {
+        let (cell_x, cell_y) = point.to_cell(grid_size);
+        let (sub_x, sub_y) = point.subcell_offset(grid_size);
+        format!("({},{},{},{})", cell_x, cell_y, sub_x, sub_y)
     }
 
     /// Try to reserve diagonal sub-cell with H/V anchor (triangle formation)
@@ -1506,25 +1511,19 @@ impl Actor {
             );
 
             if track_movement {
-                let (anchor_cell_x, anchor_cell_y) = affinity_result.anchor.to_cell(self.subcell_grid_size);
-                let (anchor_sub_x, anchor_sub_y) = affinity_result.anchor.subcell_offset(self.subcell_grid_size);
-                println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor=({},{},{},{})",
+                println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor={}",
                     affinity_result.affinity,
-                    anchor_cell_x, anchor_cell_y,
-                    anchor_sub_x, anchor_sub_y);
+                    Self::format_subpoint_debug(&affinity_result.anchor, self.subcell_grid_size));
             }
 
             // Check ownership before attempting reservation
             let diag_owner = reservation_manager.get_owner(diagonal);
             let anchor_coord = SubCellCoord::from_subpoint(&affinity_result.anchor, self.subcell_grid_size);
             let anchor_owner = reservation_manager.get_owner(&anchor_coord);
-            let (anchor_cell_x, anchor_cell_y) = affinity_result.anchor.to_cell(self.subcell_grid_size);
-            let (anchor_sub_x, anchor_sub_y) = affinity_result.anchor.subcell_offset(self.subcell_grid_size);
             self.diagnostic_messages.push(format!(
-                "[DIAG RESERVE] Actor {} BEST diagonal: affinity={:?} anchor=({},{},{},{}) | Ownership: diagonal={:?} anchor={:?}",
+                "[DIAG RESERVE] Actor {} BEST diagonal: affinity={:?} anchor={} | Ownership: diagonal={:?} anchor={:?}",
                 self.id, affinity_result.affinity,
-                anchor_cell_x, anchor_cell_y,
-                anchor_sub_x, anchor_sub_y,
+                Self::format_subpoint_debug(&affinity_result.anchor, self.subcell_grid_size),
                 diag_owner, anchor_owner
             ));
 
@@ -1582,20 +1581,18 @@ impl Actor {
                 println!("[RESERVE V2 DEBUG]   Trying opposite affinity fallback...");
             }
             if let Some(opposite_anchor) = self.get_opposite_anchor(&affinity_result.affinity, &current_subpoint, &diagonal_subpoint, Some(&affinity_result.anchor)) {
-                let (opp_anc_cx, opp_anc_cy) = opposite_anchor.to_cell(self.subcell_grid_size);
-                let (opp_anc_sx, opp_anc_sy) = opposite_anchor.subcell_offset(self.subcell_grid_size);
                 if track_movement {
-                    println!("[RESERVE V2 DEBUG]   Opposite anchor=({},{},{},{})",
-                        opp_anc_cx, opp_anc_cy, opp_anc_sx, opp_anc_sy);
+                    println!("[RESERVE V2 DEBUG]   Opposite anchor={}",
+                        Self::format_subpoint_debug(&opposite_anchor, self.subcell_grid_size));
                 }
 
                 // Check ownership of opposite anchor
                 let opp_anchor_coord = SubCellCoord::from_subpoint(&opposite_anchor, self.subcell_grid_size);
                 let opp_anchor_owner = reservation_manager.get_owner(&opp_anchor_coord);
                 self.diagnostic_messages.push(format!(
-                    "[DIAG RESERVE] Actor {} trying OPPOSITE affinity: opposite_anchor=({},{},{},{}) owner={:?}",
+                    "[DIAG RESERVE] Actor {} trying OPPOSITE affinity: opposite_anchor={} owner={:?}",
                     self.id,
-                    opp_anc_cx, opp_anc_cy, opp_anc_sx, opp_anc_sy,
+                    Self::format_subpoint_debug(&opposite_anchor, self.subcell_grid_size),
                     opp_anchor_owner
                 ));
 
@@ -3073,39 +3070,33 @@ impl Actor {
                     };
 
                     // Calculate distances for logging (using subcell centers for consistency with old logs)
-                    let reserved_coord = SubCellCoord::from_subpoint(&reserved, self.subcell_grid_size);
-                    let anchor_coord = SubCellCoord::from_subpoint(&anchor, self.subcell_grid_size);
                     let dist_reserved = Self::subcell_center_distance_to_destination(
-                        &reserved_coord,
+                        &reserved,
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
                     let dist_anchor = Self::subcell_center_distance_to_destination(
-                        &anchor_coord,
+                        &anchor,
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
 
                     // DEBUG: Log diagonal PSC selection
                     if always_trace || track_movement {
-                        let (curr_cx, curr_cy) = current.to_cell(self.subcell_grid_size);
-                        let (curr_sx, curr_sy) = current.subcell_offset(self.subcell_grid_size);
-                        let (res_cx, res_cy) = reserved.to_cell(self.subcell_grid_size);
-                        let (res_sx, res_sy) = reserved.subcell_offset(self.subcell_grid_size);
-                        let (anc_cx, anc_cy) = anchor.to_cell(self.subcell_grid_size);
-                        let (anc_sx, anc_sy) = anchor.subcell_offset(self.subcell_grid_size);
-                        println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
-                            curr_cx, curr_cy, curr_sx, curr_sy,
-                            res_cx, res_cy, res_sx, res_sy,
-                            anc_cx, anc_cy, anc_sx, anc_sy);
+                        println!("  [PSC_DIAG] old_psc={} reserved={} anchor={}",
+                            Self::format_subpoint_debug(&current, self.subcell_grid_size),
+                            Self::format_subpoint_debug(&reserved, self.subcell_grid_size),
+                            Self::format_subpoint_debug(&anchor, self.subcell_grid_size));
                         println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6}",
                             dist_reserved, dist_anchor);
                     }
@@ -3144,38 +3135,34 @@ impl Actor {
                     );
 
                     // Calculate distance from current PSC to destination (for logging)
-                    let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                     let dist_current = Self::subcell_center_distance_to_destination(
-                        &current_coord,
+                        &current,
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
 
                     // Calculate distance from reserved PSC to destination (for logging)
-                    let reserved_coord = SubCellCoord::from_subpoint(&reserved, self.subcell_grid_size);
                     let dist_reserved = Self::subcell_center_distance_to_destination(
-                        &reserved_coord,
+                        &reserved,
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
 
                     // DEBUG: Log H/V PSC selection with high precision
                     if always_trace || track_movement {
-                        let (curr_cx, curr_cy) = current.to_cell(self.subcell_grid_size);
-                        let (curr_sx, curr_sy) = current.subcell_offset(self.subcell_grid_size);
-                        let (res_cx, res_cy) = reserved.to_cell(self.subcell_grid_size);
-                        let (res_sx, res_sy) = reserved.subcell_offset(self.subcell_grid_size);
-                        println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
-                            curr_cx, curr_cy, curr_sx, curr_sy,
-                            res_cx, res_cy, res_sx, res_sy);
+                        println!("  [PSC_HV] old_psc={} reserved={} no anchor",
+                            Self::format_subpoint_debug(&current, self.subcell_grid_size),
+                            Self::format_subpoint_debug(&reserved, self.subcell_grid_size));
                         println!("  [PSC_HV] dist_current={:.6} dist_reserved={:.6} diff={:.6}",
                             dist_current, dist_reserved, (dist_reserved - dist_current).abs());
                     }
@@ -3269,10 +3256,8 @@ impl Actor {
                     );
                     self.alignment_target = Some((center_x, center_y));
                     if always_trace || (self.id == 0 && track_movement) {
-                        let (psc_cx, psc_cy) = new_psc.to_cell(self.subcell_grid_size);
-                        let (psc_sx, psc_sy) = new_psc.subcell_offset(self.subcell_grid_size);
-                        println!("  [SWITCH] Switched to new PSC ({},{},{},{}), entering PscAlignment to center ({:.1},{:.1})",
-                            psc_cx, psc_cy, psc_sx, psc_sy, center_x, center_y);
+                        println!("  [SWITCH] Switched to new PSC {}, entering PscAlignment to center ({:.1},{:.1})",
+                            Self::format_subpoint_debug(&new_psc, self.subcell_grid_size), center_x, center_y);
                     }
 
                     // Record position when reaching subcell
