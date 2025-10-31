@@ -735,16 +735,6 @@ pub fn calculate_rectangle_bounds(
 }
 
 /// Check if a position is within the rectangular free-movement area
-pub fn is_within_rectangle(
-    pos_x: f32,
-    pos_y: f32,
-    min_x: f32,
-    min_y: f32,
-    max_x: f32,
-    max_y: f32,
-) -> bool {
-    pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
-}
 
 /// Calculate rectangle bounds between two SubPoints (SubPoint version)
 ///
@@ -1076,71 +1066,6 @@ pub fn spread_subcell_destinations(
 /// Uses a spiral pattern expanding from center to ensure good distribution.
 ///
 /// This is the SubPoint version of spread_subcell_destinations.
-pub fn spread_subpoint_destinations(
-    target_cell_x: i32,
-    target_cell_y: i32,
-    num_actors: usize,
-    grid_size: i32,
-) -> Vec<crate::subpoint::SubPoint> {
-    let mut destinations = Vec::new();
-    let center_index = grid_size / 2;
-
-    // Start with center sub-cell of target cell (in flat SubPoint coordinates)
-    let center_x = target_cell_x * grid_size + center_index;
-    let center_y = target_cell_y * grid_size + center_index;
-    destinations.push(crate::subpoint::SubPoint::new(center_x, center_y));
-
-    if num_actors <= 1 {
-        return destinations;
-    }
-
-    // Add remaining sub-cells in target cell
-    for dy in 0..grid_size {
-        for dx in 0..grid_size {
-            if dx == center_index && dy == center_index {
-                continue; // Skip center (already added)
-            }
-            let x = target_cell_x * grid_size + dx;
-            let y = target_cell_y * grid_size + dy;
-            destinations.push(crate::subpoint::SubPoint::new(x, y));
-            if destinations.len() >= num_actors {
-                return destinations;
-            }
-        }
-    }
-
-    // If we need more, spiral outward to neighboring cells
-    // Order: N, E, S, W, NE, SE, SW, NW
-    let neighbor_offsets = [
-        (0, -1),  // N
-        (1, 0),   // E
-        (0, 1),   // S
-        (-1, 0),  // W
-        (1, -1),  // NE
-        (1, 1),   // SE
-        (-1, 1),  // SW
-        (-1, -1), // NW
-    ];
-
-    for (cell_dx, cell_dy) in neighbor_offsets.iter() {
-        let neighbor_cell_x = target_cell_x + cell_dx;
-        let neighbor_cell_y = target_cell_y + cell_dy;
-
-        // Add all sub-cells of this neighbor cell
-        for sub_dy in 0..grid_size {
-            for sub_dx in 0..grid_size {
-                let x = neighbor_cell_x * grid_size + sub_dx;
-                let y = neighbor_cell_y * grid_size + sub_dy;
-                destinations.push(crate::subpoint::SubPoint::new(x, y));
-                if destinations.len() >= num_actors {
-                    return destinations;
-                }
-            }
-        }
-    }
-
-    destinations
-}
 
 /// Find the best neighbors for pathfinding (SubPoint version)
 /// Returns up to 5 neighbors sorted by alignment to target direction
@@ -1153,34 +1078,6 @@ pub fn spread_subpoint_destinations(
 /// * `cell_height` - Height of a cell in screen pixels
 /// * `grid_size` - Subcell grid size (typically 2 for 2x2)
 /// * `filter_backward` - If true, filter out candidates with negative alignment scores
-pub fn find_best_neighbors_subpoint(
-    current: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-    filter_backward: bool,
-) -> Vec<crate::subpoint::SubPoint> {
-    let neighbors = current.get_neighbors();
-
-    // Calculate alignment scores for all neighbors
-    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
-        .iter()
-        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
-        .collect();
-
-    // Sort by score (highest first)
-    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
-    if filter_backward {
-        scored_neighbors.retain(|(_, score)| *score >= 0.0);
-    }
-
-    // Return top 5 candidates (or fewer if filtered)
-    scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
-}
 
 /// Filter SubPoint candidates to only those that decrease Euclidean distance to destination
 /// This ensures monotonic approach: overall distance never increases
@@ -1225,221 +1122,26 @@ fn filter_monotonic_approach_subpoint(
 /// If filter_backward is true, candidates with negative scores are filtered out.
 /// If use_monotonic_filter is true, ensures Euclidean distance to destination never increases.
 /// If allow_fallback is true and all candidates are filtered, returns best candidate anyway.
-pub fn find_best_3_neighbors_subpoint(
-    current: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-    filter_backward: bool,
-    dest_screen_x: f32,
-    dest_screen_y: f32,
-    use_monotonic_filter: bool,
-    allow_fallback: bool,
-) -> Vec<crate::subpoint::SubPoint> {
-    let neighbors = current.get_neighbors();
-
-    // Calculate alignment scores for all neighbors
-    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
-        .iter()
-        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
-        .collect();
-
-    // Sort by score (highest first)
-    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
-    if filter_backward {
-        scored_neighbors.retain(|(_, score)| *score >= 0.0);
-    }
-
-    // Take only top 3 candidates
-    let candidates: Vec<crate::subpoint::SubPoint> = scored_neighbors.iter().take(3).map(|(coord, _)| *coord).collect();
-
-    // Apply monotonic distance filter if requested (for Basic3 modes)
-    if use_monotonic_filter {
-        let filtered = filter_monotonic_approach_subpoint(current, candidates.clone(), dest_screen_x, dest_screen_y, cell_width, cell_height, grid_size);
-
-        // If all filtered out and fallback allowed, return best candidate
-        if filtered.is_empty() && allow_fallback && !candidates.is_empty() {
-            vec![candidates[0]]
-        } else {
-            filtered
-        }
-    } else {
-        candidates
-    }
-}
 
 /// Find a 2x2 square reservation pattern for robust pathfinding (SubPoint version)
 /// Returns (best_neighbor, [3 other subcells forming square]) or None if not possible
 ///
 /// The square reservation provides extra spacing and avoids conflicts in diagonal movement.
-pub fn find_square_reservation_subpoint(
-    current: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> Option<(crate::subpoint::SubPoint, [crate::subpoint::SubPoint; 3])> {
-    // Determine primary direction (which component is larger)
-    let abs_x = target_dir_x.abs();
-    let abs_y = target_dir_y.abs();
-
-    // Need significant directional movement
-    if abs_x < 0.1 && abs_y < 0.1 {
-        return None;
-    }
-
-    let neighbors = current.get_neighbors();
-
-    // Calculate alignment scores for all neighbors
-    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
-        .iter()
-        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
-        .collect();
-
-    // Sort by score (highest first)
-    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-    // Get the best aligned neighbor
-    let best = scored_neighbors[0].0;
-
-    // Determine perpendicular direction to form a 2x2 square
-    let (perp_dir_x, perp_dir_y) = if abs_x > abs_y {
-        // Primary direction is horizontal, square extends vertically
-        let sign = if target_dir_y >= 0.0 { 1.0 } else { -1.0 };
-        (0.0, sign)
-    } else {
-        // Primary direction is vertical, square extends horizontally
-        let sign = if target_dir_x >= 0.0 { 1.0 } else { -1.0 };
-        (sign, 0.0)
-    };
-
-    let mut square = [best; 3];
-
-    // Get best neighbor's neighbors
-    let best_neighbors = best.get_neighbors();
-
-    // Find neighbors of best that are also neighbors of current (these form a square)
-    let current_neighbor_set: std::collections::HashSet<_> = neighbors.iter().copied().collect();
-
-    let mut adjacent_to_both: Vec<crate::subpoint::SubPoint> = best_neighbors
-        .iter()
-        .filter(|n| current_neighbor_set.contains(n))
-        .copied()
-        .collect();
-
-    if adjacent_to_both.len() < 2 {
-        // Can't form a proper square
-        return None;
-    }
-
-    // Sort by alignment to perpendicular direction
-    adjacent_to_both.sort_by(|a, b| {
-        let a_score = current.alignment_score(a, perp_dir_x, perp_dir_y, cell_width, cell_height, grid_size);
-        let b_score = current.alignment_score(b, perp_dir_x, perp_dir_y, cell_width, cell_height, grid_size);
-        b_score.partial_cmp(&a_score).unwrap()
-    });
-
-    // Take the best perpendicular neighbor
-    let perp_from_current = adjacent_to_both[0];
-
-    // The fourth corner is the remaining cell
-    // It should be adjacent to both best and perp_from_current
-    let perp_from_current_neighbors = perp_from_current.get_neighbors();
-    let best_neighbor_set: std::collections::HashSet<_> = best_neighbors.iter().copied().collect();
-
-    let fourth_corner = perp_from_current_neighbors
-        .iter()
-        .find(|n| best_neighbor_set.contains(n) && **n != *current)
-        .copied();
-
-    match fourth_corner {
-        Some(corner) => {
-            square[0] = perp_from_current;
-            square[1] = corner;
-            square[2] = best;  // Redundant but clear
-            Some((best, square))
-        },
-        None => None,
-    }
-}
 
 /// Calculate distance between two SubPoints in screen coordinates
-pub fn distance_between_subpoints(
-    p1: &crate::subpoint::SubPoint,
-    p2: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> f32 {
-    let (x1, y1) = p1.to_screen_center(cell_width, cell_height, grid_size);
-    let (x2, y2) = p2.to_screen_center(cell_width, cell_height, grid_size);
-    let dx = x2 - x1;
-    let dy = y2 - y1;
-    (dx * dx + dy * dy).sqrt()
-}
 
 /// Check if a SubPoint move is horizontal (only X changes)
-pub fn is_horizontal_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
-    from.y == to.y && from.x != to.x
-}
 
 /// Check if a SubPoint move is vertical (only Y changes)
-pub fn is_vertical_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
-    from.x == to.x && from.y != to.y
-}
 
 /// Check if two SubPoints are adjacent (within 1 step in any direction)
-pub fn are_adjacent_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> bool {
-    let dx = (p2.x - p1.x).abs();
-    let dy = (p2.y - p1.y).abs();
-    dx <= 1 && dy <= 1 && (dx > 0 || dy > 0)
-}
 
 /// Calculate Manhattan distance between two SubPoints (in subcell units)
-pub fn manhattan_distance_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> i32 {
-    (p2.x - p1.x).abs() + (p2.y - p1.y).abs()
-}
 
 /// Clamp a screen position to rectangle bounds
 /// Returns the clamped (x, y) position
-pub fn clamp_to_rectangle(
-    pos_x: f32,
-    pos_y: f32,
-    min_x: f32,
-    min_y: f32,
-    max_x: f32,
-    max_y: f32,
-) -> (f32, f32) {
-    let clamped_x = pos_x.max(min_x).min(max_x);
-    let clamped_y = pos_y.max(min_y).min(max_y);
-    (clamped_x, clamped_y)
-}
 
 /// Get the closest SubPoint to a screen position (with offset support)
-pub fn closest_subpoint_to_screen(
-    screen_x: f32,
-    screen_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-    offset_x: f32,
-    offset_y: f32,
-) -> crate::subpoint::SubPoint {
-    crate::subpoint::SubPoint::from_screen_pos_with_offset(
-        screen_x,
-        screen_y,
-        cell_width,
-        cell_height,
-        grid_size,
-        offset_x,
-        offset_y,
-    )
-}
 
 /// Check if a SubPoint is within grid bounds
 pub fn is_subpoint_in_bounds(
@@ -1454,145 +1156,40 @@ pub fn is_subpoint_in_bounds(
 
 /// Get the direction vector from one SubPoint to another (normalized)
 /// Returns (dir_x, dir_y) normalized to unit length, or (0, 0) if points are identical
-pub fn direction_between_subpoints(
-    from: &crate::subpoint::SubPoint,
-    to: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> (f32, f32) {
-    from.direction_to(to, cell_width, cell_height, grid_size)
-}
 
 /// Get all neighbors of a SubPoint that are within grid bounds
 /// Returns a Vec instead of an array since some neighbors may be out of bounds
-pub fn get_valid_neighbors_subpoint(
-    point: &crate::subpoint::SubPoint,
-    grid_size: i32,
-    world_cols: i32,
-    world_rows: i32,
-) -> Vec<crate::subpoint::SubPoint> {
-    point
-        .get_neighbors()
-        .iter()
-        .filter(|n| is_subpoint_in_bounds(n, grid_size, world_cols, world_rows))
-        .copied()
-        .collect()
-}
 
 /// Convert a cell coordinate and subcell offset to a SubPoint
 /// This is a convenience function for creating SubPoints from components
-pub fn subpoint_from_components(
-    cell_x: i32,
-    cell_y: i32,
-    sub_x: i32,
-    sub_y: i32,
-    grid_size: i32,
-) -> crate::subpoint::SubPoint {
-    crate::subpoint::SubPoint::from_cell_subcell(cell_x, cell_y, sub_x, sub_y, grid_size)
-}
 
 /// Get the center SubPoint of a cell (middle subcell)
 /// For a 2x2 grid, this is subcell (0, 0) which represents the top-left intersection
-pub fn cell_center_subpoint(cell_x: i32, cell_y: i32, grid_size: i32) -> crate::subpoint::SubPoint {
-    let center_index = 0; // In subcell system, (0,0) is the first intersection
-    crate::subpoint::SubPoint::from_cell_subcell(cell_x, cell_y, center_index, center_index, grid_size)
-}
 
 /// Check if two SubPoints are in the same cell
-pub fn same_cell_subpoint(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint, grid_size: i32) -> bool {
-    let (cell1_x, cell1_y) = p1.to_cell(grid_size);
-    let (cell2_x, cell2_y) = p2.to_cell(grid_size);
-    cell1_x == cell2_x && cell1_y == cell2_y
-}
 
 /// Get the cell coordinate containing a SubPoint
 /// Returns (cell_x, cell_y)
-pub fn subpoint_to_cell(point: &crate::subpoint::SubPoint, grid_size: i32) -> (i32, i32) {
-    point.to_cell(grid_size)
-}
 
 /// Get the subcell offset within a cell for a SubPoint
 /// Returns (sub_x, sub_y) in range [0, grid_size-1]
-pub fn subpoint_subcell_offset(point: &crate::subpoint::SubPoint, grid_size: i32) -> (i32, i32) {
-    point.subcell_offset(grid_size)
-}
 
 /// Offset a SubPoint by a given amount in subcell units
 /// Returns a new SubPoint offset by (dx, dy) in flat subcell coordinates
-pub fn offset_subpoint(point: &crate::subpoint::SubPoint, dx: i32, dy: i32) -> crate::subpoint::SubPoint {
-    crate::subpoint::SubPoint::new(point.x + dx, point.y + dy)
-}
 
 /// Calculate the midpoint between two SubPoints (rounded down to nearest subcell)
-pub fn midpoint_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> crate::subpoint::SubPoint {
-    crate::subpoint::SubPoint::new(
-        (p1.x + p2.x) / 2,
-        (p1.y + p2.y) / 2,
-    )
-}
 
 /// Check if a move between two SubPoints is diagonal
 /// Returns true if both X and Y coordinates change
-pub fn is_diagonal_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
-    let dx = (to.x - from.x).abs();
-    let dy = (to.y - from.y).abs();
-    dx > 0 && dy > 0
-}
 
 /// Get the alignment score between a SubPoint direction and a target direction
 /// Returns dot product from -1.0 (opposite) to 1.0 (same direction)
-pub fn alignment_score_subpoint(
-    from: &crate::subpoint::SubPoint,
-    to: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> f32 {
-    from.alignment_score(to, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)
-}
 
 /// Get all neighbors of a SubPoint sorted by alignment to a target direction
 /// Returns neighbors in order from best aligned to worst aligned
-pub fn neighbors_sorted_by_alignment(
-    point: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> Vec<(crate::subpoint::SubPoint, f32)> {
-    let neighbors = point.get_neighbors();
-    let mut scored: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
-        .iter()
-        .map(|n| (*n, point.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
-        .collect();
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    scored
-}
 
 /// Get the best neighbor of a SubPoint aligned to a target direction
 /// Returns the neighbor with the highest alignment score
-pub fn best_aligned_neighbor(
-    point: &crate::subpoint::SubPoint,
-    target_dir_x: f32,
-    target_dir_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> Option<crate::subpoint::SubPoint> {
-    let neighbors = point.get_neighbors();
-    neighbors
-        .iter()
-        .max_by(|a, b| {
-            let score_a = point.alignment_score(a, target_dir_x, target_dir_y, cell_width, cell_height, grid_size);
-            let score_b = point.alignment_score(b, target_dir_x, target_dir_y, cell_width, cell_height, grid_size);
-            score_a.partial_cmp(&score_b).unwrap()
-        })
-        .copied()
-}
 
 /// Calculate Euclidean distance from SubPoint to a screen position
 pub fn distance_to_screen_pos(
@@ -1610,139 +1207,33 @@ pub fn distance_to_screen_pos(
 }
 
 /// Find the closest SubPoint to a screen position from a list of candidates
-pub fn closest_subpoint_to_position(
-    candidates: &[crate::subpoint::SubPoint],
-    screen_x: f32,
-    screen_y: f32,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> Option<crate::subpoint::SubPoint> {
-    candidates
-        .iter()
-        .min_by(|a, b| {
-            let dist_a = distance_to_screen_pos(a, screen_x, screen_y, cell_width, cell_height, grid_size);
-            let dist_b = distance_to_screen_pos(b, screen_x, screen_y, cell_width, cell_height, grid_size);
-            dist_a.partial_cmp(&dist_b).unwrap()
-        })
-        .copied()
-}
 
 /// Check if a SubPoint is at a cell boundary (on edge of cell)
 /// Returns true if subcell offset is 0 or grid_size-1 in either dimension
-pub fn is_at_cell_boundary(point: &crate::subpoint::SubPoint, grid_size: i32) -> bool {
-    let (sub_x, sub_y) = point.subcell_offset(grid_size);
-    sub_x == 0 || sub_x == grid_size - 1 || sub_y == 0 || sub_y == grid_size - 1
-}
 
 /// Get the four cardinal neighbors (N, E, S, W) of a SubPoint
 /// Returns only the 4 non-diagonal neighbors
-pub fn cardinal_neighbors_subpoint(point: &crate::subpoint::SubPoint) -> [crate::subpoint::SubPoint; 4] {
-    [
-        crate::subpoint::SubPoint::new(point.x, point.y - 1), // N
-        crate::subpoint::SubPoint::new(point.x + 1, point.y), // E
-        crate::subpoint::SubPoint::new(point.x, point.y + 1), // S
-        crate::subpoint::SubPoint::new(point.x - 1, point.y), // W
-    ]
-}
 
 /// Get the four diagonal neighbors (NE, SE, SW, NW) of a SubPoint
 /// Returns only the 4 diagonal neighbors
-pub fn diagonal_neighbors_subpoint(point: &crate::subpoint::SubPoint) -> [crate::subpoint::SubPoint; 4] {
-    [
-        crate::subpoint::SubPoint::new(point.x + 1, point.y - 1), // NE
-        crate::subpoint::SubPoint::new(point.x + 1, point.y + 1), // SE
-        crate::subpoint::SubPoint::new(point.x - 1, point.y + 1), // SW
-        crate::subpoint::SubPoint::new(point.x - 1, point.y - 1), // NW
-    ]
-}
 
 /// Convert SubPoint to screen center position with offset
 /// Returns (screen_x, screen_y) coordinates
-pub fn subpoint_to_screen_with_offset(
-    point: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-    offset_x: f32,
-    offset_y: f32,
-) -> (f32, f32) {
-    point.to_screen_center_with_offset(cell_width, cell_height, grid_size, offset_x, offset_y)
-}
 
 /// Convert SubPoint to screen center position without offset
 /// Returns (screen_x, screen_y) coordinates
-pub fn subpoint_to_screen(
-    point: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> (f32, f32) {
-    point.to_screen_center(cell_width, cell_height, grid_size)
-}
 
 /// Filter SubPoints to only those within grid bounds
 /// Returns new Vec with only valid SubPoints
-pub fn filter_subpoints_in_bounds(
-    points: &[crate::subpoint::SubPoint],
-    grid_size: i32,
-    world_cols: i32,
-    world_rows: i32,
-) -> Vec<crate::subpoint::SubPoint> {
-    points
-        .iter()
-        .filter(|p| is_subpoint_in_bounds(p, grid_size, world_cols, world_rows))
-        .copied()
-        .collect()
-}
 
 /// Get all SubPoints within a cell
 /// Returns all grid_size × grid_size SubPoints for the given cell
-pub fn subpoints_in_cell(cell_x: i32, cell_y: i32, grid_size: i32) -> Vec<crate::subpoint::SubPoint> {
-    let mut points = Vec::with_capacity((grid_size * grid_size) as usize);
-    for sub_y in 0..grid_size {
-        for sub_x in 0..grid_size {
-            points.push(crate::subpoint::SubPoint::from_cell_subcell(
-                cell_x, cell_y, sub_x, sub_y, grid_size,
-            ));
-        }
-    }
-    points
-}
 
 /// Calculate the angle (in radians) from one SubPoint to another
 /// Returns angle in range [-π, π], where 0 is East, π/2 is South
-pub fn angle_between_subpoints(
-    from: &crate::subpoint::SubPoint,
-    to: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> f32 {
-    let (from_x, from_y) = from.to_screen_center(cell_width, cell_height, grid_size);
-    let (to_x, to_y) = to.to_screen_center(cell_width, cell_height, grid_size);
-    let dx = to_x - from_x;
-    let dy = to_y - from_y;
-    dy.atan2(dx)
-}
 
 /// Check if three SubPoints form a right angle at the middle point
 /// Returns true if the angle at 'middle' between 'from' and 'to' is approximately 90 degrees
-pub fn is_right_angle(
-    from: &crate::subpoint::SubPoint,
-    middle: &crate::subpoint::SubPoint,
-    to: &crate::subpoint::SubPoint,
-    cell_width: f32,
-    cell_height: f32,
-    grid_size: i32,
-) -> bool {
-    let (dir1_x, dir1_y) = middle.direction_to(from, cell_width, cell_height, grid_size);
-    let (dir2_x, dir2_y) = middle.direction_to(to, cell_width, cell_height, grid_size);
-
-    // Dot product close to 0 means perpendicular
-    let dot = dir1_x * dir2_x + dir1_y * dir2_y;
-    dot.abs() < 0.1
-}
 
 #[cfg(test)]
 mod tests {
