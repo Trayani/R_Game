@@ -5,7 +5,7 @@
 ///
 /// YOU (the user) will maintain this file directly.
 
-use crate::actor::Actor;
+use crate::actor::{Actor, AlignmentState};
 use crate::subcell::{SubCellCoord, SubCellReservationManager};
 use crate::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -232,12 +232,120 @@ pub fn is_moving_toward_destination(
 }
 
 // ============================================================================
+// STATE HANDLERS
+// ============================================================================
+
+/// Handle NoSubcell state - actor needs to acquire initial subcell
+fn handle_no_subcell_state(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_early_reservation: bool,
+    enable_anti_cross: bool,
+    track_movement: bool,
+    reservation_eagerness: ReservationEagerness,
+    release_eagerness: ReleaseEagerness,
+) -> bool {
+    // Delegate to full implementation for now
+    // TODO: Extract NoSubcell-specific logic here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        enable_early_reservation,
+        false,
+        enable_anti_cross,
+        track_movement,
+        0.0,
+        reservation_eagerness,
+        release_eagerness,
+    )
+}
+
+/// Handle PscAlignment state - actor moving to subcell center
+fn handle_psc_alignment_state(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_early_reservation: bool,
+    enable_anti_cross: bool,
+    track_movement: bool,
+    reservation_eagerness: ReservationEagerness,
+    release_eagerness: ReleaseEagerness,
+) -> bool {
+    // Delegate to full implementation for now
+    // TODO: Extract PscAlignment-specific logic here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        enable_early_reservation,
+        false,
+        enable_anti_cross,
+        track_movement,
+        0.0,
+        reservation_eagerness,
+        release_eagerness,
+    )
+}
+
+/// Handle Idle state - actor at subcell center, ready to move
+fn handle_idle_state(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_early_reservation: bool,
+    enable_anti_cross: bool,
+    track_movement: bool,
+    reservation_eagerness: ReservationEagerness,
+    release_eagerness: ReleaseEagerness,
+) -> bool {
+    // Delegate to full implementation for now
+    // TODO: Extract Idle-specific logic here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        enable_early_reservation,
+        false,
+        enable_anti_cross,
+        track_movement,
+        0.0,
+        reservation_eagerness,
+        release_eagerness,
+    )
+}
+
+/// Handle Move state - actor has reservation, moving toward it
+fn handle_move_state(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_early_reservation: bool,
+    enable_anti_cross: bool,
+    track_movement: bool,
+    reservation_eagerness: ReservationEagerness,
+    release_eagerness: ReleaseEagerness,
+) -> bool {
+    // Delegate to full implementation for now
+    // TODO: Extract Move-specific logic here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        enable_early_reservation,
+        false,
+        enable_anti_cross,
+        track_movement,
+        0.0,
+        reservation_eagerness,
+        release_eagerness,
+    )
+}
+
+// ============================================================================
 // UPDATE ACTOR - DECISION ROOT
 // ============================================================================
 
 /// Main update function - serves as the decision root for actor behavior
 ///
-/// This function orchestrates all actor decisions and delegates to execution functions.
+/// This function orchestrates all actor decisions by dispatching to state handlers.
 /// All decision logic flows through this function, making it easy to understand and modify.
 ///
 /// Returns: true if actor reached destination, false otherwise
@@ -251,18 +359,47 @@ pub fn update_actor(
     reservation_eagerness: ReservationEagerness,
     release_eagerness: ReleaseEagerness,
 ) -> bool {
-    // For now, delegate to the internal implementation in actor.rs
-    // TODO: Gradually refactor to extract decision logic here
-    // This function serves as the decision root - all actor updates flow through here
-    actor.update_subcell_destination_direct_impl(
-        delta_time,
-        reservation_manager,
-        enable_early_reservation,
-        false, // filter_backward (unused)
-        enable_anti_cross,
-        track_movement,
-        0.0, // reservation_threshold_distance (unused)
-        reservation_eagerness,
-        release_eagerness,
-    )
+    // Dispatch to appropriate state handler based on actor's current state
+    match actor.alignment_state {
+        AlignmentState::NoSubcell => handle_no_subcell_state(
+            actor,
+            delta_time,
+            reservation_manager,
+            enable_early_reservation,
+            enable_anti_cross,
+            track_movement,
+            reservation_eagerness,
+            release_eagerness,
+        ),
+        AlignmentState::PscAlignment => handle_psc_alignment_state(
+            actor,
+            delta_time,
+            reservation_manager,
+            enable_early_reservation,
+            enable_anti_cross,
+            track_movement,
+            reservation_eagerness,
+            release_eagerness,
+        ),
+        AlignmentState::Idle => handle_idle_state(
+            actor,
+            delta_time,
+            reservation_manager,
+            enable_early_reservation,
+            enable_anti_cross,
+            track_movement,
+            reservation_eagerness,
+            release_eagerness,
+        ),
+        AlignmentState::Move => handle_move_state(
+            actor,
+            delta_time,
+            reservation_manager,
+            enable_early_reservation,
+            enable_anti_cross,
+            track_movement,
+            reservation_eagerness,
+            release_eagerness,
+        ),
+    }
 }
