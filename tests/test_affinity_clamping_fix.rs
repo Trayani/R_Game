@@ -61,7 +61,7 @@ fn test_horizontal_affinity_no_y_clamping_actor_below_rect() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     // Diagonal at (11, 34, 1, 0) - top-right of SAME cell
     let diagonal = SubCellCoord {
@@ -70,7 +70,7 @@ fn test_horizontal_affinity_no_y_clamping_actor_below_rect() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     // Destination far to the right and up
     let dest_x = 420.0;
@@ -139,7 +139,7 @@ fn test_horizontal_affinity_no_y_clamping_actor_above_rect() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -147,7 +147,7 @@ fn test_horizontal_affinity_no_y_clamping_actor_above_rect() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let dest_x = 420.0;
     let dest_y = 520.0; // Below actor
@@ -186,7 +186,7 @@ fn test_vertical_affinity_no_x_clamping_actor_left_of_rect() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -194,7 +194,7 @@ fn test_vertical_affinity_no_x_clamping_actor_left_of_rect() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     // Destination mostly down/up
     let dest_x = 210.0;
@@ -244,7 +244,7 @@ fn test_vertical_affinity_no_x_clamping_actor_right_of_rect() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -252,7 +252,7 @@ fn test_vertical_affinity_no_x_clamping_actor_right_of_rect() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let dest_x = 235.0;
     let dest_y = 300.0; // Far above
@@ -300,7 +300,7 @@ fn test_both_affinity_clamps_both_coordinates() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -308,7 +308,7 @@ fn test_both_affinity_clamps_both_coordinates() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     // Destination toward top-right corner
     let dest_x = 300.0;
@@ -359,7 +359,7 @@ fn test_original_bug_scenario() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -367,7 +367,7 @@ fn test_original_bug_scenario() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let dest_x = 420.0;
     let dest_y = 465.0;
@@ -419,7 +419,7 @@ fn test_extreme_case_actor_far_outside_rectangle() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -427,7 +427,7 @@ fn test_extreme_case_actor_far_outside_rectangle() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let dest_x = 420.0;
     let dest_y = 465.0;
@@ -462,7 +462,7 @@ fn test_actor_on_boundary() {
         sub_x: 0,
         sub_y: 1,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let diagonal = SubCellCoord {
         cell_x: 11,
@@ -470,7 +470,7 @@ fn test_actor_on_boundary() {
         sub_x: 1,
         sub_y: 0,
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let dest_x = 420.0;
     let dest_y = 465.0;

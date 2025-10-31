@@ -5,7 +5,7 @@ sub# Actor.rs SubPoint Migration - In Progress
 ### 1. Actor Struct Fields Migrated
 **File**: `src/actor.rs` lines 152-154
 
-```rust
+```rustfix 
 // BEFORE:
 pub reserved_subcell: Option<SubCellCoord>,
 pub extra_reserved_subcells: Vec<SubCellCoord>,

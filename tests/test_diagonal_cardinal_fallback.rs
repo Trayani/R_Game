@@ -74,8 +74,8 @@ fn test_sw_blocked_tries_s_cardinal() {
 
     // S (down) is subcell (10, 11, 0, 0) - directly down
     // W (left) is subcell (9, 10, 1, 1) - directly left
-    let s_cardinal = SubCellCoord::new(10, 11, 0, 0, subcell_grid_size);
-    let w_cardinal = SubCellCoord::new(9, 10, 1, 1, subcell_grid_size);
+    let s_cardinal = SubCellCoord::new(10, 11, 0, 0, subcell_grid_size).to_subpoint();
+    let w_cardinal = SubCellCoord::new(9, 10, 1, 1, subcell_grid_size).to_subpoint();
 
     // Should have reserved S (down) since vertical distance is larger (3 cells vs 2 cells)
     assert!(
@@ -145,8 +145,8 @@ fn test_ne_blocked_tries_cardinal() {
 
     // N (up) is subcell (10, 9, 0, 1)
     // E (right) is subcell (11, 10, 0, 0)
-    let n_cardinal = SubCellCoord::new(10, 9, 0, 1, subcell_grid_size);
-    let e_cardinal = SubCellCoord::new(11, 10, 0, 0, subcell_grid_size);
+    let n_cardinal = SubCellCoord::new(10, 9, 0, 1, subcell_grid_size).to_subpoint();
+    let e_cardinal = SubCellCoord::new(11, 10, 0, 0, subcell_grid_size).to_subpoint();
 
     assert!(
         reserved == n_cardinal || reserved == e_cardinal,
@@ -369,7 +369,7 @@ fn test_only_best_diagonal_tried() {
 
     // Actor should have reserved a CARDINAL direction, NOT SE diagonal
     if let Some(reserved) = actor.reserved_subcell {
-        let se_diagonal = SubCellCoord::new(11, 11, 0, 0, subcell_grid_size);
+        let se_diagonal = SubCellCoord::new(11, 11, 0, 0, subcell_grid_size).to_subpoint();
 
         assert_ne!(
             reserved, se_diagonal,

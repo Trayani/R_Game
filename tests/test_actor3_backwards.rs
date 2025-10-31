@@ -61,14 +61,15 @@ fn test_actor3_se_diagonal_should_be_filtered() {
 
     // Check what was reserved
     if let Some(reserved) = actor.reserved_subcell {
-        let se_diagonal = SubCellCoord::new(10, 14, 0, 0, subcell_grid_size);
+        let se_diagonal = SubCellCoord::new(10, 14, 0, 0, subcell_grid_size).to_subpoint();
 
         // Calculate if SE would increase distance
         let curr = SubCellCoord::new(9, 13, 1, 1, subcell_grid_size);
         let (curr_x, curr_y) = curr.to_screen_center_with_offset(
             cell_width, cell_height, 0.5, 0.5
         );
-        let (se_x, se_y) = se_diagonal.to_screen_center_with_offset(
+        let se_diagonal_coord = SubCellCoord::from_subpoint(&se_diagonal, subcell_grid_size);
+        let (se_x, se_y) = se_diagonal_coord.to_screen_center_with_offset(
             cell_width, cell_height, 0.5, 0.5
         );
 

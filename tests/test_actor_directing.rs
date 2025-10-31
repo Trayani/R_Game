@@ -192,7 +192,7 @@ fn run_alternative_test(
         sub_x: diagonal.sub_x,      // SUB X from diagonal
         sub_y: psc.sub_y,           // SUB Y from PSC
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     let v_anchor = SubCellCoord {
         cell_x: psc.cell_x,         // X from PSC
@@ -200,7 +200,7 @@ fn run_alternative_test(
         sub_x: psc.sub_x,           // SUB X from PSC
         sub_y: diagonal.sub_y,      // SUB Y from diagonal
         grid_size: 2,
-    };
+    }.to_subpoint();
 
     // Determine which anchor to block based on optimal and expected alternative
     let block_subcell = if !optimal_has_affinity {
@@ -238,16 +238,20 @@ fn run_alternative_test(
         }
     };
 
+    // Convert SubPoint to SubCellCoord for reservation manager
+    let block_subcell_coord = SubCellCoord::from_subpoint(&block_subcell, 2);
+    let (bcx, bcy) = block_subcell.to_cell(2);
+    let (bsx, bsy) = block_subcell.subcell_offset(2);
     println!("  Blocking ONLY anchor subcell: ({},{},{},{}) to force alternative",
-        block_subcell.cell_x, block_subcell.cell_y, block_subcell.sub_x, block_subcell.sub_y);
+        bcx, bcy, bsx, bsy);
 
     // Block ONLY the specific anchor subcell, not all 4 in that cell!
     // Blocking all 4 would also block the diagonal itself if they share the same cell.
-    let blocked = reservation_mgr.try_reserve(block_subcell.clone(), 999);
+    let blocked = reservation_mgr.try_reserve(block_subcell_coord.clone(), 999);
     println!("    Blocked anchor: {}", blocked);
 
     // Verify it's actually blocked
-    if let Some(owner) = reservation_mgr.get_owner(&block_subcell) {
+    if let Some(owner) = reservation_mgr.get_owner(&block_subcell_coord) {
         println!("      → Verified: anchor owned by actor {}", owner);
     } else {
         println!("      → WARNING: Anchor not actually reserved!");
@@ -320,13 +324,15 @@ fn run_alternative_test(
 
     // Check that some diagonal reservation was made (relaxed check - anchor might be in extra_reserved_subcells)
     if let Some(reserved) = &actor.reserved_subcell {
+        let (rcx, rcy) = reserved.to_cell(2);
+        let (rsx, rsy) = reserved.subcell_offset(2);
         println!("  ✓ Actor has reserved subcell: ({},{},{},{})",
-            reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+            rcx, rcy, rsx, rsy);
 
         // Verify it's a diagonal move (not the PSC)
         // Must check BOTH cell and subcell coordinates - SE diagonal from (5,5,0,0) is (5,5,1,1)
-        if reserved.cell_x == test.psc_x && reserved.cell_y == test.psc_y &&
-           reserved.sub_x == psc.sub_x && reserved.sub_y == psc.sub_y {
+        if rcx == test.psc_x && rcy == test.psc_y &&
+           rsx == psc.sub_x && rsy == psc.sub_y {
             errors.push("Actor reserved PSC instead of diagonal - alternative selection failed".to_string());
         }
     } else {
@@ -337,20 +343,24 @@ fn run_alternative_test(
     if !actor.extra_reserved_subcells.is_empty() {
         println!("  ✓ Actor has {} extra reserved subcells (anchors)", actor.extra_reserved_subcells.len());
         for anchor in &actor.extra_reserved_subcells {
-            println!("    - Anchor: ({},{},{},{})", anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+            let (acx, acy) = anchor.to_cell(2);
+            let (asx, asy) = anchor.subcell_offset(2);
+            println!("    - Anchor: ({},{},{},{})", acx, acy, asx, asy);
         }
     }
 
     // Clean up reservations
     reservation_mgr.release(psc, 0);
-    reservation_mgr.release(block_subcell, 999);
+    reservation_mgr.release(block_subcell_coord, 999);
 
     // Release the reserved diagonal and anchor if any
     if let Some(reserved) = actor.reserved_subcell {
-        reservation_mgr.release(reserved, 0);
+        let reserved_coord = SubCellCoord::from_subpoint(&reserved, 2);
+        reservation_mgr.release(reserved_coord, 0);
     }
     for extra in &actor.extra_reserved_subcells {
-        reservation_mgr.release(*extra, 0);
+        let extra_coord = SubCellCoord::from_subpoint(extra, 2);
+        reservation_mgr.release(extra_coord, 0);
     }
 
     if errors.is_empty() {
@@ -411,12 +421,14 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
     let psc = SubCellCoord::new(test.psc_x, test.psc_y, 0, 0, 2);
     let diagonal = SubCellCoord::new(test.diag_x, test.diag_y, 0, 0, 2);
 
-    // Calculate affinity and target
+    // Calculate affinity and target (convert to SubPoint)
+    let psc_sp = psc.to_subpoint();
+    let diagonal_sp = diagonal.to_subpoint();
     let result = actor.calculate_affinity_and_target(
         test.actor_x,
         test.actor_y,
-        &psc,
-        &diagonal,
+        &psc_sp,
+        &diagonal_sp,
         test.dest_x,
         test.dest_y,
     );
@@ -500,16 +512,17 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
         }
     };
 
-    if result.anchor.cell_x != expected_anchor_x || result.anchor.cell_y != expected_anchor_y {
+    let (anchor_cx, anchor_cy) = result.anchor.to_cell(2);
+    if anchor_cx != expected_anchor_x || anchor_cy != expected_anchor_y {
         errors.push(format!(
             "anchor mismatch: expected ({},{}), got ({},{}), affinity={:?}",
             expected_anchor_x, expected_anchor_y,
-            result.anchor.cell_x, result.anchor.cell_y,
+            anchor_cx, anchor_cy,
             result.affinity
         ));
     } else {
         println!("  ✓ Validation 4: Anchor ({},{}) matches affinity {:?} rules",
-            result.anchor.cell_x, result.anchor.cell_y, result.affinity);
+            anchor_cx, anchor_cy, result.affinity);
     }
 
     if errors.is_empty() {
@@ -531,8 +544,8 @@ fn run_single_test(test: &ActorDirectingTest, _epsilon: f32) -> Result<(), Strin
             result.target_x,
             result.target_y,
             result.affinity,
-            result.anchor.cell_x,
-            result.anchor.cell_y,
+            anchor_cx,
+            anchor_cy,
             result.t_vertical,
             result.t_horizontal
         ))
@@ -979,9 +992,11 @@ fn test_specific_diagonal_cases() {
 
     let psc = SubCellCoord::new(5, 5, 0, 0, 2);
     let diagonal = SubCellCoord::new(6, 4, 0, 0, 2);
+    let psc_sp = psc.to_subpoint();
+    let diagonal_sp = diagonal.to_subpoint();
 
     let result = actor.calculate_affinity_and_target(
-        5.3, 4.1, &psc, &diagonal, 8.0, 2.0
+        5.3, 4.1, &psc_sp, &diagonal_sp, 8.0, 2.0
     );
 
     println!("Example 3: Actor near top edge (5.3, 4.1)");
@@ -994,7 +1009,7 @@ fn test_specific_diagonal_cases() {
 
     // Test case from design doc Example 4 (near right edge)
     let result2 = actor.calculate_affinity_and_target(
-        5.9, 4.6, &psc, &diagonal, 8.0, 2.0
+        5.9, 4.6, &psc_sp, &diagonal_sp, 8.0, 2.0
     );
 
     println!("\nExample 4: Actor near right edge (5.9, 4.6)");

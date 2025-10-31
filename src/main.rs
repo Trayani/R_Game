@@ -1039,7 +1039,7 @@ impl VisState {
 
                 // Draw reserved sub-cell (yellow)
                 if let Some(reserved_sc) = actor.reserved_subcell {
-                    let (rx, ry) = reserved_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
+                    let (rx, ry) = reserved_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, actor.subcell_grid_size, offset_x, offset_y);
                     draw_circle(rx, ry, 4.0, YELLOW);
                     draw_circle_lines(rx, ry, 6.0, 1.5, YELLOW);
 
@@ -1052,7 +1052,7 @@ impl VisState {
 
                 // Draw extra reserved sub-cells (anchor) with orange
                 for (idx, extra_sc) in actor.extra_reserved_subcells.iter().enumerate() {
-                    let (ex, ey) = extra_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
+                    let (ex, ey) = extra_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, actor.subcell_grid_size, offset_x, offset_y);
                     draw_circle(ex, ey, 3.5, ORANGE);
                     draw_circle_lines(ex, ey, 5.5, 1.5, ORANGE);
 
@@ -1379,15 +1379,19 @@ impl VisState {
 
             // Draw reserved & anchor info with distances
             if let Some(reserved) = actor.reserved_subcell {
+                let (res_cx, res_cy) = reserved.to_cell(actor.subcell_grid_size);
+                let (res_sx, res_sy) = reserved.subcell_offset(actor.subcell_grid_size);
                 let reserved_text = format!("Reserved: cell=({},{}), sub=({},{})",
-                    reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+                    res_cx, res_cy, res_sx, res_sy);
                 draw_text(&reserved_text, 10.0, debug_y, 18.0, YELLOW);
                 debug_y += 20.0;
 
                 // Show anchor if present
                 if let Some(anchor) = actor.extra_reserved_subcells.get(0) {
+                    let (anc_cx, anc_cy) = anchor.to_cell(actor.subcell_grid_size);
+                    let (anc_sx, anc_sy) = anchor.subcell_offset(actor.subcell_grid_size);
                     let anchor_text = format!("Anchor: cell=({},{}), sub=({},{})",
-                        anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+                        anc_cx, anc_cy, anc_sx, anc_sy);
                     draw_text(&anchor_text, 10.0, debug_y, 18.0, ORANGE);
                     debug_y += 20.0;
 
@@ -2223,40 +2227,41 @@ async fn main() {
                         affinity: affinity_str.to_string(),
                         target_x: directing_info.target_x,
                         target_y: directing_info.target_y,
-                        reserved_cell_x: directing_info.reserved.cell_x,
-                        reserved_cell_y: directing_info.reserved.cell_y,
-                        reserved_sub_x: directing_info.reserved.sub_x,
-                        reserved_sub_y: directing_info.reserved.sub_y,
-                        anchor_cell_x: directing_info.anchor.cell_x,
-                        anchor_cell_y: directing_info.anchor.cell_y,
-                        anchor_sub_x: directing_info.anchor.sub_x,
-                        anchor_sub_y: directing_info.anchor.sub_y,
+                        reserved_cell_x: directing_info.reserved.to_cell(state.actors[i].subcell_grid_size).0,
+                        reserved_cell_y: directing_info.reserved.to_cell(state.actors[i].subcell_grid_size).1,
+                        reserved_sub_x: directing_info.reserved.subcell_offset(state.actors[i].subcell_grid_size).0,
+                        reserved_sub_y: directing_info.reserved.subcell_offset(state.actors[i].subcell_grid_size).1,
+                        anchor_cell_x: directing_info.anchor.to_cell(state.actors[i].subcell_grid_size).0,
+                        anchor_cell_y: directing_info.anchor.to_cell(state.actors[i].subcell_grid_size).1,
+                        anchor_sub_x: directing_info.anchor.subcell_offset(state.actors[i].subcell_grid_size).0,
+                        anchor_sub_y: directing_info.anchor.subcell_offset(state.actors[i].subcell_grid_size).1,
                     });
                 }
 
                 // Log PSC selection decisions to action log
                 if let Some(psc_info) = state.actors[i].last_psc_selection.take() {
+                    let grid_size = state.actors[i].subcell_grid_size;
                     state.action_log.log_event(Action::PSCSelection {
                         actor_id: state.actors[i].id,
-                        old_psc_cell_x: psc_info.old_psc.cell_x,
-                        old_psc_cell_y: psc_info.old_psc.cell_y,
-                        old_psc_sub_x: psc_info.old_psc.sub_x,
-                        old_psc_sub_y: psc_info.old_psc.sub_y,
-                        reserved_cell_x: psc_info.reserved.cell_x,
-                        reserved_cell_y: psc_info.reserved.cell_y,
-                        reserved_sub_x: psc_info.reserved.sub_x,
-                        reserved_sub_y: psc_info.reserved.sub_y,
+                        old_psc_cell_x: psc_info.old_psc.to_cell(grid_size).0,
+                        old_psc_cell_y: psc_info.old_psc.to_cell(grid_size).1,
+                        old_psc_sub_x: psc_info.old_psc.subcell_offset(grid_size).0,
+                        old_psc_sub_y: psc_info.old_psc.subcell_offset(grid_size).1,
+                        reserved_cell_x: psc_info.reserved.to_cell(grid_size).0,
+                        reserved_cell_y: psc_info.reserved.to_cell(grid_size).1,
+                        reserved_sub_x: psc_info.reserved.subcell_offset(grid_size).0,
+                        reserved_sub_y: psc_info.reserved.subcell_offset(grid_size).1,
                         reserved_dist: psc_info.reserved_dist,
-                        anchor_cell_x: psc_info.anchor.map(|a| a.cell_x),
-                        anchor_cell_y: psc_info.anchor.map(|a| a.cell_y),
-                        anchor_sub_x: psc_info.anchor.map(|a| a.sub_x),
-                        anchor_sub_y: psc_info.anchor.map(|a| a.sub_y),
+                        anchor_cell_x: psc_info.anchor.map(|a| a.to_cell(grid_size).0),
+                        anchor_cell_y: psc_info.anchor.map(|a| a.to_cell(grid_size).1),
+                        anchor_sub_x: psc_info.anchor.map(|a| a.subcell_offset(grid_size).0),
+                        anchor_sub_y: psc_info.anchor.map(|a| a.subcell_offset(grid_size).1),
                         anchor_dist: psc_info.anchor_dist,
                         chosen: psc_info.chosen_name.clone(),
-                        chosen_cell_x: psc_info.chosen.cell_x,
-                        chosen_cell_y: psc_info.chosen.cell_y,
-                        chosen_sub_x: psc_info.chosen.sub_x,
-                        chosen_sub_y: psc_info.chosen.sub_y,
+                        chosen_cell_x: psc_info.chosen.to_cell(grid_size).0,
+                        chosen_cell_y: psc_info.chosen.to_cell(grid_size).1,
+                        chosen_sub_x: psc_info.chosen.subcell_offset(grid_size).0,
+                        chosen_sub_y: psc_info.chosen.subcell_offset(grid_size).1,
                     });
                 }
             }
