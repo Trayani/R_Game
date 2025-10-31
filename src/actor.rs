@@ -2332,10 +2332,10 @@ impl Actor {
     // ========================================================================
 
     /// Log actor's alignment to subcell center
-    fn log_subcell_alignment(&self, subcell: &SubCellCoord, center_x: f32, center_y: f32, always_trace: bool) {
+    fn log_subcell_alignment(&self, subcell: &SubPoint, center_x: f32, center_y: f32, always_trace: bool) {
         if always_trace {
-            println!("[ALIGN] Actor {} reserved subcell ({},{},{},{}) at distance {:.1}px from ({:.1},{:.1})",
-                self.id, subcell.cell_x, subcell.cell_y, subcell.sub_x, subcell.sub_y,
+            println!("[ALIGN] Actor {} reserved subcell {} at distance {:.1}px from ({:.1},{:.1})",
+                self.id, Self::format_subpoint_debug(subcell, self.subcell_grid_size),
                 ((self.fpos_x - center_x).powi(2) + (self.fpos_y - center_y).powi(2)).sqrt(),
                 self.fpos_x, self.fpos_y);
         }
@@ -2374,7 +2374,7 @@ impl Actor {
     }
 
     /// Log transition to Idle state
-    fn log_transition_to_idle(&self, subcell: &SubCellCoord, dist: f32, always_trace: bool, track_movement: bool) {
+    fn log_transition_to_idle(&self, subcell: &SubPoint, dist: f32, always_trace: bool, track_movement: bool) {
         if always_trace || (self.id == 0 && track_movement) {
             println!("[ALIGN] Actor {} reached PSC center (dist={:.2}px < threshold=2.00px), entering Idle state",
                 self.id, dist);
@@ -2411,21 +2411,21 @@ impl Actor {
     }
 
     /// Log PSC switching decision
-    fn log_psc_switch(&self, from: &SubCellCoord, to: &SubCellCoord, reason: &str, always_trace: bool, track_movement: bool) {
+    fn log_psc_switch(&self, from: &SubPoint, to: &SubPoint, reason: &str, always_trace: bool, track_movement: bool) {
         if always_trace || (self.id == 0 && track_movement) {
-            println!("[PSC SWITCH] Actor {} switching from ({},{},{},{}) to ({},{},{},{}) - {}",
+            println!("[PSC SWITCH] Actor {} switching from {} to {} - {}",
                 self.id,
-                from.cell_x, from.cell_y, from.sub_x, from.sub_y,
-                to.cell_x, to.cell_y, to.sub_x, to.sub_y,
+                Self::format_subpoint_debug(from, self.subcell_grid_size),
+                Self::format_subpoint_debug(to, self.subcell_grid_size),
                 reason);
         }
     }
 
     /// Log staying at current PSC
-    fn log_staying_at_psc(&self, psc: &SubCellCoord, always_trace: bool, track_movement: bool) {
+    fn log_staying_at_psc(&self, psc: &SubPoint, always_trace: bool, track_movement: bool) {
         if always_trace || (self.id == 0 && track_movement) {
-            println!("[PSC] Actor {} staying at ({},{},{},{})",
-                self.id, psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y);
+            println!("[PSC] Actor {} staying at {}",
+                self.id, Self::format_subpoint_debug(psc, self.subcell_grid_size));
         }
     }
 
@@ -2437,11 +2437,11 @@ impl Actor {
     }
 
     /// Log reservation success
-    fn log_reservation_success(&self, reserved: &SubCellCoord, reservation_type: &str, always_trace: bool, track_movement: bool) {
+    fn log_reservation_success(&self, reserved: &SubPoint, reservation_type: &str, always_trace: bool, track_movement: bool) {
         if always_trace || (self.id == 0 && track_movement) {
-            println!("[RESERVE] Actor {} {} SUCCESS: reserved ({},{},{},{})",
+            println!("[RESERVE] Actor {} {} SUCCESS: reserved {}",
                 self.id, reservation_type,
-                reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+                Self::format_subpoint_debug(reserved, self.subcell_grid_size));
         }
     }
 
