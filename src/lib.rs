@@ -22,5 +22,5 @@ pub use config::{Config, ReservationEagerness, ReleaseEagerness};
 pub use grid::Grid;
 pub use raycast::raycast;
 pub use save_state::SaveState;
-pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, find_square_reservation, spread_subcell_destinations, spread_cell_destinations, get_counter_diagonal_subpoints, calculate_rectangle_bounds_subpoint, is_within_rectangle, spread_subpoint_destinations};
+pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, find_square_reservation, spread_subcell_destinations, spread_cell_destinations, get_counter_diagonal_subpoints, calculate_rectangle_bounds_subpoint, is_within_rectangle, spread_subpoint_destinations, find_best_neighbors_subpoint, find_best_3_neighbors_subpoint};
 pub use subpoint::SubPoint;

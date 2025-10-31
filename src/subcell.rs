@@ -1142,6 +1142,136 @@ pub fn spread_subpoint_destinations(
     destinations
 }
 
+/// Find the best neighbors for pathfinding (SubPoint version)
+/// Returns up to 5 neighbors sorted by alignment to target direction
+///
+/// # Arguments
+/// * `current` - Current SubPoint position
+/// * `target_dir_x` - Target direction X component (normalized or unnormalized)
+/// * `target_dir_y` - Target direction Y component (normalized or unnormalized)
+/// * `cell_width` - Width of a cell in screen pixels
+/// * `cell_height` - Height of a cell in screen pixels
+/// * `grid_size` - Subcell grid size (typically 2 for 2x2)
+/// * `filter_backward` - If true, filter out candidates with negative alignment scores
+pub fn find_best_neighbors_subpoint(
+    current: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    filter_backward: bool,
+) -> Vec<crate::subpoint::SubPoint> {
+    let neighbors = current.get_neighbors();
+
+    // Calculate alignment scores for all neighbors
+    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
+        .collect();
+
+    // Sort by score (highest first)
+    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
+    if filter_backward {
+        scored_neighbors.retain(|(_, score)| *score >= 0.0);
+    }
+
+    // Return top 5 candidates (or fewer if filtered)
+    scored_neighbors.iter().take(5).map(|(coord, _)| *coord).collect()
+}
+
+/// Filter SubPoint candidates to only those that decrease Euclidean distance to destination
+/// This ensures monotonic approach: overall distance never increases
+/// Allows small coordinate increases if total distance still decreases
+fn filter_monotonic_approach_subpoint(
+    current: &crate::subpoint::SubPoint,
+    candidates: Vec<crate::subpoint::SubPoint>,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> Vec<crate::subpoint::SubPoint> {
+    // Calculate current distance to destination
+    let (curr_x, curr_y) = current.to_screen_center(cell_width, cell_height, grid_size);
+    let curr_dx = dest_screen_x - curr_x;
+    let curr_dy = dest_screen_y - curr_y;
+    let current_distance = (curr_dx * curr_dx + curr_dy * curr_dy).sqrt();
+
+    // Filter candidates that would increase distance
+    candidates
+        .into_iter()
+        .filter(|candidate| {
+            let (cand_x, cand_y) = candidate.to_screen_center(cell_width, cell_height, grid_size);
+            let cand_dx = dest_screen_x - cand_x;
+            let cand_dy = dest_screen_y - cand_y;
+            let candidate_distance = (cand_dx * cand_dx + cand_dy * cand_dy).sqrt();
+
+            // Only keep candidates that decrease or maintain distance
+            candidate_distance <= current_distance
+        })
+        .collect()
+}
+
+/// Find the best 3 neighbors (strictly limited to ±45° alternatives) (SubPoint version)
+/// Returns exactly 3 candidates (or fewer if filtered):
+/// 1. Best aligned neighbor
+/// 2. Clockwise neighbor (±45°)
+/// 3. Counter-clockwise neighbor (±45°)
+///
+/// This provides more deterministic pathfinding with fewer alternatives.
+/// If filter_backward is true, candidates with negative scores are filtered out.
+/// If use_monotonic_filter is true, ensures Euclidean distance to destination never increases.
+/// If allow_fallback is true and all candidates are filtered, returns best candidate anyway.
+pub fn find_best_3_neighbors_subpoint(
+    current: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    filter_backward: bool,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    use_monotonic_filter: bool,
+    allow_fallback: bool,
+) -> Vec<crate::subpoint::SubPoint> {
+    let neighbors = current.get_neighbors();
+
+    // Calculate alignment scores for all neighbors
+    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
+        .collect();
+
+    // Sort by score (highest first)
+    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // Filter out backward moves if requested (score < 0.0 means moving away from destination)
+    if filter_backward {
+        scored_neighbors.retain(|(_, score)| *score >= 0.0);
+    }
+
+    // Take only top 3 candidates
+    let candidates: Vec<crate::subpoint::SubPoint> = scored_neighbors.iter().take(3).map(|(coord, _)| *coord).collect();
+
+    // Apply monotonic distance filter if requested (for Basic3 modes)
+    if use_monotonic_filter {
+        let filtered = filter_monotonic_approach_subpoint(current, candidates.clone(), dest_screen_x, dest_screen_y, cell_width, cell_height, grid_size);
+
+        // If all filtered out and fallback allowed, return best candidate
+        if filtered.is_empty() && allow_fallback && !candidates.is_empty() {
+            vec![candidates[0]]
+        } else {
+            filtered
+        }
+    } else {
+        candidates
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
