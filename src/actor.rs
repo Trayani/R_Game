@@ -1,6 +1,7 @@
 use crate::Grid;
 use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
+use crate::actor_directives;
 
 /// Affinity for diagonal movement (actor_directing_v2.txt Section B)
 /// Determines which anchor subcell to reserve alongside diagonal subcell
@@ -3044,7 +3045,21 @@ impl Actor {
                     // Hysteresis epsilon defined in diagonal section above
                     const HYSTERESIS_EPSILON: f32 = 0.001;
 
-                    // Calculate distance from current PSC to destination
+                    // Get subcell centers
+                    let current_center = current.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+                    let reserved_center = reserved.to_screen_center_with_offset(
+                        self.cell_width,
+                        self.cell_height,
+                        self.subcell_offset_x,
+                        self.subcell_offset_y,
+                    );
+
+                    // Calculate distance from current PSC to destination (for logging)
                     let dist_current = Self::subcell_center_distance_to_destination(
                         &current,
                         dest_screen_x,
@@ -3055,7 +3070,7 @@ impl Actor {
                         self.subcell_offset_y,
                     );
 
-                    // Calculate distance from reserved PSC to destination
+                    // Calculate distance from reserved PSC to destination (for logging)
                     let dist_reserved = Self::subcell_center_distance_to_destination(
                         &reserved,
                         dest_screen_x,
@@ -3075,115 +3090,33 @@ impl Actor {
                             dist_current, dist_reserved, (dist_reserved - dist_current).abs());
                     }
 
-                    // Apply hysteresis: only switch if reserved is clearly better
-                    let (chosen, chosen_name) = if dist_reserved < dist_current - HYSTERESIS_EPSILON {
-                        // Reserved is clearly better (more than epsilon closer)
+                    // Use directive function to decide whether to switch
+                    // This uses actor's ACTUAL POSITION instead of subcell centers
+                    let should_switch = actor_directives::should_switch_to_reserved(
+                        self.id,
+                        (self.fpos_x, self.fpos_y),
+                        current_center,
+                        reserved_center,
+                        (dest_screen_x, dest_screen_y),
+                        false, // H/V move, no anchor
+                    );
+
+                    let (chosen, chosen_name) = if should_switch {
                         if always_trace || track_movement {
-                            println!("  [PSC_HV] Chose RESERVED - dist_reserved ({:.6}) < dist_current ({:.6}) - epsilon",
-                                dist_reserved, dist_current);
+                            println!("  [PSC_HV_DIRECTIVE] SWITCH to RESERVED (directive approved)");
                         }
                         if always_trace || (self.id == 0 && track_movement) {
-                            println!("  [PSC SELECTION] H/V move, using reserved as new PSC");
+                            println!("  [PSC SELECTION] H/V move, using reserved as new PSC (directive)");
                         }
-                        (reserved, "Reserved".to_string())
+                        (reserved, "Reserved (directive)".to_string())
                     } else {
-                        // Within epsilon - effectively equidistant
-                        if self.enable_lookahead {
-                            // Use look-ahead to break deadlock
-                            if always_trace || track_movement {
-                                println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), evaluating look-ahead...",
-                                    HYSTERESIS_EPSILON);
-                            }
-
-                            // Evaluate 2-step paths from both candidates
-                            let lookahead_current = Self::evaluate_lookahead_candidate(
-                            &current,
-                            dest_screen_x,
-                            dest_screen_y,
-                            self.cell_width,
-                            self.cell_height,
-                            self.subcell_offset_x,
-                            self.subcell_offset_y,
-                            reservation_manager,
-                            self.id,
-                        );
-                        let lookahead_reserved = Self::evaluate_lookahead_candidate(
-                            &reserved,
-                            dest_screen_x,
-                            dest_screen_y,
-                            self.cell_width,
-                            self.cell_height,
-                            self.subcell_offset_x,
-                            self.subcell_offset_y,
-                            reservation_manager,
-                            self.id,
-                        );
-
-                        // Choose based on look-ahead results
-                        let (chosen, chosen_name) = match (lookahead_current, lookahead_reserved) {
-                            (Some(dist_c), Some(dist_r)) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] current_2step={:.6} reserved_2step={:.6}", dist_c, dist_r);
-                                }
-                                if dist_r < dist_c {
-                                    if always_trace || track_movement {
-                                        println!("  [LOOKAHEAD] Breaking deadlock: chose RESERVED (better 2-step)");
-                                    }
-                                    if always_trace || (self.id == 0 && track_movement) {
-                                        println!("  [PSC SELECTION] H/V move, using reserved as new PSC (lookahead)");
-                                    }
-                                    (reserved, "Reserved (lookahead)".to_string())
-                                } else {
-                                    if always_trace || track_movement {
-                                        println!("  [LOOKAHEAD] Staying at CURRENT (better 2-step)");
-                                    }
-                                    if always_trace || (self.id == 0 && track_movement) {
-                                        println!("  [PSC SELECTION] H/V move, staying at current PSC (lookahead)");
-                                    }
-                                    (current, "Current (lookahead)".to_string())
-                                }
-                            }
-                            (Some(_), None) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Only current has valid 2-step");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Staying at current (only valid lookahead)");
-                                }
-                                (current, "Current (only valid lookahead)".to_string())
-                            }
-                            (None, Some(_)) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Only reserved has valid 2-step");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Using reserved (only valid lookahead)");
-                                }
-                                (reserved, "Reserved (only valid lookahead)".to_string())
-                            }
-                            (None, None) => {
-                                if always_trace || track_movement {
-                                    println!("  [LOOKAHEAD] Both blocked, staying at current");
-                                }
-                                if always_trace || (self.id == 0 && track_movement) {
-                                    println!("  [PSC SELECTION] Staying at current (deadlock, both blocked)");
-                                }
-                                (current, "Current (deadlock)".to_string())
-                            }
-                        };
-
-                            (chosen, chosen_name)
-                        } else {
-                            // Fallback when look-ahead disabled: stay at current (conservative)
-                            if always_trace || track_movement {
-                                println!("  [PSC_HV] HYSTERESIS: distances within epsilon ({:.6}), look-ahead disabled, staying at current",
-                                    HYSTERESIS_EPSILON);
-                            }
-                            if always_trace || (self.id == 0 && track_movement) {
-                                println!("  [PSC SELECTION] Staying at current (hysteresis fallback)");
-                            }
-                            (current, "Current (hysteresis)".to_string())
+                        if always_trace || track_movement {
+                            println!("  [PSC_HV_DIRECTIVE] STAY at CURRENT (directive rejected switch)");
                         }
+                        if always_trace || (self.id == 0 && track_movement) {
+                            println!("  [PSC SELECTION] H/V move, staying at current PSC (directive)");
+                        }
+                        (current, "Current (directive)".to_string())
                     };
 
                     let info = PSCSelectionInfo {
