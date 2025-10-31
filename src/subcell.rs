@@ -564,6 +564,29 @@ pub fn get_counter_diagonal_subcells(current: &SubCellCoord, target: &SubCellCoo
     [counter1, counter2]
 }
 
+/// Get the two counter-diagonal subcells for a diagonal move (SubPoint version)
+///
+/// For a diagonal move from current to target, returns the two subcells that form
+/// the counter-diagonal (the two cells that would create a crossing pattern).
+///
+/// This is the SubPoint version of get_counter_diagonal_subcells.
+pub fn get_counter_diagonal_subpoints(current: &crate::subpoint::SubPoint, target: &crate::subpoint::SubPoint) -> [crate::subpoint::SubPoint; 2] {
+    // With SubPoint's flat coordinates, this is much simpler
+    // Counter-diagonal cells are formed by swapping one coordinate
+
+    let counter1 = crate::subpoint::SubPoint {
+        x: target.x,
+        y: current.y,
+    };
+
+    let counter2 = crate::subpoint::SubPoint {
+        x: current.x,
+        y: target.y,
+    };
+
+    [counter1, counter2]
+}
+
 /// Find the best neighbor sub-cell that aligns with the target direction
 /// Returns up to 5 candidates in priority order:
 /// 1. Best aligned neighbor
