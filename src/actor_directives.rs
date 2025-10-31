@@ -1,0 +1,230 @@
+/// Actor Directives - Simple if-else decision logic for actor state machine
+///
+/// This file contains all decision-making logic for actors.
+/// Keep this simple with clear if-else statements that are easy to understand and modify.
+///
+/// YOU (the user) will maintain this file directly.
+
+use crate::subcell::SubCellCoord;
+
+/// Calculate Euclidean distance between two points
+fn distance(p1: (f32, f32), p2: (f32, f32)) -> f32 {
+    ((p1.0 - p2.0).powi(2) + (p1.1 - p2.1).powi(2)).sqrt()
+}
+
+// ============================================================================
+// STATE TRANSITION DECISIONS
+// ============================================================================
+
+/// Should actor reserve its initial subcell?
+/// Called when actor has no current_subcell (NoSubcell state)
+pub fn should_reserve_initial_subcell(
+    _actor_id: usize,
+    _actor_pos: (f32, f32),
+    _has_destination: bool,
+) -> bool {
+    // Always try to reserve initial subcell
+    // Actor needs a subcell to align to before it can navigate
+    true
+}
+
+/// Should actor transition from PscAlignment to Idle?
+/// Called when actor is aligning to subcell center
+pub fn should_transition_to_idle(
+    _actor_id: usize,
+    distance_to_center: f32,
+    alignment_threshold: f32,
+) -> bool {
+    // Simple rule: transition when close enough to center
+    if distance_to_center < alignment_threshold {
+        return true;
+    }
+    false
+}
+
+/// Should actor attempt to reserve next subcell?
+/// Called when actor is in Idle state at subcell center
+pub fn should_attempt_next_reservation(
+    _actor_id: usize,
+    has_destination: bool,
+) -> bool {
+    // Only try to reserve next subcell if we have a destination
+    if has_destination {
+        return true;
+    }
+    false
+}
+
+// ============================================================================
+// NAVIGATION DECISIONS
+// ============================================================================
+
+/// Should actor try diagonal movement first?
+/// Called when actor is ready to reserve next subcell
+pub fn should_try_diagonal_first(
+    _actor_id: usize,
+    dx_to_dest: f32,
+    dy_to_dest: f32,
+) -> bool {
+    // Try diagonal if moving in both X and Y directions
+    let moving_x = dx_to_dest.abs() > 5.0;
+    let moving_y = dy_to_dest.abs() > 5.0;
+
+    if moving_x && moving_y {
+        return true;
+    }
+    false
+}
+
+/// Should actor fallback to horizontal/vertical movement?
+/// Called when diagonal reservation fails
+pub fn should_fallback_to_hv(
+    _actor_id: usize,
+) -> bool {
+    // Always try H/V fallback if diagonal fails
+    true
+}
+
+/// Should actor wait when all reservations fail?
+/// Called when neither diagonal nor H/V can be reserved
+pub fn should_wait_when_blocked(
+    _actor_id: usize,
+) -> bool {
+    // Wait in place if no moves available
+    true
+}
+
+// ============================================================================
+// PSC SWITCHING DECISIONS (CRITICAL - Controls backwards movement)
+// ============================================================================
+
+/// Should actor switch from current subcell to reserved subcell?
+///
+/// This is the CRITICAL decision that controls backwards movement!
+///
+/// Parameters:
+/// - actor_pos: Actor's current (x, y) position
+/// - current_center: Center of current subcell
+/// - reserved_center: Center of reserved subcell
+/// - destination: Destination (x, y) position
+/// - has_anchor: Whether this is a diagonal move with anchor subcell
+///
+/// Returns: true if actor should switch to reserved subcell
+pub fn should_switch_to_reserved(
+    _actor_id: usize,
+    actor_pos: (f32, f32),
+    current_center: (f32, f32),
+    reserved_center: (f32, f32),
+    destination: (f32, f32),
+    _has_anchor: bool,
+) -> bool {
+    // Calculate distances FROM ACTOR'S ACTUAL POSITION (not subcell centers!)
+    let actor_to_dest = distance(actor_pos, destination);
+    let reserved_center_to_dest = distance(reserved_center, destination);
+    let current_center_to_dest = distance(current_center, destination);
+
+    // Calculate how far actor would need to move to reach each subcell center
+    let dist_to_current_center = distance(actor_pos, current_center);
+    let dist_to_reserved_center = distance(actor_pos, reserved_center);
+
+    // RULE 1: Don't switch if reserved is much farther from destination
+    if reserved_center_to_dest > current_center_to_dest + 20.0 {
+        return false; // Reserved is significantly farther from destination
+    }
+
+    // RULE 2: Don't switch if it requires moving backwards (away from destination)
+    // Check if moving to reserved center would increase distance to destination
+    let would_move_backwards = dist_to_reserved_center > dist_to_current_center * 1.5;
+    if would_move_backwards {
+        return false; // Would require moving too far backwards
+    }
+
+    // RULE 3: Switch if reserved is closer to destination AND actor is already close to boundary
+    let near_boundary = dist_to_current_center > 5.0; // Actor is moving away from current center
+    let reserved_is_closer = reserved_center_to_dest < current_center_to_dest - 10.0;
+
+    if near_boundary && reserved_is_closer {
+        return true; // Good time to switch - actor is leaving current subcell anyway
+    }
+
+    // DEFAULT: Stay at current subcell
+    false
+}
+
+/// Should actor switch to anchor subcell?
+/// Called during diagonal movement when actor has both reserved and anchor subcells
+pub fn should_switch_to_anchor(
+    _actor_id: usize,
+    actor_pos: (f32, f32),
+    current_center: (f32, f32),
+    anchor_center: (f32, f32),
+    destination: (f32, f32),
+) -> bool {
+    // Similar logic to should_switch_to_reserved but for anchor subcell
+
+    let anchor_center_to_dest = distance(anchor_center, destination);
+    let current_center_to_dest = distance(current_center, destination);
+    let dist_to_anchor_center = distance(actor_pos, anchor_center);
+    let dist_to_current_center = distance(actor_pos, current_center);
+
+    // Don't switch if anchor is farther from destination
+    if anchor_center_to_dest > current_center_to_dest + 20.0 {
+        return false;
+    }
+
+    // Don't switch if it requires significant backwards movement
+    if dist_to_anchor_center > dist_to_current_center * 1.5 {
+        return false;
+    }
+
+    // Switch if anchor is closer and actor is near boundary
+    let near_boundary = dist_to_current_center > 5.0;
+    let anchor_is_closer = anchor_center_to_dest < current_center_to_dest - 10.0;
+
+    if near_boundary && anchor_is_closer {
+        return true;
+    }
+
+    false
+}
+
+/// Should actor stay at current subcell despite having reservation?
+/// Called as final check before switching PSC
+pub fn should_stay_at_current(
+    _actor_id: usize,
+    actor_pos: (f32, f32),
+    current_center: (f32, f32),
+    _destination: (f32, f32),
+) -> bool {
+    // Stay if actor is still very close to current subcell center
+    let dist_to_center = distance(actor_pos, current_center);
+
+    if dist_to_center < 3.0 {
+        return true; // Very close to center, no need to switch yet
+    }
+
+    false
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS (for common calculations)
+// ============================================================================
+
+/// Check if actor is moving in the direction of destination
+/// Returns true if movement vector aligns with destination direction
+pub fn is_moving_toward_destination(
+    actor_pos: (f32, f32),
+    next_pos: (f32, f32),
+    destination: (f32, f32),
+) -> bool {
+    // Calculate vectors
+    let movement_x = next_pos.0 - actor_pos.0;
+    let movement_y = next_pos.1 - actor_pos.1;
+    let dest_x = destination.0 - actor_pos.0;
+    let dest_y = destination.1 - actor_pos.1;
+
+    // Dot product - positive means moving toward destination
+    let dot_product = movement_x * dest_x + movement_y * dest_y;
+
+    dot_product > 0.0
+}

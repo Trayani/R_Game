@@ -1,5 +1,6 @@
 pub mod action_log;
 pub mod actor;
+pub mod actor_directives;
 pub mod compact_log;
 pub mod cone;
 pub mod config;
