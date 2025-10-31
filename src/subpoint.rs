@@ -47,6 +47,32 @@ impl SubPoint {
         }
     }
 
+    // ========== Index Conversion (1D flattening) ==========
+
+    /// Convert SubPoint to a single integer index for efficient storage in collections
+    /// Formula: index = x + y * width
+    /// This allows using HashSet<usize> or Vec<T> instead of HashMap<SubPoint, T>
+    ///
+    /// # Arguments
+    /// * `width` - The width of the grid in subcell units (typically world_cols * grid_size)
+    pub fn to_index(&self, width: i32) -> usize {
+        (self.x + self.y * width) as usize
+    }
+
+    /// Create SubPoint from a single integer index
+    /// Formula: x = index % width, y = index / width
+    ///
+    /// # Arguments
+    /// * `index` - The flattened index
+    /// * `width` - The width of the grid in subcell units (typically world_cols * grid_size)
+    pub fn from_index(index: usize, width: i32) -> Self {
+        let index = index as i32;
+        SubPoint {
+            x: index % width,
+            y: index / width,
+        }
+    }
+
     // ========== Screen Conversion ==========
 
     /// Convert screen position to SubPoint
@@ -277,11 +303,16 @@ pub fn is_diagonal_move(from: &SubPoint, to: &SubPoint) -> bool {
 // ========== Reservation Manager ==========
 
 pub struct SubPointReservationManager {
-    reservations: HashMap<SubPoint, usize>,
-    current_points: HashMap<usize, SubPoint>,
+    /// Maps index → actor_id for reserved points
+    /// Using flat index instead of SubPoint for better performance
+    reservations: HashMap<usize, usize>,
+    /// Maps actor_id → index for current positions
+    current_points: HashMap<usize, usize>,
     grid_size: i32,
     world_cols: i32,
     world_rows: i32,
+    /// Cached width in subcell units (world_cols * grid_size)
+    subcell_width: i32,
 }
 
 impl SubPointReservationManager {
@@ -292,6 +323,7 @@ impl SubPointReservationManager {
             grid_size,
             world_cols,
             world_rows,
+            subcell_width: world_cols * grid_size,
         }
     }
 
@@ -304,8 +336,10 @@ impl SubPointReservationManager {
             return false;
         }
 
+        let index = point.to_index(self.subcell_width);
+
         // Check reservation
-        if let Some(&reserved_by) = self.reservations.get(&point) {
+        if let Some(&reserved_by) = self.reservations.get(&index) {
             if reserved_by == actor_id {
                 return true; // Already reserved by this actor
             }
@@ -313,51 +347,57 @@ impl SubPointReservationManager {
         }
 
         // Check current occupation
-        for (&other_id, other_point) in &self.current_points {
-            if other_point == &point && other_id != actor_id {
+        for (&other_id, &other_index) in &self.current_points {
+            if other_index == index && other_id != actor_id {
                 return false; // Occupied by another actor
             }
         }
 
-        self.reservations.insert(point, actor_id);
+        self.reservations.insert(index, actor_id);
         true
     }
 
     /// Try to reserve multiple SubPoints atomically
     /// Either all succeed or all fail
     pub fn try_reserve_multiple(&mut self, points: &[SubPoint], actor_id: usize) -> bool {
-        // Check all first (atomic)
+        // Convert all points to indices first
+        let mut indices = Vec::with_capacity(points.len());
         for point in points {
             let (cell_x, cell_y) = point.to_cell(self.grid_size);
             if cell_x < 0 || cell_x >= self.world_cols || cell_y < 0 || cell_y >= self.world_rows {
                 return false;
             }
+            indices.push(point.to_index(self.subcell_width));
+        }
 
-            if let Some(&reserved_by) = self.reservations.get(point) {
+        // Check all first (atomic)
+        for &index in &indices {
+            if let Some(&reserved_by) = self.reservations.get(&index) {
                 if reserved_by != actor_id {
                     return false;
                 }
             }
 
-            for (&other_id, other_point) in &self.current_points {
-                if other_point == point && other_id != actor_id {
+            for (&other_id, &other_index) in &self.current_points {
+                if other_index == index && other_id != actor_id {
                     return false;
                 }
             }
         }
 
         // All clear - reserve all
-        for point in points {
-            self.reservations.insert(*point, actor_id);
+        for index in indices {
+            self.reservations.insert(index, actor_id);
         }
         true
     }
 
     /// Release a reservation
     pub fn release(&mut self, point: SubPoint, actor_id: usize) {
-        if let Some(&reserved_by) = self.reservations.get(&point) {
+        let index = point.to_index(self.subcell_width);
+        if let Some(&reserved_by) = self.reservations.get(&index) {
             if reserved_by == actor_id {
-                self.reservations.remove(&point);
+                self.reservations.remove(&index);
             }
         }
     }
@@ -370,14 +410,16 @@ impl SubPointReservationManager {
     /// Get the owner (actor ID) of a SubPoint
     /// Checks both reservations and current positions
     pub fn get_owner(&self, point: &SubPoint) -> Option<usize> {
+        let index = point.to_index(self.subcell_width);
+
         // Check reservations first
-        if let Some(&actor_id) = self.reservations.get(point) {
+        if let Some(&actor_id) = self.reservations.get(&index) {
             return Some(actor_id);
         }
 
         // Check current positions
-        for (&actor_id, current_point) in &self.current_points {
-            if current_point == point {
+        for (&actor_id, &current_index) in &self.current_points {
+            if current_index == index {
                 return Some(actor_id);
             }
         }
@@ -387,12 +429,15 @@ impl SubPointReservationManager {
 
     /// Set the current SubPoint for an actor
     pub fn set_current(&mut self, point: SubPoint, actor_id: usize) {
-        self.current_points.insert(actor_id, point);
+        let index = point.to_index(self.subcell_width);
+        self.current_points.insert(actor_id, index);
     }
 
     /// Get the current SubPoint for an actor
     pub fn get_current(&self, actor_id: usize) -> Option<SubPoint> {
-        self.current_points.get(&actor_id).copied()
+        self.current_points.get(&actor_id).map(|&index| {
+            SubPoint::from_index(index, self.subcell_width)
+        })
     }
 
     /// Clear all reservations and current positions
