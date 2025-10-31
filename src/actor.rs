@@ -2359,6 +2359,142 @@ impl Actor {
         false
     }
 
+    // ========================================================================
+    // LOGGING HELPERS
+    // ========================================================================
+
+    /// Log actor's alignment to subcell center
+    fn log_subcell_alignment(&self, subcell: &SubCellCoord, center_x: f32, center_y: f32, always_trace: bool) {
+        if always_trace {
+            println!("[ALIGN] Actor {} reserved subcell ({},{},{},{}) at distance {:.1}px from ({:.1},{:.1})",
+                self.id, subcell.cell_x, subcell.cell_y, subcell.sub_x, subcell.sub_y,
+                ((self.fpos_x - center_x).powi(2) + (self.fpos_y - center_y).powi(2)).sqrt(),
+                self.fpos_x, self.fpos_y);
+        }
+    }
+
+    /// Log failure to reserve any subcell
+    fn log_no_subcell_available(&self, radius: i32, always_trace: bool) {
+        if always_trace {
+            println!("[ALIGN] Actor {} could NOT reserve ANY subcell within radius {} - all occupied, will retry",
+                self.id, radius);
+        }
+    }
+
+    /// Log entering PscAlignment state
+    fn log_entering_psc_alignment(&self, center_x: f32, center_y: f32, always_trace: bool) {
+        if always_trace {
+            println!("[ALIGN] Actor {} entering PscAlignment to subcell center ({:.1},{:.1})",
+                self.id, center_x, center_y);
+        }
+    }
+
+    /// Log alignment target being set
+    fn log_alignment_target_set(&self, target_x: f32, target_y: f32, always_trace: bool) {
+        if always_trace {
+            println!("[ALIGN] Actor {} set initial alignment_target to ({:.1},{:.1})",
+                self.id, target_x, target_y);
+        }
+    }
+
+    /// Log PscAlignment movement progress
+    fn log_psc_alignment_movement(&self, old_x: f32, old_y: f32, dist_to_center: f32, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[ALIGN] Actor {} moving to PSC center: ({:.1},{:.1}) → ({:.1},{:.1}), dist={:.2}px",
+                self.id, old_x, old_y, self.fpos_x, self.fpos_y, dist_to_center);
+        }
+    }
+
+    /// Log transition to Idle state
+    fn log_transition_to_idle(&self, subcell: &SubCellCoord, dist: f32, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[ALIGN] Actor {} reached PSC center (dist={:.2}px < threshold=2.00px), entering Idle state",
+                self.id, dist);
+        }
+    }
+
+    /// Log no destination available
+    fn log_no_destination(&self, always_trace: bool) {
+        if always_trace {
+            println!("[DestDirect] Actor {} has NO DESTINATION (Idle at subcell center)", self.id);
+        }
+    }
+
+    /// Log destination information
+    fn log_destination(&self, dest_x: f32, dest_y: f32, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[DestDirect] Destination: ({:.0},{:.0})", dest_x, dest_y);
+        }
+    }
+
+    /// Log destination reached
+    fn log_destination_reached(&self, dist: f32, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[DEST REACHED] Actor {} within 2.0px (dist={:.2}px)", self.id, dist);
+        }
+    }
+
+    /// Log movement execution
+    fn log_movement(&self, move_dist: f32, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[MOVE] Actor {} moved {:.2}px to ({:.1},{:.1})",
+                self.id, move_dist, self.fpos_x, self.fpos_y);
+        }
+    }
+
+    /// Log PSC switching decision
+    fn log_psc_switch(&self, from: &SubCellCoord, to: &SubCellCoord, reason: &str, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[PSC SWITCH] Actor {} switching from ({},{},{},{}) to ({},{},{},{}) - {}",
+                self.id,
+                from.cell_x, from.cell_y, from.sub_x, from.sub_y,
+                to.cell_x, to.cell_y, to.sub_x, to.sub_y,
+                reason);
+        }
+    }
+
+    /// Log staying at current PSC
+    fn log_staying_at_psc(&self, psc: &SubCellCoord, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[PSC] Actor {} staying at ({},{},{},{})",
+                self.id, psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y);
+        }
+    }
+
+    /// Log reservation attempt
+    fn log_reservation_attempt(&self, reservation_type: &str, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[RESERVE] Actor {} attempting {} reservation", self.id, reservation_type);
+        }
+    }
+
+    /// Log reservation success
+    fn log_reservation_success(&self, reserved: &SubCellCoord, reservation_type: &str, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[RESERVE] Actor {} {} SUCCESS: reserved ({},{},{},{})",
+                self.id, reservation_type,
+                reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
+        }
+    }
+
+    /// Log reservation failure
+    fn log_reservation_failure(&self, reservation_type: &str, reason: &str, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            println!("[RESERVE] Actor {} {} FAILED: {}", self.id, reservation_type, reason);
+        }
+    }
+
+    /// Log function return
+    fn log_return(&self, reached: bool, always_trace: bool, track_movement: bool) {
+        if always_trace || (self.id == 0 && track_movement) {
+            if reached {
+                println!("  [RETURN] Returning true (reached destination)");
+            } else {
+                println!("  [RETURN] Returning false (not reached destination)");
+            }
+        }
+    }
+
 
     /// Update sub-cell movement with destination-direct strategy
     /// Returns true if destination reached, false otherwise
@@ -2380,10 +2516,7 @@ impl Actor {
         enable_early_reservation: bool,
         filter_backward: bool,
         enable_anti_cross: bool,
-        track_movement: bool,
-        reservation_threshold_distance: f32,
-        reservation_eagerness: crate::config::ReservationEagerness,
-        release_eagerness: crate::config::ReleaseEagerness,
+        track_movement: bool
     ) -> bool {
         // ALWAYS log first 100 frames for actor 0 to debug GUI freeze
         // ALSO log when actor is at critical moments (target reached, switching, etc.)
