@@ -313,32 +313,6 @@ fn handle_idle_state(
     )
 }
 
-/// Handle Move state - actor has reservation, moving toward it
-fn handle_move_state(
-    actor: &mut Actor,
-    delta_time: f32,
-    reservation_manager: &mut SubCellReservationManager,
-    enable_early_reservation: bool,
-    enable_anti_cross: bool,
-    track_movement: bool,
-    reservation_eagerness: ReservationEagerness,
-    release_eagerness: ReleaseEagerness,
-) -> bool {
-    // Delegate to full implementation for now
-    // TODO: Extract Move-specific logic here
-    actor.update_subcell_destination_direct_impl(
-        delta_time,
-        reservation_manager,
-        enable_early_reservation,
-        false,
-        enable_anti_cross,
-        track_movement,
-        0.0,
-        reservation_eagerness,
-        release_eagerness,
-    )
-}
-
 // ============================================================================
 // UPDATE ACTOR - DECISION ROOT
 // ============================================================================
@@ -391,15 +365,20 @@ pub fn update_actor(
             reservation_eagerness,
             release_eagerness,
         ),
-        AlignmentState::Move => handle_move_state(
-            actor,
-            delta_time,
-            reservation_manager,
-            enable_early_reservation,
-            enable_anti_cross,
-            track_movement,
-            reservation_eagerness,
-            release_eagerness,
-        ),
+        AlignmentState::Move => {
+            // Delegate to full implementation for now
+            // TODO: Extract Move-specific logic here
+            actor.update_subcell_destination_direct_impl(
+                delta_time,
+                reservation_manager,
+                enable_early_reservation,
+                false,
+                enable_anti_cross,
+                track_movement,
+                0.0,
+                reservation_eagerness,
+                release_eagerness,
+            )
+        }
     }
 }
