@@ -11,7 +11,7 @@ Incremental migration from SubCellCoord to SubPoint flat coordinate system.
 ## Progress
 
 ### Phase 1: Actor Struct Fields
-- [ ] `current_subcell: Option<SubCellCoord>` → `Option<SubPoint>`
+- [X] `current_subcell: Option<SubCellCoord>` → `Option<SubPoint>` ✓ (Commit: d748020)
 - [ ] `reserved_subcell: Option<SubCellCoord>` → `Option<SubPoint>`
 - [ ] `extra_reserved_subcells: Vec<SubCellCoord>` → `Vec<SubPoint>`
 
@@ -41,9 +41,9 @@ Incremental migration from SubCellCoord to SubPoint flat coordinate system.
 
 ### Phase 5: External Files
 - [ ] `src/actor_execution.rs` - struct literals and field accesses
-- [ ] `src/actor_directives.rs` - any SubCellCoord usage
-- [ ] `src/main.rs` - visualization and GUI code
-- [ ] `src/lib.rs` - update exports
+- [X] `src/actor_directives.rs` - any SubCellCoord usage ✓ (Commit: d748020)
+- [X] `src/main.rs` - visualization and GUI code ✓ (Commit: d748020)
+- [X] `src/lib.rs` - update exports ✓ (Commit: d748020)
 
 ### Phase 6: Tests (33 files)
 - [ ] `tests/test_actor_directing.rs`
@@ -69,3 +69,10 @@ Incremental migration from SubCellCoord to SubPoint flat coordinate system.
 ## Current Session
 Started: 2025-10-31
 Target: Migrate Actor struct fields first
+
+### Session Log
+- **d748020**: Migrated Actor.current_subcell field
+  - Fixed 26 errors in actor.rs
+  - Fixed actor_directives.rs, main.rs, lib.rs
+  - Library compiles, 25/25 unit tests pass
+  - 14 integration test files need field access fixes (pending)

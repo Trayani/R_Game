@@ -247,7 +247,7 @@ fn test_original_bug_case_175_477_to_19_28() {
     );
 
     // Set initial current_subcell (this will be the "stored" PSC)
-    actor.current_subcell = Some(actual_psc.clone());
+    actor.current_subcell = Some(actual_psc.to_subpoint());
 
     // Set destination
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
@@ -311,7 +311,7 @@ fn test_actor_at_subcell_boundary() {
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(actual_psc.clone());
+    actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     let mut reservation_mgr = SubCellReservationManager::new(2);
@@ -362,7 +362,7 @@ fn test_diagonal_movement_northeast() {
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(actual_psc.clone());
+    actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     let mut reservation_mgr = SubCellReservationManager::new(2);
@@ -413,7 +413,7 @@ fn test_diagonal_movement_southwest() {
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(actual_psc.clone());
+    actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     let mut reservation_mgr = SubCellReservationManager::new(2);
@@ -464,7 +464,7 @@ fn test_multiple_updates_psc_lag() {
     let initial_psc = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(initial_psc.clone());
+    actor.current_subcell = Some(initial_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     let mut reservation_mgr = SubCellReservationManager::new(2);
@@ -562,7 +562,7 @@ fn test_high_speed_amplified_psc_lag() {
     let actual_psc = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(actual_psc.clone());
+    actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     let mut reservation_mgr = SubCellReservationManager::new(2);

@@ -63,7 +63,7 @@ fn test_movement_direction(test: &MovementTest) {
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set destination
     let dest = Position { x: dest_cell_x, y: dest_cell_y };

@@ -59,7 +59,7 @@ fn test_direct_movement_plus_5x_plus_13y() {
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     println!("Starting subcell: ({},{},{},{})\n",
         start_subcell.cell_x, start_subcell.cell_y,

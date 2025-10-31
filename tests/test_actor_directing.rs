@@ -254,7 +254,7 @@ fn run_alternative_test(
     }
 
     // NOW set up the actor AFTER blocking
-    actor.current_subcell = Some(psc.clone());
+    actor.current_subcell = Some(psc.to_subpoint());
 
     // Reserve actor's current position
     reservation_mgr.try_reserve(psc.clone(), 0);

@@ -30,7 +30,7 @@ fn test_simple_diagonal_movement_ne() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (NE direction, 4+ cells away)
     let dest = Position { x: 9, y: 1 };
@@ -238,7 +238,7 @@ fn test_simple_diagonal_movement_se() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (SE direction, 4+ cells away)
     let dest = Position { x: 9, y: 9 };
@@ -446,7 +446,7 @@ fn test_simple_diagonal_movement_sw() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (SW direction, 4+ cells away)
     let dest = Position { x: 1, y: 9 };
@@ -654,7 +654,7 @@ fn test_simple_diagonal_movement_nw() {
 
     // Set starting subcell
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     // Set diagonal destination (NW direction, 4+ cells away)
     let dest = Position { x: 1, y: 1 };

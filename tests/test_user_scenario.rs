@@ -58,7 +58,7 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
     let start_subcell = SubCellCoord::from_screen_pos_with_offset(
         spawn_x, spawn_y, cell_width, cell_height, 2, 0.0, 0.0
     );
-    actor.current_subcell = Some(start_subcell.clone());
+    actor.current_subcell = Some(start_subcell.to_subpoint());
 
     println!("Starting subcell: ({},{},{},{})\n",
         start_subcell.cell_x, start_subcell.cell_y,
@@ -115,8 +115,10 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
                 if moved { "MOVING" } else { "STOPPED" });
 
             if let Some(ref sc) = actor.current_subcell {
+                let (cell_x, cell_y) = sc.to_cell(actor.subcell_grid_size);
+                let (sub_x, sub_y) = sc.subcell_offset(actor.subcell_grid_size);
                 println!("                   Subcell: ({},{},{},{}) | Reservations: {}",
-                    sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y,
+                    cell_x, cell_y, sub_x, sub_y,
                     reservation_mgr.reservation_count());
             }
 
