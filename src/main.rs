@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellCoord, SubCellReservationManager, SubPoint, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -380,7 +380,7 @@ impl VisState {
         for actor in &mut self.actors {
             actor.subcell_grid_size = new_grid_size;
             // Re-calculate current sub-cell position with new grid size
-            actor.current_subcell = Some(SubCellCoord::from_screen_pos(
+            actor.current_subcell = Some(SubPoint::from_screen_pos(
                 actor.fpos_x,
                 actor.fpos_y,
                 self.cell_width,
@@ -1024,7 +1024,7 @@ impl VisState {
 
                 // Draw current sub-cell (PSC - bright cyan with thick border)
                 if let Some(current_sc) = actor.current_subcell {
-                    let (cx, cy) = current_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, offset_x, offset_y);
+                    let (cx, cy) = current_sc.to_screen_center_with_offset(self.cell_width, self.cell_height, actor.subcell_grid_size, offset_x, offset_y);
 
                     // Draw line from actor to PSC
                     draw_line(actor.fpos_x, actor.fpos_y, cx, cy, 1.5, SKYBLUE);
@@ -1369,8 +1369,10 @@ impl VisState {
 
             // Draw PSC info
             if let Some(psc) = actor.current_subcell {
+                let (cell_x, cell_y) = psc.to_cell(actor.subcell_grid_size);
+                let (sub_x, sub_y) = psc.subcell_offset(actor.subcell_grid_size);
                 let psc_text = format!("PSC: cell=({},{}), sub=({},{})",
-                    psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y);
+                    cell_x, cell_y, sub_x, sub_y);
                 draw_text(&psc_text, 10.0, debug_y, 18.0, SKYBLUE);
                 debug_y += 20.0;
             }
@@ -1796,12 +1798,16 @@ async fn main() {
                 let sub_cell_height = state.cell_height / subcell_grid_size as f32;
                 let max_sub = subcell_grid_size - 1;
 
+                // Extract cell and subcell coordinates from SubPoint
+                let (cell_x, cell_y) = sc.to_cell(subcell_grid_size);
+                let (sub_x, sub_y) = sc.subcell_offset(subcell_grid_size);
+
                 // Helper closure to calculate screen position for a subcell
                 let calc_screen_pos = |sub_x: i32, sub_y: i32| -> (f32, f32) {
-                    let screen_x = sc.cell_x as f32 * state.cell_width
+                    let screen_x = cell_x as f32 * state.cell_width
                         + sub_x as f32 * sub_cell_width
                         - offset_x * sub_cell_width;
-                    let screen_y = sc.cell_y as f32 * state.cell_height
+                    let screen_y = cell_y as f32 * state.cell_height
                         + sub_y as f32 * sub_cell_height
                         - offset_y * sub_cell_height;
                     (screen_x, screen_y)
@@ -1815,11 +1821,11 @@ async fn main() {
 
                 format!(
                     "\n  Current subcell: ({}, {}, {}, {}) grid_size={}\n  Cell corners:\n    TL ({},{},{},{}) @ ({:.1}, {:.1})\n    TR ({},{},{},{}) @ ({:.1}, {:.1})\n    BL ({},{},{},{}) @ ({:.1}, {:.1})\n    BR ({},{},{},{}) @ ({:.1}, {:.1})",
-                    sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y, sc.grid_size,
-                    sc.cell_x, sc.cell_y, 0, 0, tl_x, tl_y,
-                    sc.cell_x, sc.cell_y, max_sub, 0, tr_x, tr_y,
-                    sc.cell_x, sc.cell_y, 0, max_sub, bl_x, bl_y,
-                    sc.cell_x, sc.cell_y, max_sub, max_sub, br_x, br_y
+                    cell_x, cell_y, sub_x, sub_y, subcell_grid_size,
+                    cell_x, cell_y, 0, 0, tl_x, tl_y,
+                    cell_x, cell_y, max_sub, 0, tr_x, tr_y,
+                    cell_x, cell_y, 0, max_sub, bl_x, bl_y,
+                    cell_x, cell_y, max_sub, max_sub, br_x, br_y
                 )
             } else {
                 String::from("\n  No subcell assigned")

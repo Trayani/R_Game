@@ -7,6 +7,7 @@
 
 use crate::actor::{Actor, AlignmentState};
 use crate::subcell::{SubCellCoord, SubCellReservationManager};
+use crate::subpoint::SubPoint;
 use crate::config::{ReservationEagerness, ReleaseEagerness};
 use crate::pathfinding::Position;
 
@@ -24,11 +25,15 @@ fn distance(p1: (f32, f32), p2: (f32, f32)) -> f32 {
 /// Returns None if destination requires diagonal movement (different X AND Y)
 /// or if already at destination (same X AND Y)
 fn check_cardinal_alignment(
-    current: &SubCellCoord,
+    current: &SubPoint,
     dest: &Position,
+    grid_size: i32,
 ) -> Option<bool> {
-    let same_x = dest.x == current.cell_x;
-    let same_y = dest.y == current.cell_y;
+    // Extract cell coordinates from flat SubPoint
+    let (current_cell_x, current_cell_y) = current.to_cell(grid_size);
+
+    let same_x = dest.x == current_cell_x;
+    let same_y = dest.y == current_cell_y;
 
     if same_x && !same_y {
         Some(false) // Vertical alignment (NORTH/SOUTH)
@@ -398,11 +403,14 @@ fn handle_idle_state(
 
     // 4. Try reservation with appropriate priority based on cardinal alignment
     // Per actor_directing_v2.txt: Spec A1 (cardinal) vs A2 (diagonal)
-    let is_cardinal = check_cardinal_alignment(&current, &dest).is_some();
+    let is_cardinal = check_cardinal_alignment(&current, &dest, actor.subcell_grid_size).is_some();
+
+    // Temporarily convert back to SubCellCoord for methods that haven't been migrated yet
+    let current_coord = crate::subcell::SubCellCoord::from_subpoint(&current, actor.subcell_grid_size);
 
     let success = try_reservation_with_fallback(
         actor,
-        &current,
+        &current_coord,
         dx_to_dest,
         dy_to_dest,
         dest_screen_x,

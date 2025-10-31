@@ -23,3 +23,4 @@ pub use grid::Grid;
 pub use raycast::raycast;
 pub use save_state::SaveState;
 pub use subcell::{SubCellCoord, SubCellReservationManager, find_best_neighbors, find_square_reservation, spread_subcell_destinations, spread_cell_destinations};
+pub use subpoint::SubPoint;

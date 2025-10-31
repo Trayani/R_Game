@@ -2669,7 +2669,7 @@ impl Actor {
                 }
 
                 let c = reserved_subcell.unwrap();
-                self.current_subcell = Some(c);
+                self.current_subcell = Some(c.to_subpoint());
                 reservation_manager.set_current(c, self.id);
 
                 // Enter PscAlignment state (NoSubcell → PscAlignment transition)
@@ -2686,7 +2686,7 @@ impl Actor {
                         self.id, center_x, center_y);
                 }
 
-                c
+                c.to_subpoint()
             }
         };
 
@@ -2696,6 +2696,7 @@ impl Actor {
             let (center_x, center_y) = current.to_screen_center_with_offset(
                 self.cell_width,
                 self.cell_height,
+                self.subcell_grid_size,
                 self.subcell_offset_x,
                 self.subcell_offset_y,
             );
@@ -2823,8 +2824,9 @@ impl Actor {
                 dest_subcell.cell_x, dest_subcell.cell_y, dest_subcell.sub_x, dest_subcell.sub_y);
 
             // Release all reservations except the destination sub-cell
-            if current != dest_subcell {
-                reservation_manager.release(current, self.id);
+            let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
+            if current_coord != dest_subcell {
+                reservation_manager.release(current_coord, self.id);
             }
             if let Some(reserved) = self.reserved_subcell {
                 if reserved != dest_subcell {
@@ -2839,7 +2841,7 @@ impl Actor {
             self.extra_reserved_subcells.clear();
 
             // Keep only the destination sub-cell reserved
-            self.current_subcell = Some(dest_subcell);
+            self.current_subcell = Some(dest_subcell.to_subpoint());
             self.subcell_destination = None;
             self.reserved_subcell = None;
             // Clear locked values from affinity calculation
@@ -2857,8 +2859,9 @@ impl Actor {
             (locked_x, locked_y)
         } else {
             // Fallback: calculate optimal boundary (legacy or non-diagonal movement)
+            let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
             crate::subcell::calculate_optimal_boundary(
-                &current,
+                &current_coord,
                 self.reserved_subcell.as_ref(),
                 anchor_subcell,
                 dest_screen_x,
@@ -2959,6 +2962,7 @@ impl Actor {
                 let (current_x, current_y) = current.to_screen_center_with_offset(
                     self.cell_width,
                     self.cell_height,
+                    self.subcell_grid_size,
                     self.subcell_offset_x,
                     self.subcell_offset_y,
                 );
@@ -3011,6 +3015,7 @@ impl Actor {
                     let current_center = current.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
@@ -3089,7 +3094,7 @@ impl Actor {
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] Staying at CURRENT (directive)");
                         }
-                        (current, "Current (directive, stay)".to_string())
+                        (SubCellCoord::from_subpoint(&current, self.subcell_grid_size), "Current (directive, stay)".to_string())
                     };
 
                     // Calculate distances for logging (using subcell centers for consistency with old logs)
@@ -3114,8 +3119,10 @@ impl Actor {
 
                     // DEBUG: Log diagonal PSC selection
                     if always_trace || track_movement {
+                        let (curr_cx, curr_cy) = current.to_cell(self.subcell_grid_size);
+                        let (curr_sx, curr_sy) = current.subcell_offset(self.subcell_grid_size);
                         println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
-                            current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                            curr_cx, curr_cy, curr_sx, curr_sy,
                             reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
                             anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
                         println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6}",
@@ -3124,7 +3131,7 @@ impl Actor {
 
                     // Create PSC selection info for logging
                     let info = PSCSelectionInfo {
-                        old_psc: current,
+                        old_psc: SubCellCoord::from_subpoint(&current, self.subcell_grid_size),
                         reserved,
                         reserved_dist: dist_reserved,
                         anchor: Some(anchor),
@@ -3143,6 +3150,7 @@ impl Actor {
                     let current_center = current.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
@@ -3154,8 +3162,9 @@ impl Actor {
                     );
 
                     // Calculate distance from current PSC to destination (for logging)
+                    let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                     let dist_current = Self::subcell_center_distance_to_destination(
-                        &current,
+                        &current_coord,
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
@@ -3177,8 +3186,10 @@ impl Actor {
 
                     // DEBUG: Log H/V PSC selection with high precision
                     if always_trace || track_movement {
+                        let (curr_cx, curr_cy) = current.to_cell(self.subcell_grid_size);
+                        let (curr_sx, curr_sy) = current.subcell_offset(self.subcell_grid_size);
                         println!("  [PSC_HV] old_psc=({},{},{},{}) reserved=({},{},{},{}) no anchor",
-                            current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                            curr_cx, curr_cy, curr_sx, curr_sy,
                             reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y);
                         println!("  [PSC_HV] dist_current={:.6} dist_reserved={:.6} diff={:.6}",
                             dist_current, dist_reserved, (dist_reserved - dist_current).abs());
@@ -3210,11 +3221,11 @@ impl Actor {
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [PSC SELECTION] H/V move, staying at current PSC (directive)");
                         }
-                        (current, "Current (directive)".to_string())
+                        (SubCellCoord::from_subpoint(&current, self.subcell_grid_size), "Current (directive)".to_string())
                     };
 
                     let info = PSCSelectionInfo {
-                        old_psc: current,
+                        old_psc: SubCellCoord::from_subpoint(&current, self.subcell_grid_size),
                         reserved,
                         reserved_dist: dist_reserved,
                         anchor: None,
@@ -3236,8 +3247,9 @@ impl Actor {
                     }
 
                     // Release old current sub-cell if different
-                    if current != reserved {
-                        reservation_manager.release(current, self.id);
+                    let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
+                    if current_coord != reserved {
+                        reservation_manager.release(current_coord, self.id);
                     }
 
                     // Release extra reserved cells (not chosen as PSC)
@@ -3249,7 +3261,7 @@ impl Actor {
                     self.extra_reserved_subcells.clear();
 
                     // Update current to the CLOSER subcell
-                    self.current_subcell = Some(new_psc);
+                    self.current_subcell = Some(new_psc.to_subpoint());
                     self.reserved_subcell = None;
                     // Clear locked values when changing reservation
                     self.locked_target = None;
@@ -3312,9 +3324,11 @@ impl Actor {
                         // Always attempt reservation after switching (no eagerness check)
                         // Eagerness only applies to early reservations (next-next cell)
                         // DestinationDirect: Try diagonal+anchor first, fallback to H/V
+                        // Note: current is already SubCellCoord (new_psc) in this code path
+                        let previous_current_coord = SubCellCoord::from_subpoint(&previous_current, self.subcell_grid_size);
                         let diag_success = self.try_reserve_diagonal_with_anchor(
                             &current,
-                            Some(&previous_current),
+                            Some(&previous_current_coord),
                             dx_to_dest,
                             dy_to_dest,
                             dest_screen_x,
@@ -3377,8 +3391,9 @@ impl Actor {
                 }
 
                 // Try diagonal+anchor first
+                let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                 let diagonal_success = self.try_reserve_diagonal_with_anchor(
-                    &current,
+                    &current_coord,
                     None,
                     dx_to_dest,
                     dy_to_dest,
@@ -3401,7 +3416,7 @@ impl Actor {
                         println!("  [RESERVE] Diagonal+anchor FAILED, trying H/V fallback");
                     }
                     let hv_success = self.try_reserve_horizontal_vertical(
-                        &current,
+                        &current_coord,
                         dx_to_dest,
                         dy_to_dest,
                         dest_screen_x,
