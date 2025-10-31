@@ -1995,6 +1995,7 @@ impl Actor {
                     let (res_x, res_y) = reserved_sc.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
@@ -2012,6 +2013,7 @@ impl Actor {
                     let (extra_x, extra_y) = extra_sc.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
