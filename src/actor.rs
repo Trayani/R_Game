@@ -1225,7 +1225,7 @@ impl Actor {
     ///
     /// # Parameters
     /// - `previous_current`: Optional previous position for anti-cross check
-    fn try_reserve_diagonal_with_anchor(
+    pub(crate) fn try_reserve_diagonal_with_anchor(
         &mut self,
         current: &SubCellCoord,
         previous_current: Option<&SubCellCoord>,
@@ -2073,7 +2073,7 @@ impl Actor {
 
     /// Try to reserve H/V sub-cell (fallback when diagonal blocked)
     /// Returns true if reservation succeeded
-    fn try_reserve_horizontal_vertical(
+    pub(crate) fn try_reserve_horizontal_vertical(
         &mut self,
         current: &SubCellCoord,
         dir_x: f32,
