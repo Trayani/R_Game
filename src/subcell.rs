@@ -822,6 +822,85 @@ pub fn calculate_optimal_boundary(
     }
 }
 
+/// SubPoint version of calculate_optimal_boundary
+/// Returns the position the actor should move toward based on:
+/// - Diagonal reservation: Clamp destination to rectangle between current and reserved subcells
+/// - H/V reservation: Return reserved sub-cell center
+/// - No reservation: Return current sub-cell center IF closer to destination, else actor's current position
+pub fn calculate_optimal_boundary_subpoint(
+    current_subcell: &crate::subpoint::SubPoint,
+    reserved_subcell: Option<&crate::subpoint::SubPoint>,
+    dest_screen_x: f32,
+    dest_screen_y: f32,
+    actor_pos_x: f32,
+    actor_pos_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    offset_x: f32,
+    offset_y: f32,
+) -> (f32, f32) {
+    match reserved_subcell {
+        Some(reserved) => {
+            // Check if this is a diagonal reservation
+            let dx = (reserved.x - current_subcell.x).abs();
+            let dy = (reserved.y - current_subcell.y).abs();
+
+            let is_diagonal = dx > 0 && dy > 0;
+
+            if is_diagonal {
+                // Diagonal reservation: Use rectangle-based clamping
+                let (curr_x, curr_y) = current_subcell.to_screen_center_with_offset(
+                    cell_width, cell_height, grid_size, offset_x, offset_y
+                );
+                let (res_x, res_y) = reserved.to_screen_center_with_offset(
+                    cell_width, cell_height, grid_size, offset_x, offset_y
+                );
+
+                let min_x = curr_x.min(res_x);
+                let max_x = curr_x.max(res_x);
+                let min_y = curr_y.min(res_y);
+                let max_y = curr_y.max(res_y);
+
+                let clamped_x = dest_screen_x.max(min_x).min(max_x);
+                let clamped_y = dest_screen_y.max(min_y).min(max_y);
+
+                (clamped_x, clamped_y)
+            } else {
+                // H/V reservation: Move directly to reserved sub-cell center
+                let target = reserved.to_screen_center_with_offset(
+                    cell_width, cell_height, grid_size, offset_x, offset_y
+                );
+                println!("[BOUNDARY] H/V reservation: target=reserved center ({:.1},{:.1})",
+                    target.0, target.1);
+                target
+            }
+        }
+        None => {
+            // No reservation: Stay at current subcell center
+            let center = current_subcell.to_screen_center_with_offset(
+                cell_width, cell_height, grid_size, offset_x, offset_y
+            );
+
+            // Check if already at center - if so, just stay
+            let dx_to_center = center.0 - actor_pos_x;
+            let dy_to_center = center.1 - actor_pos_y;
+            let dist_to_center = (dx_to_center * dx_to_center + dy_to_center * dy_to_center).sqrt();
+
+            if dist_to_center < 0.5 {
+                // Already at or very close to center - stay in place
+                println!("[BOUNDARY] No reservation: staying at current position");
+                (actor_pos_x, actor_pos_y)
+            } else {
+                // Move toward subcell center
+                println!("[BOUNDARY] No reservation: moving to subcell center ({:.1},{:.1})",
+                    center.0, center.1);
+                center
+            }
+        }
+    }
+}
+
 /// Spread actors across different CELLS (not sub-cells)
 /// This is for final destinations - each actor gets a different cell
 /// Uses spiral pattern: center cell, then 8 neighbors, then next ring, etc.

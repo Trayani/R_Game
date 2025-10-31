@@ -2859,11 +2859,11 @@ impl Actor {
             (locked_x, locked_y)
         } else {
             // Fallback: calculate optimal boundary (legacy or non-diagonal movement)
-            let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
-            crate::subcell::calculate_optimal_boundary(
-                &current_coord,
-                self.reserved_subcell.as_ref(),
-                anchor_subcell,
+            // Convert reserved_subcell from SubCellCoord to SubPoint for new API
+            let reserved_subpoint = self.reserved_subcell.as_ref().map(|sc| sc.to_subpoint());
+            crate::subcell::calculate_optimal_boundary_subpoint(
+                &current,
+                reserved_subpoint.as_ref(),
                 dest_screen_x,
                 dest_screen_y,
                 self.fpos_x,
