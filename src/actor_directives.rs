@@ -254,10 +254,7 @@ fn handle_no_subcell_state(
         enable_early_reservation,
         false,
         enable_anti_cross,
-        track_movement,
-        0.0,
-        reservation_eagerness,
-        release_eagerness,
+        track_movement
     )
 }
 
@@ -280,36 +277,7 @@ fn handle_psc_alignment_state(
         enable_early_reservation,
         false,
         enable_anti_cross,
-        track_movement,
-        0.0,
-        reservation_eagerness,
-        release_eagerness,
-    )
-}
-
-/// Handle Idle state - actor at subcell center, ready to move
-fn handle_idle_state(
-    actor: &mut Actor,
-    delta_time: f32,
-    reservation_manager: &mut SubCellReservationManager,
-    enable_early_reservation: bool,
-    enable_anti_cross: bool,
-    track_movement: bool,
-    reservation_eagerness: ReservationEagerness,
-    release_eagerness: ReleaseEagerness,
-) -> bool {
-    // Delegate to full implementation for now
-    // TODO: Extract Idle-specific logic here
-    actor.update_subcell_destination_direct_impl(
-        delta_time,
-        reservation_manager,
-        enable_early_reservation,
-        false,
-        enable_anti_cross,
-        track_movement,
-        0.0,
-        reservation_eagerness,
-        release_eagerness,
+        track_movement
     )
 }
 
@@ -355,17 +323,24 @@ pub fn update_actor(
             reservation_eagerness,
             release_eagerness,
         ),
-        AlignmentState::Idle => handle_idle_state(
-            actor,
-            delta_time,
-            reservation_manager,
-            enable_early_reservation,
-            enable_anti_cross,
-            track_movement,
-            reservation_eagerness,
-            release_eagerness,
-        ),
+        AlignmentState::Idle => {
+            // Delegate to full implementation for now
+            // TODO: Extract Idle-specific logic here
+            actor.update_subcell_destination_direct_impl(
+                delta_time,
+                reservation_manager,
+                enable_early_reservation,
+                false,
+                enable_anti_cross,
+                track_movement
+            )
+        }
         AlignmentState::Move => {
+
+
+            // actor should have
+
+
             // Delegate to full implementation for now
             // TODO: Extract Move-specific logic here
             actor.update_subcell_destination_direct_impl(
@@ -374,10 +349,7 @@ pub fn update_actor(
                 enable_early_reservation,
                 false,
                 enable_anti_cross,
-                track_movement,
-                0.0,
-                reservation_eagerness,
-                release_eagerness,
+                track_movement
             )
         }
     }
