@@ -746,6 +746,30 @@ pub fn is_within_rectangle(
     pos_x >= min_x && pos_x <= max_x && pos_y >= min_y && pos_y <= max_y
 }
 
+/// Calculate rectangle bounds between two SubPoints (SubPoint version)
+///
+/// Returns (min_x, min_y, max_x, max_y) representing the rectangular area
+/// bounded by the screen centers of the two subcells.
+pub fn calculate_rectangle_bounds_subpoint(
+    current: &crate::subpoint::SubPoint,
+    reserved: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+    offset_x: f32,
+    offset_y: f32,
+) -> (f32, f32, f32, f32) {
+    let (curr_x, curr_y) = current.to_screen_center_with_offset(cell_width, cell_height, grid_size, offset_x, offset_y);
+    let (res_x, res_y) = reserved.to_screen_center_with_offset(cell_width, cell_height, grid_size, offset_x, offset_y);
+
+    let min_x = curr_x.min(res_x);
+    let max_x = curr_x.max(res_x);
+    let min_y = curr_y.min(res_y);
+    let max_y = curr_y.max(res_y);
+
+    (min_x, min_y, max_x, max_y)
+}
+
 /// Calculate the optimal target position for destination-direct movement
 ///
 /// Returns the position the actor should move toward based on:
@@ -873,17 +897,15 @@ pub fn calculate_optimal_boundary_subpoint(
 
             if is_diagonal {
                 // Diagonal reservation: Use rectangle-based clamping
-                let (curr_x, curr_y) = current_subcell.to_screen_center_with_offset(
-                    cell_width, cell_height, grid_size, offset_x, offset_y
+                let (min_x, min_y, max_x, max_y) = calculate_rectangle_bounds_subpoint(
+                    current_subcell,
+                    reserved,
+                    cell_width,
+                    cell_height,
+                    grid_size,
+                    offset_x,
+                    offset_y,
                 );
-                let (res_x, res_y) = reserved.to_screen_center_with_offset(
-                    cell_width, cell_height, grid_size, offset_x, offset_y
-                );
-
-                let min_x = curr_x.min(res_x);
-                let max_x = curr_x.max(res_x);
-                let min_y = curr_y.min(res_y);
-                let max_y = curr_y.max(res_y);
 
                 let clamped_x = dest_screen_x.max(min_x).min(max_x);
                 let clamped_y = dest_screen_y.max(min_y).min(max_y);
