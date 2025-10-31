@@ -89,10 +89,12 @@ fn test_six_actors_at_same_location() {
 
     for actor in &actors {
         if let Some(sc) = actor.current_subcell {
+            let (cell_x, cell_y) = sc.to_cell(actor.subcell_grid_size);
+            let (sub_x, sub_y) = sc.subcell_offset(actor.subcell_grid_size);
             println!("Actor {}: subcell ({},{},{},{}) @ state {:?}",
-                actor.id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y, actor.alignment_state);
+                actor.id, cell_x, cell_y, sub_x, sub_y, actor.alignment_state);
 
-            let key = (sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y);
+            let key = (cell_x, cell_y, sub_x, sub_y);
             if reserved_subcells.contains(&key) {
                 println!("  ⚠️ ERROR: This subcell is already used by another actor!");
             }
@@ -112,9 +114,11 @@ fn test_six_actors_at_same_location() {
     let mut cells: std::collections::HashMap<(i32, i32), Vec<(i32, i32, usize)>> = std::collections::HashMap::new();
     for actor in &actors {
         if let Some(sc) = actor.current_subcell {
-            cells.entry((sc.cell_x, sc.cell_y))
+            let (cell_x, cell_y) = sc.to_cell(actor.subcell_grid_size);
+            let (sub_x, sub_y) = sc.subcell_offset(actor.subcell_grid_size);
+            cells.entry((cell_x, cell_y))
                 .or_insert_with(Vec::new)
-                .push((sc.sub_x, sc.sub_y, actor.id));
+                .push((sub_x, sub_y, actor.id));
         }
     }
 

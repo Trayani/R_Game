@@ -275,10 +275,12 @@ fn test_original_bug_case_175_477_to_19_28() {
     );
 
     // Print diagnostic report
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "original_bug_case_175_477_to_19_28",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &current_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
@@ -328,10 +330,11 @@ fn test_actor_at_subcell_boundary() {
         actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
     );
 
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "actor_at_subcell_boundary",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &current_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
@@ -379,10 +382,11 @@ fn test_diagonal_movement_northeast() {
         actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
     );
 
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "diagonal_movement_northeast",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &current_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
@@ -430,10 +434,11 @@ fn test_diagonal_movement_southwest() {
         actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
     );
 
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "diagonal_movement_southwest",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &current_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
@@ -499,14 +504,16 @@ fn test_multiple_updates_psc_lag() {
         );
 
         if let (Some(stored), actual) = (&psc_after, &actual_psc_after) {
-            let mismatch = stored.cell_x != actual.cell_x
-                || stored.cell_y != actual.cell_y
-                || stored.sub_x != actual.sub_x
-                || stored.sub_y != actual.sub_y;
+            let (stored_cx, stored_cy) = stored.to_cell(2);
+            let (stored_sx, stored_sy) = stored.subcell_offset(2);
+            let mismatch = stored_cx != actual.cell_x
+                || stored_cy != actual.cell_y
+                || stored_sx != actual.sub_x
+                || stored_sy != actual.sub_y;
 
             if mismatch {
                 println!("❗ PSC Mismatch: Stored=({},{},{},{}), Actual=({},{},{},{})",
-                    stored.cell_x, stored.cell_y, stored.sub_x, stored.sub_y,
+                    stored_cx, stored_cy, stored_sx, stored_sy,
                     actual.cell_x, actual.cell_y, actual.sub_x, actual.sub_y);
             } else {
                 println!("✓ PSC consistent");
@@ -525,10 +532,11 @@ fn test_multiple_updates_psc_lag() {
         actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
     );
 
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "multiple_updates_psc_lag_final_state",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &final_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
@@ -579,10 +587,11 @@ fn test_high_speed_amplified_psc_lag() {
         actor.fpos_x, actor.fpos_y, cell_width, cell_height, 2, 0.0, 0.0
     );
 
+    let stored_psc_coord = actor.current_subcell.map(|sp| SubCellCoord::from_subpoint(&sp, 2));
     print_diagnostic_report(
         "high_speed_amplified_psc_lag",
         (actor.fpos_x, actor.fpos_y),
-        &actor.current_subcell,
+        &stored_psc_coord,
         &current_actual_psc,
         (dest_cell_x, dest_cell_y),
         actor.locked_target,
