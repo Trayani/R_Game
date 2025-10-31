@@ -1272,6 +1272,139 @@ pub fn find_best_3_neighbors_subpoint(
     }
 }
 
+/// Find a 2x2 square reservation pattern for robust pathfinding (SubPoint version)
+/// Returns (best_neighbor, [3 other subcells forming square]) or None if not possible
+///
+/// The square reservation provides extra spacing and avoids conflicts in diagonal movement.
+pub fn find_square_reservation_subpoint(
+    current: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> Option<(crate::subpoint::SubPoint, [crate::subpoint::SubPoint; 3])> {
+    // Determine primary direction (which component is larger)
+    let abs_x = target_dir_x.abs();
+    let abs_y = target_dir_y.abs();
+
+    // Need significant directional movement
+    if abs_x < 0.1 && abs_y < 0.1 {
+        return None;
+    }
+
+    let neighbors = current.get_neighbors();
+
+    // Calculate alignment scores for all neighbors
+    let mut scored_neighbors: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, current.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
+        .collect();
+
+    // Sort by score (highest first)
+    scored_neighbors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    // Get the best aligned neighbor
+    let best = scored_neighbors[0].0;
+
+    // Determine perpendicular direction to form a 2x2 square
+    let (perp_dir_x, perp_dir_y) = if abs_x > abs_y {
+        // Primary direction is horizontal, square extends vertically
+        let sign = if target_dir_y >= 0.0 { 1.0 } else { -1.0 };
+        (0.0, sign)
+    } else {
+        // Primary direction is vertical, square extends horizontally
+        let sign = if target_dir_x >= 0.0 { 1.0 } else { -1.0 };
+        (sign, 0.0)
+    };
+
+    let mut square = [best; 3];
+
+    // Get best neighbor's neighbors
+    let best_neighbors = best.get_neighbors();
+
+    // Find neighbors of best that are also neighbors of current (these form a square)
+    let current_neighbor_set: std::collections::HashSet<_> = neighbors.iter().copied().collect();
+
+    let mut adjacent_to_both: Vec<crate::subpoint::SubPoint> = best_neighbors
+        .iter()
+        .filter(|n| current_neighbor_set.contains(n))
+        .copied()
+        .collect();
+
+    if adjacent_to_both.len() < 2 {
+        // Can't form a proper square
+        return None;
+    }
+
+    // Sort by alignment to perpendicular direction
+    adjacent_to_both.sort_by(|a, b| {
+        let a_score = current.alignment_score(a, perp_dir_x, perp_dir_y, cell_width, cell_height, grid_size);
+        let b_score = current.alignment_score(b, perp_dir_x, perp_dir_y, cell_width, cell_height, grid_size);
+        b_score.partial_cmp(&a_score).unwrap()
+    });
+
+    // Take the best perpendicular neighbor
+    let perp_from_current = adjacent_to_both[0];
+
+    // The fourth corner is the remaining cell
+    // It should be adjacent to both best and perp_from_current
+    let perp_from_current_neighbors = perp_from_current.get_neighbors();
+    let best_neighbor_set: std::collections::HashSet<_> = best_neighbors.iter().copied().collect();
+
+    let fourth_corner = perp_from_current_neighbors
+        .iter()
+        .find(|n| best_neighbor_set.contains(n) && **n != *current)
+        .copied();
+
+    match fourth_corner {
+        Some(corner) => {
+            square[0] = perp_from_current;
+            square[1] = corner;
+            square[2] = best;  // Redundant but clear
+            Some((best, square))
+        },
+        None => None,
+    }
+}
+
+/// Calculate distance between two SubPoints in screen coordinates
+pub fn distance_between_subpoints(
+    p1: &crate::subpoint::SubPoint,
+    p2: &crate::subpoint::SubPoint,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> f32 {
+    let (x1, y1) = p1.to_screen_center(cell_width, cell_height, grid_size);
+    let (x2, y2) = p2.to_screen_center(cell_width, cell_height, grid_size);
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    (dx * dx + dy * dy).sqrt()
+}
+
+/// Check if a SubPoint move is horizontal (only X changes)
+pub fn is_horizontal_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
+    from.y == to.y && from.x != to.x
+}
+
+/// Check if a SubPoint move is vertical (only Y changes)
+pub fn is_vertical_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
+    from.x == to.x && from.y != to.y
+}
+
+/// Check if two SubPoints are adjacent (within 1 step in any direction)
+pub fn are_adjacent_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> bool {
+    let dx = (p2.x - p1.x).abs();
+    let dy = (p2.y - p1.y).abs();
+    dx <= 1 && dy <= 1 && (dx > 0 || dy > 0)
+}
+
+/// Calculate Manhattan distance between two SubPoints (in subcell units)
+pub fn manhattan_distance_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> i32 {
+    (p2.x - p1.x).abs() + (p2.y - p1.y).abs()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
