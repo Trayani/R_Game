@@ -3268,7 +3268,7 @@ impl Actor {
                     }
 
                     // Check if at destination sub-cell
-                    let dest_subcell = SubCellCoord::from_screen_pos_with_offset(
+                    let dest_subcell = SubPoint::from_screen_pos_with_offset(
                         dest_screen_x,
                         dest_screen_y,
                         self.cell_width,
@@ -3278,13 +3278,14 @@ impl Actor {
                         self.subcell_offset_y,
                     );
 
-                    let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                     if always_trace || (self.id == 0 && track_movement) {
-                        println!("  [SWITCH] Checking if at destination subcell: current={:?} dest={:?} match={}",
-                            current_coord, dest_subcell, current_coord == dest_subcell);
+                        println!("  [SWITCH] Checking if at destination subcell: current={} dest={} match={}",
+                            Self::format_subpoint_debug(&current, self.subcell_grid_size),
+                            Self::format_subpoint_debug(&dest_subcell, self.subcell_grid_size),
+                            current == dest_subcell);
                     }
 
-                    if current_coord != dest_subcell {
+                    if current != dest_subcell {
                         if always_trace || (self.id == 0 && track_movement) {
                             println!("  [SWITCH] Not at destination, attempting to reserve next subcell");
                         }
