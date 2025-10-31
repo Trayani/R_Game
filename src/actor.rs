@@ -3,6 +3,7 @@ use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
 use crate::subpoint::SubPoint;
 use crate::actor_directives;
+use crate::actor_execution::{is_diagonal_move, find_anchor_cell, get_horizontal_anchor, get_vertical_anchor};
 
 /// Affinity for diagonal movement (actor_directing_v2.txt Section B)
 /// Determines which anchor subcell to reserve alongside diagonal subcell
@@ -62,7 +63,7 @@ pub struct AffinityResult {
     pub target_x: f32,
     pub target_y: f32,
     /// Anchor subcell to reserve (determined by affinity)
-    pub anchor: SubCellCoord,
+    pub anchor: SubPoint,
     /// Parametric t value for vertical edge (debug/visualization)
     pub t_vertical: f32,
     /// Parametric t value for horizontal edge (debug/visualization)
@@ -75,19 +76,19 @@ pub struct DirectingInfo {
     pub affinity: Affinity,
     pub target_x: f32,
     pub target_y: f32,
-    pub reserved: SubCellCoord,
-    pub anchor: SubCellCoord,
+    pub reserved: SubPoint,
+    pub anchor: SubPoint,
 }
 
 /// PSC selection information for logging - captures PSC switching decision
 #[derive(Clone, Debug)]
 pub struct PSCSelectionInfo {
-    pub old_psc: SubCellCoord,
-    pub reserved: SubCellCoord,
+    pub old_psc: SubPoint,
+    pub reserved: SubPoint,
     pub reserved_dist: f32,
-    pub anchor: Option<SubCellCoord>,  // None for H/V moves
+    pub anchor: Option<SubPoint>,  // None for H/V moves
     pub anchor_dist: Option<f32>,
-    pub chosen: SubCellCoord,
+    pub chosen: SubPoint,
     pub chosen_name: String,  // "Reserved" or "Anchor"
 }
 
@@ -149,9 +150,9 @@ pub struct Actor {
     /// Current sub-cell position (migrated to SubPoint flat coordinates)
     pub current_subcell: Option<SubPoint>,
     /// Reserved sub-cell that actor is moving toward
-    pub reserved_subcell: Option<SubCellCoord>,
+    pub reserved_subcell: Option<SubPoint>,
     /// Additional reserved sub-cells (for square reservations)
-    pub extra_reserved_subcells: Vec<SubCellCoord>,
+    pub extra_reserved_subcells: Vec<SubPoint>,
     /// Final destination for sub-cell movement (cell-level, NOT sub-cell level)
     pub subcell_destination: Option<Position>,
     /// Movement tracking - records positions at key events (reserve, release, reach center)
@@ -704,53 +705,6 @@ impl Actor {
         (left, top, right, bottom)
     }
 
-    /// Check if a move from current to target is diagonal
-    fn is_diagonal_move(current: &SubCellCoord, target: &SubCellCoord) -> bool {
-        let dx = (target.cell_x - current.cell_x).abs() + (target.sub_x - current.sub_x).abs();
-        let dy = (target.cell_y - current.cell_y).abs() + (target.sub_y - current.sub_y).abs();
-
-        // Diagonal if both dx and dy are non-zero
-        dx > 0 && dy > 0
-    }
-
-    /// Find an anchor cell (horizontal or vertical from current) on the path to diagonal target
-    /// Returns the anchor that shares either row or column with current and is adjacent to target
-    fn find_anchor_cell(current: &SubCellCoord, target: &SubCellCoord) -> Option<SubCellCoord> {
-        // For a diagonal move, we have two possible anchors:
-        // 1. Horizontal anchor: same row as current, same column as target
-        // 2. Vertical anchor: same column as current, same row as target
-
-        // Try horizontal anchor (move horizontally first, then diagonally)
-        let h_anchor = SubCellCoord::new(
-            target.cell_x,
-            current.cell_y,
-            target.sub_x,
-            current.sub_y,
-            current.grid_size,
-        );
-
-        // Try vertical anchor (move vertically first, then diagonally)
-        let v_anchor = SubCellCoord::new(
-            current.cell_x,
-            target.cell_y,
-            current.sub_x,
-            target.sub_y,
-            current.grid_size,
-        );
-
-        // Prefer the anchor that's actually adjacent to current (single step away)
-        // Check if h_anchor is a neighbor of current
-        let current_neighbors = current.get_neighbors();
-        if current_neighbors.contains(&h_anchor) {
-            return Some(h_anchor);
-        }
-        if current_neighbors.contains(&v_anchor) {
-            return Some(v_anchor);
-        }
-
-        // If neither is a direct neighbor, prefer horizontal
-        Some(h_anchor)
-    }
 
     /// Set sub-cell destination for movement (cell-level)
     pub fn set_subcell_destination(&mut self, dest: Position) {
@@ -772,18 +726,21 @@ impl Actor {
     /// Check if a diagonal move would create a counter-diagonal crossing
     /// Returns true if crossing detected (should block move)
     fn check_anti_cross(
-        from: &SubCellCoord,
-        to: &SubCellCoord,
+        from: &SubPoint,
+        to: &SubPoint,
         reservation_manager: &crate::subcell::SubCellReservationManager,
         actor_id: usize,
+        grid_size: i32,
     ) -> bool {
         // Check if this is a diagonal move
-        if !Self::is_diagonal_move(from, to) {
+        if !is_diagonal_move(from, to) {
             return false; // Not diagonal, no crossing possible
         }
 
-        // Get counter-diagonal cells
-        let counter_diag = crate::subcell::get_counter_diagonal_subcells(from, to);
+        // Get counter-diagonal cells (temporary: convert to SubCellCoord for legacy function)
+        let from_coord = SubCellCoord::from_subpoint(from, grid_size);
+        let to_coord = SubCellCoord::from_subpoint(to, grid_size);
+        let counter_diag = crate::subcell::get_counter_diagonal_subcells(&from_coord, &to_coord);
         let owner1 = reservation_manager.get_owner(&counter_diag[0]);
         let owner2 = reservation_manager.get_owner(&counter_diag[1]);
 
@@ -820,8 +777,8 @@ impl Actor {
         &self,
         actor_x: f32,
         actor_y: f32,
-        psc: &SubCellCoord,
-        diagonal: &SubCellCoord,
+        psc: &SubPoint,
+        diagonal: &SubPoint,
         dest_x: f32,
         dest_y: f32,
     ) -> AffinityResult {
@@ -834,13 +791,18 @@ impl Actor {
         let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
 
         // Calculate subcell positions in offset coordinate system
-        let psc_x = psc.cell_x as f32 * self.cell_width + psc.sub_x as f32 * sub_cell_width
+        let (psc_cell_x, psc_cell_y) = psc.to_cell(self.subcell_grid_size);
+        let (psc_sub_x, psc_sub_y) = psc.subcell_offset(self.subcell_grid_size);
+        let (diag_cell_x, diag_cell_y) = diagonal.to_cell(self.subcell_grid_size);
+        let (diag_sub_x, diag_sub_y) = diagonal.subcell_offset(self.subcell_grid_size);
+
+        let psc_x = psc_cell_x as f32 * self.cell_width + psc_sub_x as f32 * sub_cell_width
             - self.subcell_offset_x * sub_cell_width;
-        let psc_y = psc.cell_y as f32 * self.cell_height + psc.sub_y as f32 * sub_cell_height
+        let psc_y = psc_cell_y as f32 * self.cell_height + psc_sub_y as f32 * sub_cell_height
             - self.subcell_offset_y * sub_cell_height;
-        let diag_x = diagonal.cell_x as f32 * self.cell_width + diagonal.sub_x as f32 * sub_cell_width
+        let diag_x = diag_cell_x as f32 * self.cell_width + diag_sub_x as f32 * sub_cell_width
             - self.subcell_offset_x * sub_cell_width;
-        let diag_y = diagonal.cell_y as f32 * self.cell_height + diagonal.sub_y as f32 * sub_cell_height
+        let diag_y = diag_cell_y as f32 * self.cell_height + diag_sub_y as f32 * sub_cell_height
             - self.subcell_offset_y * sub_cell_height;
 
         let rect_min_x = psc_x.min(diag_x);
@@ -859,9 +821,9 @@ impl Actor {
             let offset_x = (actor_x - psc_x).abs();
             let offset_y = (actor_y - psc_y).abs();
             let anchor = if offset_x > offset_y {
-                Self::get_horizontal_anchor(psc, diagonal)
+                get_horizontal_anchor(psc, diagonal)
             } else {
-                Self::get_vertical_anchor(psc, diagonal)
+                get_vertical_anchor(psc, diagonal)
             };
             return AffinityResult {
                 affinity: Affinity::Both,
@@ -933,9 +895,9 @@ impl Actor {
             let offset_x = (actor_x - psc_x).abs();
             let offset_y = (actor_y - psc_y).abs();
             let anchor = if offset_x > offset_y {
-                Self::get_horizontal_anchor(psc, diagonal)
+                get_horizontal_anchor(psc, diagonal)
             } else {
-                Self::get_vertical_anchor(psc, diagonal)
+                get_vertical_anchor(psc, diagonal)
             };
             return AffinityResult {
                 affinity: Affinity::Both,
@@ -951,7 +913,7 @@ impl Actor {
         let affinity: Affinity;
         let target_x: f32;
         let target_y: f32;
-        let anchor: SubCellCoord;
+        let anchor: SubPoint;
 
         if (t_vertical - t_horizontal).abs() < EPSILON {
             // BOTH: Hits corner (both edges at same t)
@@ -964,22 +926,22 @@ impl Actor {
             let offset_x = (actor_x - psc_x).abs();
             let offset_y = (actor_y - psc_y).abs();
             anchor = if offset_x > offset_y {
-                Self::get_horizontal_anchor(psc, diagonal)
+                get_horizontal_anchor(psc, diagonal)
             } else {
-                Self::get_vertical_anchor(psc, diagonal)
+                get_vertical_anchor(psc, diagonal)
             };
         } else if t_vertical < t_horizontal {
             // H-affinity: Hits vertical edge first
             affinity = Affinity::Horizontal;
             target_x = actor_x + dest_ray_x * t_vertical;
             target_y = actor_y + dest_ray_y * t_vertical;
-            anchor = Self::get_horizontal_anchor(psc, diagonal);
+            anchor = get_horizontal_anchor(psc, diagonal);
         } else {
             // V-affinity: Hits horizontal edge first
             affinity = Affinity::Vertical;
             target_x = actor_x + dest_ray_x * t_horizontal;
             target_y = actor_y + dest_ray_y * t_horizontal;
-            anchor = Self::get_vertical_anchor(psc, diagonal);
+            anchor = get_vertical_anchor(psc, diagonal);
         }
 
         // LOGICAL CLAMPING: Apply affinity-specific clamping
@@ -1011,8 +973,8 @@ impl Actor {
         &self,
         actor_x: f32,
         actor_y: f32,
-        psc: &SubCellCoord,
-        diagonal: &SubCellCoord,
+        psc: &SubPoint,
+        diagonal: &SubPoint,
         dest_x: f32,
         dest_y: f32,
     ) -> AffinityResult {
@@ -1037,12 +999,15 @@ impl Actor {
         let sub_cell_width = self.cell_width / self.subcell_grid_size as f32;
         let sub_cell_height = self.cell_height / self.subcell_grid_size as f32;
 
-        let diag_center_x = diagonal.cell_x as f32 * self.cell_width
-            + diagonal.sub_x as f32 * sub_cell_width
+        let (diag_cell_x, diag_cell_y) = diagonal.to_cell(self.subcell_grid_size);
+        let (diag_sub_x, diag_sub_y) = diagonal.subcell_offset(self.subcell_grid_size);
+
+        let diag_center_x = diag_cell_x as f32 * self.cell_width
+            + diag_sub_x as f32 * sub_cell_width
             + sub_cell_width / 2.0
             - self.subcell_offset_x * sub_cell_width;
-        let diag_center_y = diagonal.cell_y as f32 * self.cell_height
-            + diagonal.sub_y as f32 * sub_cell_height
+        let diag_center_y = diag_cell_y as f32 * self.cell_height
+            + diag_sub_y as f32 * sub_cell_height
             + sub_cell_height / 2.0
             - self.subcell_offset_y * sub_cell_height;
 
@@ -1080,9 +1045,9 @@ impl Actor {
 
         // Step 5: Get anchor based on affinity
         let anchor = match affinity {
-            Affinity::Horizontal => Self::get_horizontal_anchor(psc, diagonal),
-            Affinity::Vertical => Self::get_vertical_anchor(psc, diagonal),
-            Affinity::Both => Self::get_horizontal_anchor(psc, diagonal), // Fallback
+            Affinity::Horizontal => get_horizontal_anchor(psc, diagonal),
+            Affinity::Vertical => get_vertical_anchor(psc, diagonal),
+            Affinity::Both => get_horizontal_anchor(psc, diagonal), // Fallback
         };
 
         AffinityResult {
@@ -1095,31 +1060,6 @@ impl Actor {
         }
     }
 
-    /// Get horizontal anchor for diagonal move (anchor is horizontal neighbor of PSC)
-    fn get_horizontal_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
-        // Horizontal anchor: shares Y coordinate with PSC, X coordinate with diagonal
-        // Example: PSC=(5,5), Diag=(6,4) → Anchor=(6,5)
-        SubCellCoord {
-            cell_x: diagonal.cell_x,  // X from diagonal
-            cell_y: psc.cell_y,        // Y from PSC
-            sub_x: diagonal.sub_x,
-            sub_y: psc.sub_y,
-            grid_size: psc.grid_size,
-        }
-    }
-
-    /// Get vertical anchor for diagonal move (anchor is vertical neighbor of PSC)
-    fn get_vertical_anchor(psc: &SubCellCoord, diagonal: &SubCellCoord) -> SubCellCoord {
-        // Vertical anchor: shares X coordinate with PSC, Y coordinate with diagonal
-        // Example: PSC=(5,5), Diag=(6,4) → Anchor=(5,4)
-        SubCellCoord {
-            cell_x: psc.cell_x,         // X from PSC
-            cell_y: diagonal.cell_y,    // Y from diagonal
-            sub_x: psc.sub_x,
-            sub_y: diagonal.sub_y,
-            grid_size: psc.grid_size,
-        }
-    }
 
     /// Evaluate look-ahead (2-step) path quality from a candidate subcell
     /// Returns the distance from the best 2nd-step neighbor to destination
@@ -1284,7 +1224,7 @@ impl Actor {
         // Collect diagonal candidates sorted by alignment
         let mut diagonal_candidates: Vec<(SubCellCoord, f32)> = neighbors
             .iter()
-            .filter(|n| Self::is_diagonal_move(current, n))
+            .filter(|n| is_diagonal_move(current, n))
             .filter(|n| {
                 // DESIGN DOC RULE (line 20): Filter candidates that would increase distance
                 // "individual Manhattan-like distances of X and Y float coordinates must never increase"
@@ -1319,11 +1259,11 @@ impl Actor {
         for (diagonal, _score) in &diagonal_candidates {
             // Anti-cross check for diagonal (optional - disabled by default to test if 3-cell reservation prevents crossing)
             if enable_anti_cross {
-                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+                if Self::check_anti_cross(current, diagonal, reservation_manager, self.id, self.subcell_grid_size) {
                     continue;
                 }
                 if let Some(prev) = previous_current {
-                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id, self.subcell_grid_size) {
                         continue;
                     }
                 }
@@ -1331,7 +1271,7 @@ impl Actor {
 
             // Find H/V anchor cells for this diagonal
             // For a diagonal move, we need one H or V anchor
-            if let Some(anchor) = Self::find_anchor_cell(current, diagonal) {
+            if let Some(anchor) = find_anchor_cell(current, diagonal) {
                 // Try to reserve both diagonal and anchor atomically
                 if reservation_manager.try_reserve_multiple(&[*diagonal, anchor], self.id) {
                     self.reserved_subcell = Some(*diagonal);
@@ -1390,7 +1330,7 @@ impl Actor {
         // Collect diagonal candidates with distance rule filter
         let all_diagonals: Vec<SubCellCoord> = neighbors
             .iter()
-            .filter(|n| Self::is_diagonal_move(current, n))
+            .filter(|n| is_diagonal_move(current, n))
             .copied()
             .collect();
 
@@ -1495,7 +1435,7 @@ impl Actor {
         // If anti-cross blocks the best diagonal, skip directly to cardinal fallback
         let mut diagonal_blocked_by_anticross = false;
         if enable_anti_cross {
-            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id) {
+            if Self::check_anti_cross(current, diagonal, reservation_manager, self.id, self.subcell_grid_size) {
                 // Get counter-diagonal cells for logging
                 let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
                 let owner1 = reservation_manager.get_owner(&counter_diag[0]);
@@ -1513,7 +1453,7 @@ impl Actor {
             }
             if !diagonal_blocked_by_anticross {
                 if let Some(prev) = previous_current {
-                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id, self.subcell_grid_size) {
                         let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
                         let owner1 = reservation_manager.get_owner(&counter_diag[0]);
                         let owner2 = reservation_manager.get_owner(&counter_diag[1]);
@@ -1553,20 +1493,24 @@ impl Actor {
             );
 
             if track_movement {
+                let (anchor_cell_x, anchor_cell_y) = affinity_result.anchor.to_cell(self.subcell_grid_size);
+                let (anchor_sub_x, anchor_sub_y) = affinity_result.anchor.subcell_offset(self.subcell_grid_size);
                 println!("[RESERVE V2 DEBUG]   Affinity={:?}, anchor=({},{},{},{})",
                     affinity_result.affinity,
-                    affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
-                    affinity_result.anchor.sub_x, affinity_result.anchor.sub_y);
+                    anchor_cell_x, anchor_cell_y,
+                    anchor_sub_x, anchor_sub_y);
             }
 
             // Check ownership before attempting reservation
             let diag_owner = reservation_manager.get_owner(diagonal);
             let anchor_owner = reservation_manager.get_owner(&affinity_result.anchor);
+            let (anchor_cell_x, anchor_cell_y) = affinity_result.anchor.to_cell(self.subcell_grid_size);
+            let (anchor_sub_x, anchor_sub_y) = affinity_result.anchor.subcell_offset(self.subcell_grid_size);
             self.diagnostic_messages.push(format!(
                 "[DIAG RESERVE] Actor {} BEST diagonal: affinity={:?} anchor=({},{},{},{}) | Ownership: diagonal={:?} anchor={:?}",
                 self.id, affinity_result.affinity,
-                affinity_result.anchor.cell_x, affinity_result.anchor.cell_y,
-                affinity_result.anchor.sub_x, affinity_result.anchor.sub_y,
+                anchor_cell_x, anchor_cell_y,
+                anchor_sub_x, anchor_sub_y,
                 diag_owner, anchor_owner
             ));
 
@@ -1755,18 +1699,18 @@ impl Actor {
         match original_affinity {
             Affinity::Horizontal => {
                 // Was H, try V anchor
-                Some(Self::get_vertical_anchor(psc, diagonal))
+                Some(get_vertical_anchor(psc, diagonal))
             }
             Affinity::Vertical => {
                 // Was V, try H anchor
-                Some(Self::get_horizontal_anchor(psc, diagonal))
+                Some(get_horizontal_anchor(psc, diagonal))
             }
             Affinity::Both => {
                 // For BOTH affinity, try the anchor we didn't try yet
                 // Compare tried_anchor with H and V anchors to determine which to try
                 if let Some(tried) = tried_anchor {
-                    let h_anchor = Self::get_horizontal_anchor(psc, diagonal);
-                    let v_anchor = Self::get_vertical_anchor(psc, diagonal);
+                    let h_anchor = get_horizontal_anchor(psc, diagonal);
+                    let v_anchor = get_vertical_anchor(psc, diagonal);
 
                     // If tried anchor was H, return V; if tried was V, return H
                     if tried.cell_x == h_anchor.cell_x && tried.cell_y == h_anchor.cell_y &&
@@ -1777,7 +1721,7 @@ impl Actor {
                     }
                 } else {
                     // No tried anchor info, default to H anchor
-                    Some(Self::get_horizontal_anchor(psc, diagonal))
+                    Some(get_horizontal_anchor(psc, diagonal))
                 }
             }
         }
@@ -2101,7 +2045,7 @@ impl Actor {
         let mut vertical_candidates: Vec<SubCellCoord> = Vec::new();
 
         for n in neighbors.iter() {
-            if Self::is_diagonal_move(current, n) {
+            if is_diagonal_move(current, n) {
                 continue; // Skip diagonals
             }
 
@@ -2290,7 +2234,7 @@ impl Actor {
         // Try to reserve one of the candidates
         for candidate in &candidates {
             // Check if this is a diagonal move
-            let is_diagonal = Self::is_diagonal_move(current, candidate);
+            let is_diagonal = is_diagonal_move(current, candidate);
 
             // NoDiagonal mode: skip all diagonal candidates
             if enable_no_diagonal && is_diagonal {
@@ -2305,7 +2249,7 @@ impl Actor {
                 // 2. current → candidate (the move we're about to make)
 
                 // Check the immediate move: current → candidate
-                if Self::check_anti_cross(current, candidate, reservation_manager, self.id) {
+                if Self::check_anti_cross(current, candidate, reservation_manager, self.id, self.subcell_grid_size) {
                     continue; // Crossing detected in immediate move
                 }
 
@@ -2313,7 +2257,7 @@ impl Actor {
                 // also check the just-completed transition: previous → current
                 // This ensures we catch crossings that span across the early reservation boundary
                 if let Some(prev) = previous_current {
-                    if Self::check_anti_cross(prev, current, reservation_manager, self.id) {
+                    if Self::check_anti_cross(prev, current, reservation_manager, self.id, self.subcell_grid_size) {
                         // The just-completed move created a crossing
                         // We shouldn't allow further moves that could compound this
                         continue;
@@ -2324,7 +2268,7 @@ impl Actor {
             if enable_diagonal_constraint && is_diagonal {
                 // Diagonal mode: must also reserve H or V anchor
                 // Try to find and reserve an anchor cell (horizontal or vertical from current)
-                if let Some(anchor) = Self::find_anchor_cell(current, candidate) {
+                if let Some(anchor) = find_anchor_cell(current, candidate) {
                     // Try to reserve both anchor and diagonal atomically
                     if reservation_manager.try_reserve_multiple(&[anchor, *candidate], self.id) {
                         self.reserved_subcell = Some(*candidate);
@@ -3122,10 +3066,14 @@ impl Actor {
                     if always_trace || track_movement {
                         let (curr_cx, curr_cy) = current.to_cell(self.subcell_grid_size);
                         let (curr_sx, curr_sy) = current.subcell_offset(self.subcell_grid_size);
+                        let (res_cx, res_cy) = reserved.to_cell(self.subcell_grid_size);
+                        let (res_sx, res_sy) = reserved.subcell_offset(self.subcell_grid_size);
+                        let (anc_cx, anc_cy) = anchor.to_cell(self.subcell_grid_size);
+                        let (anc_sx, anc_sy) = anchor.subcell_offset(self.subcell_grid_size);
                         println!("  [PSC_DIAG] old_psc=({},{},{},{}) reserved=({},{},{},{}) anchor=({},{},{},{})",
                             curr_cx, curr_cy, curr_sx, curr_sy,
-                            reserved.cell_x, reserved.cell_y, reserved.sub_x, reserved.sub_y,
-                            anchor.cell_x, anchor.cell_y, anchor.sub_x, anchor.sub_y);
+                            res_cx, res_cy, res_sx, res_sy,
+                            anc_cx, anc_cy, anc_sx, anc_sy);
                         println!("  [PSC_DIAG] dist_reserved={:.6} dist_anchor={:.6}",
                             dist_reserved, dist_anchor);
                     }
