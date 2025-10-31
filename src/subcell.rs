@@ -1492,6 +1492,46 @@ pub fn subpoint_from_components(
     crate::subpoint::SubPoint::from_cell_subcell(cell_x, cell_y, sub_x, sub_y, grid_size)
 }
 
+/// Get the center SubPoint of a cell (middle subcell)
+/// For a 2x2 grid, this is subcell (0, 0) which represents the top-left intersection
+pub fn cell_center_subpoint(cell_x: i32, cell_y: i32, grid_size: i32) -> crate::subpoint::SubPoint {
+    let center_index = 0; // In subcell system, (0,0) is the first intersection
+    crate::subpoint::SubPoint::from_cell_subcell(cell_x, cell_y, center_index, center_index, grid_size)
+}
+
+/// Check if two SubPoints are in the same cell
+pub fn same_cell_subpoint(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint, grid_size: i32) -> bool {
+    let (cell1_x, cell1_y) = p1.to_cell(grid_size);
+    let (cell2_x, cell2_y) = p2.to_cell(grid_size);
+    cell1_x == cell2_x && cell1_y == cell2_y
+}
+
+/// Get the cell coordinate containing a SubPoint
+/// Returns (cell_x, cell_y)
+pub fn subpoint_to_cell(point: &crate::subpoint::SubPoint, grid_size: i32) -> (i32, i32) {
+    point.to_cell(grid_size)
+}
+
+/// Get the subcell offset within a cell for a SubPoint
+/// Returns (sub_x, sub_y) in range [0, grid_size-1]
+pub fn subpoint_subcell_offset(point: &crate::subpoint::SubPoint, grid_size: i32) -> (i32, i32) {
+    point.subcell_offset(grid_size)
+}
+
+/// Offset a SubPoint by a given amount in subcell units
+/// Returns a new SubPoint offset by (dx, dy) in flat subcell coordinates
+pub fn offset_subpoint(point: &crate::subpoint::SubPoint, dx: i32, dy: i32) -> crate::subpoint::SubPoint {
+    crate::subpoint::SubPoint::new(point.x + dx, point.y + dy)
+}
+
+/// Calculate the midpoint between two SubPoints (rounded down to nearest subcell)
+pub fn midpoint_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::SubPoint) -> crate::subpoint::SubPoint {
+    crate::subpoint::SubPoint::new(
+        (p1.x + p2.x) / 2,
+        (p1.y + p2.y) / 2,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
