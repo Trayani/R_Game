@@ -1069,6 +1069,79 @@ pub fn spread_subcell_destinations(
     destinations
 }
 
+/// Find unique SubPoint destinations for multiple actors (SubPoint version)
+///
+/// NOTE: This is for INTERMEDIATE movement only, not final destinations!
+/// Returns a list of SubPoint coordinates spread around the target position.
+/// Uses a spiral pattern expanding from center to ensure good distribution.
+///
+/// This is the SubPoint version of spread_subcell_destinations.
+pub fn spread_subpoint_destinations(
+    target_cell_x: i32,
+    target_cell_y: i32,
+    num_actors: usize,
+    grid_size: i32,
+) -> Vec<crate::subpoint::SubPoint> {
+    let mut destinations = Vec::new();
+    let center_index = grid_size / 2;
+
+    // Start with center sub-cell of target cell (in flat SubPoint coordinates)
+    let center_x = target_cell_x * grid_size + center_index;
+    let center_y = target_cell_y * grid_size + center_index;
+    destinations.push(crate::subpoint::SubPoint::new(center_x, center_y));
+
+    if num_actors <= 1 {
+        return destinations;
+    }
+
+    // Add remaining sub-cells in target cell
+    for dy in 0..grid_size {
+        for dx in 0..grid_size {
+            if dx == center_index && dy == center_index {
+                continue; // Skip center (already added)
+            }
+            let x = target_cell_x * grid_size + dx;
+            let y = target_cell_y * grid_size + dy;
+            destinations.push(crate::subpoint::SubPoint::new(x, y));
+            if destinations.len() >= num_actors {
+                return destinations;
+            }
+        }
+    }
+
+    // If we need more, spiral outward to neighboring cells
+    // Order: N, E, S, W, NE, SE, SW, NW
+    let neighbor_offsets = [
+        (0, -1),  // N
+        (1, 0),   // E
+        (0, 1),   // S
+        (-1, 0),  // W
+        (1, -1),  // NE
+        (1, 1),   // SE
+        (-1, 1),  // SW
+        (-1, -1), // NW
+    ];
+
+    for (cell_dx, cell_dy) in neighbor_offsets.iter() {
+        let neighbor_cell_x = target_cell_x + cell_dx;
+        let neighbor_cell_y = target_cell_y + cell_dy;
+
+        // Add all sub-cells of this neighbor cell
+        for sub_dy in 0..grid_size {
+            for sub_dx in 0..grid_size {
+                let x = neighbor_cell_x * grid_size + sub_dx;
+                let y = neighbor_cell_y * grid_size + sub_dy;
+                destinations.push(crate::subpoint::SubPoint::new(x, y));
+                if destinations.len() >= num_actors {
+                    return destinations;
+                }
+            }
+        }
+    }
+
+    destinations
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
