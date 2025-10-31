@@ -1532,6 +1532,120 @@ pub fn midpoint_subpoints(p1: &crate::subpoint::SubPoint, p2: &crate::subpoint::
     )
 }
 
+/// Check if a move between two SubPoints is diagonal
+/// Returns true if both X and Y coordinates change
+pub fn is_diagonal_move_subpoint(from: &crate::subpoint::SubPoint, to: &crate::subpoint::SubPoint) -> bool {
+    let dx = (to.x - from.x).abs();
+    let dy = (to.y - from.y).abs();
+    dx > 0 && dy > 0
+}
+
+/// Get the alignment score between a SubPoint direction and a target direction
+/// Returns dot product from -1.0 (opposite) to 1.0 (same direction)
+pub fn alignment_score_subpoint(
+    from: &crate::subpoint::SubPoint,
+    to: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> f32 {
+    from.alignment_score(to, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)
+}
+
+/// Get all neighbors of a SubPoint sorted by alignment to a target direction
+/// Returns neighbors in order from best aligned to worst aligned
+pub fn neighbors_sorted_by_alignment(
+    point: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> Vec<(crate::subpoint::SubPoint, f32)> {
+    let neighbors = point.get_neighbors();
+    let mut scored: Vec<(crate::subpoint::SubPoint, f32)> = neighbors
+        .iter()
+        .map(|n| (*n, point.alignment_score(n, target_dir_x, target_dir_y, cell_width, cell_height, grid_size)))
+        .collect();
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    scored
+}
+
+/// Get the best neighbor of a SubPoint aligned to a target direction
+/// Returns the neighbor with the highest alignment score
+pub fn best_aligned_neighbor(
+    point: &crate::subpoint::SubPoint,
+    target_dir_x: f32,
+    target_dir_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> Option<crate::subpoint::SubPoint> {
+    let neighbors = point.get_neighbors();
+    neighbors
+        .iter()
+        .max_by(|a, b| {
+            let score_a = point.alignment_score(a, target_dir_x, target_dir_y, cell_width, cell_height, grid_size);
+            let score_b = point.alignment_score(b, target_dir_x, target_dir_y, cell_width, cell_height, grid_size);
+            score_a.partial_cmp(&score_b).unwrap()
+        })
+        .copied()
+}
+
+/// Calculate Euclidean distance from SubPoint to a screen position
+pub fn distance_to_screen_pos(
+    point: &crate::subpoint::SubPoint,
+    screen_x: f32,
+    screen_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> f32 {
+    let (px, py) = point.to_screen_center(cell_width, cell_height, grid_size);
+    let dx = screen_x - px;
+    let dy = screen_y - py;
+    (dx * dx + dy * dy).sqrt()
+}
+
+/// Find the closest SubPoint to a screen position from a list of candidates
+pub fn closest_subpoint_to_position(
+    candidates: &[crate::subpoint::SubPoint],
+    screen_x: f32,
+    screen_y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    grid_size: i32,
+) -> Option<crate::subpoint::SubPoint> {
+    candidates
+        .iter()
+        .min_by(|a, b| {
+            let dist_a = distance_to_screen_pos(a, screen_x, screen_y, cell_width, cell_height, grid_size);
+            let dist_b = distance_to_screen_pos(b, screen_x, screen_y, cell_width, cell_height, grid_size);
+            dist_a.partial_cmp(&dist_b).unwrap()
+        })
+        .copied()
+}
+
+/// Check if a SubPoint is at a cell boundary (on edge of cell)
+/// Returns true if subcell offset is 0 or grid_size-1 in either dimension
+pub fn is_at_cell_boundary(point: &crate::subpoint::SubPoint, grid_size: i32) -> bool {
+    let (sub_x, sub_y) = point.subcell_offset(grid_size);
+    sub_x == 0 || sub_x == grid_size - 1 || sub_y == 0 || sub_y == grid_size - 1
+}
+
+/// Get the four cardinal neighbors (N, E, S, W) of a SubPoint
+/// Returns only the 4 non-diagonal neighbors
+pub fn cardinal_neighbors_subpoint(point: &crate::subpoint::SubPoint) -> [crate::subpoint::SubPoint; 4] {
+    [
+        crate::subpoint::SubPoint::new(point.x, point.y - 1), // N
+        crate::subpoint::SubPoint::new(point.x + 1, point.y), // E
+        crate::subpoint::SubPoint::new(point.x, point.y + 1), // S
+        crate::subpoint::SubPoint::new(point.x - 1, point.y), // W
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
