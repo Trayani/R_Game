@@ -56,7 +56,9 @@ impl PSCTracker {
 
     fn record(&mut self, actor: &Actor) {
         if let Some(psc) = actor.current_subcell {
-            self.psc_history.push((psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y));
+            let (cell_x, cell_y) = psc.to_cell(2);
+            let (sub_x, sub_y) = psc.subcell_offset(2);
+            self.psc_history.push((cell_x, cell_y, sub_x, sub_y));
         }
         if let Some((tx, ty)) = actor.locked_target {
             self.target_history.push((tx, ty));
@@ -128,8 +130,10 @@ fn test_multi_step_path_0_0_to_3_1() {
         if actor.current_subcell != prev_psc {
             tracker.record(&actor);
             if let Some(psc) = actor.current_subcell {
+                let (cell_x, cell_y) = psc.to_cell(2);
+                let (sub_x, sub_y) = psc.subcell_offset(2);
                 println!("  [Iteration {}] PSC switched to: cell=({}, {}), sub=({}, {})",
-                    iteration, psc.cell_x, psc.cell_y, psc.sub_x, psc.sub_y);
+                    iteration, cell_x, cell_y, sub_x, sub_y);
             }
         }
 

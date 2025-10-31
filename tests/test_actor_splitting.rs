@@ -293,8 +293,11 @@ fn test_actors_dont_overlap_during_movement() {
             println!("Iteration {}: Checking subcell positions...", iteration);
             for (id, actor) in actors.iter().enumerate() {
                 if let Some(sc) = actor.current_subcell {
+                    // SubPoint uses flat x, y coordinates
+                    let (cell_x, cell_y) = sc.to_cell(2);
+                    let (sub_x, sub_y) = sc.subcell_offset(2);
                     println!("  Actor {}: subcell ({},{},{},{})",
-                        id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y);
+                        id, cell_x, cell_y, sub_x, sub_y);
                 }
             }
         }

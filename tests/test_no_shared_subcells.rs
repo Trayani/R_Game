@@ -78,10 +78,12 @@ fn test_actors_get_unique_subcells() {
     let mut reserved_subcells = HashSet::new();
     for actor in &actors {
         if let Some(sc) = actor.current_subcell {
+            let (cell_x, cell_y) = sc.to_cell(subcell_grid_size);
+            let (sub_x, sub_y) = sc.subcell_offset(subcell_grid_size);
             println!("Actor {}: subcell ({},{},{},{})",
-                actor.id, sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y);
+                actor.id, cell_x, cell_y, sub_x, sub_y);
 
-            let key = (sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y);
+            let key = (cell_x, cell_y, sub_x, sub_y);
             if reserved_subcells.contains(&key) {
                 println!("  ⚠️ ERROR: This subcell is already used by another actor!");
             }

@@ -76,16 +76,18 @@ fn test_automatic_alignment_without_destination() {
 
         // Check alignment to current subcell center
         if let Some(current) = actor.current_subcell {
-            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
+            let (center_x, center_y) = current.to_screen_center(cell_width, cell_height, subcell_grid_size);
             let dist = ((new_pos.0 - center_x).powi(2) + (new_pos.1 - center_y).powi(2)).sqrt();
 
             // Check if aligned (distance < 2.0 pixels)
             if !aligned && dist < 2.0 {
                 aligned = true;
                 alignment_frame = Some(iteration);
+                let (cell_x, cell_y) = current.to_cell(subcell_grid_size);
+                let (sub_x, sub_y) = current.subcell_offset(subcell_grid_size);
                 println!("[{:4}ms] Actor {} ALIGNED to subcell ({},{},{},{}) at ({:.1},{:.1}) - dist={:.3}px",
                     iteration * 16, actor.id,
-                    current.cell_x, current.cell_y, current.sub_x, current.sub_y,
+                    cell_x, cell_y, sub_x, sub_y,
                     new_pos.0, new_pos.1, dist);
                 println!("[{:4}ms] Actor should now be IDLE at subcell center", iteration * 16);
             }
@@ -118,11 +120,13 @@ fn test_automatic_alignment_without_destination() {
     println!("========================================");
 
     if let Some(current) = actor.current_subcell {
-        let (center_x, center_y) = current.to_screen_center(cell_width, cell_height);
+        let (center_x, center_y) = current.to_screen_center(cell_width, cell_height, subcell_grid_size);
         let dist = ((actor.fpos_x - center_x).powi(2) + (actor.fpos_y - center_y).powi(2)).sqrt();
         let aligned_ms = alignment_frame.unwrap_or(0) * 16;
 
-        println!("Current Subcell: ({},{},{},{})", current.cell_x, current.cell_y, current.sub_x, current.sub_y);
+        let (cell_x, cell_y) = current.to_cell(subcell_grid_size);
+        let (sub_x, sub_y) = current.subcell_offset(subcell_grid_size);
+        println!("Current Subcell: ({},{},{},{})", cell_x, cell_y, sub_x, sub_y);
         println!("Position: ({:.2}, {:.2})", actor.fpos_x, actor.fpos_y);
         println!("Center: ({:.2}, {:.2})", center_x, center_y);
         println!("Distance: {:.3}px", dist);
