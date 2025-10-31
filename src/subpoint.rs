@@ -14,8 +14,10 @@
 /// - No cell-boundary wrapping complexity
 /// - 60% memory reduction (8 bytes vs 20 bytes)
 
+
 use std::collections::HashMap;
 
+/// SubPoint represents a single point in the grid. The point is an intersection of a vertical line on the x coordinate and horizontal line on the y coordinate
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SubPoint {
     pub x: i32,

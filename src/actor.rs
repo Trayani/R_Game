@@ -1,6 +1,7 @@
 use crate::Grid;
 use crate::pathfinding::Position;
 use crate::subcell::SubCellCoord;
+use crate::subpoint::SubPoint;
 use crate::actor_directives;
 
 /// Affinity for diagonal movement (actor_directing_v2.txt Section B)
@@ -145,8 +146,8 @@ pub struct Actor {
     /// Sub-cell offset (in sub-cell units, e.g., 0.5 for half-cell shift)
     pub subcell_offset_x: f32,
     pub subcell_offset_y: f32,
-    /// Current sub-cell position
-    pub current_subcell: Option<SubCellCoord>,
+    /// Current sub-cell position (migrated to SubPoint flat coordinates)
+    pub current_subcell: Option<SubPoint>,
     /// Reserved sub-cell that actor is moving toward
     pub reserved_subcell: Option<SubCellCoord>,
     /// Additional reserved sub-cells (for square reservations)
@@ -756,7 +757,7 @@ impl Actor {
         self.subcell_destination = Some(dest);
         // Initialize current sub-cell if not set
         if self.current_subcell.is_none() {
-            self.current_subcell = Some(SubCellCoord::from_screen_pos_with_offset(
+            self.current_subcell = Some(SubPoint::from_screen_pos_with_offset(
                 self.fpos_x,
                 self.fpos_y,
                 self.cell_width,
@@ -2018,6 +2019,7 @@ impl Actor {
                     let (curr_x, curr_y) = current_sc.to_screen_center_with_offset(
                         self.cell_width,
                         self.cell_height,
+                        self.subcell_grid_size,
                         self.subcell_offset_x,
                         self.subcell_offset_y,
                     );
