@@ -24,7 +24,7 @@ fn test_q11_primary_subcell_concept() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let _reservation_mgr = SubPointReservationManager::new(grid_size);
+    let _reservation_mgr = SubPointReservationManager::new(grid_size, 1000, 1000);
 
     // Spawn actor at position
     let actor = Actor::new(
@@ -175,7 +175,7 @@ fn test_q27_dynamic_discovery() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let _reservation_mgr = SubPointReservationManager::new(grid_size);
+    let _reservation_mgr = SubPointReservationManager::new(grid_size, 1000, 1000);
 
     // Create actor at position A
     let mut actor_a = Actor::new(1, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
@@ -335,21 +335,21 @@ fn test_q56_grid_boundary() {
 fn test_q57_atomic_reservation() {
     // Q5.7: Subcell reservation must be atomic (no race conditions)
     let grid_size = 2;
-    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size, 1000, 1000);
 
     let subcell = SubCellCoord::new(0, 0, 1, 1, grid_size);
 
     // Actor 0 reserves
-    assert!(reservation_mgr.try_reserve(subcell, 0), "Actor 0 should reserve successfully");
+    assert!(reservation_mgr.try_reserve(subcell.to_subpoint(), 0), "Actor 0 should reserve successfully");
 
     // Actor 1 tries to reserve same subcell
-    assert!(!reservation_mgr.try_reserve(subcell, 1), "Actor 1 should be blocked");
+    assert!(!reservation_mgr.try_reserve(subcell.to_subpoint(), 1), "Actor 1 should be blocked");
 
     // Verify ownership
-    assert_eq!(reservation_mgr.is_reserved(&subcell), Some(0), "Subcell should be owned by actor 0");
+    assert_eq!(reservation_mgr.get_owner(&subcell), Some(0), "Subcell should be owned by actor 0");
 
     // Actor 0 can "re-reserve" (idempotent)
-    assert!(reservation_mgr.try_reserve(subcell, 0), "Actor 0 can re-reserve own cell");
+    assert!(reservation_mgr.try_reserve(subcell.to_subpoint(), 0), "Actor 0 can re-reserve own cell");
 }
 
 // ===========================================================================
@@ -362,7 +362,7 @@ fn test_q63_invariant_psc_exclusivity() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size, 1000, 1000);
 
     let actor1 = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
     let actor2 = Actor::new(1, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
@@ -377,8 +377,8 @@ fn test_q63_invariant_psc_exclusivity() {
     // Register with reservation manager (convert to SubCellCoord temporarily)
     let psc1_coord = SubCellCoord::from_subpoint(&psc1, grid_size);
     let psc2_coord = SubCellCoord::from_subpoint(&psc2, grid_size);
-    reservation_mgr.set_current(psc1_coord, actor1.id);
-    reservation_mgr.set_current(psc2_coord, actor2.id);
+    reservation_mgr.set_current(psc1_coord.to_subpoint(), actor1.id);
+    reservation_mgr.set_current(psc2_coord.to_subpoint(), actor2.id);
 
     // PSCs must be different (since spawn positions are different)
     assert_ne!(psc1, psc2, "Two actors at different positions must have different PSCs");
@@ -417,7 +417,7 @@ fn test_destination_direct_basic_movement() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size, 1000, 1000);
 
     let mut actor = Actor::new(
         0,

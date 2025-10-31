@@ -45,8 +45,8 @@ fn test_simple_diagonal_movement_ne() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(start_subcell, 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(start_subcell.to_subpoint(), 0);
 
     // Simulation parameters
     let delta_time = 0.016; // ~60 FPS
@@ -254,8 +254,8 @@ fn test_simple_diagonal_movement_se() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(start_subcell, 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(start_subcell.to_subpoint(), 0);
 
     // Simulation parameters
     let delta_time = 0.016; // ~60 FPS
@@ -463,8 +463,8 @@ fn test_simple_diagonal_movement_sw() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(start_subcell, 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(start_subcell.to_subpoint(), 0);
 
     // Simulation parameters
     let delta_time = 0.016; // ~60 FPS
@@ -672,8 +672,8 @@ fn test_simple_diagonal_movement_nw() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(start_subcell, 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(start_subcell.to_subpoint(), 0);
 
     // Simulation parameters
     let delta_time = 0.016; // ~60 FPS

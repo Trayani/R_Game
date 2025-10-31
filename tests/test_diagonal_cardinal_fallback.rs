@@ -50,9 +50,9 @@ fn test_sw_blocked_tries_s_cardinal() {
     let sw_anchor_v = SubCellCoord::new(10, 11, 0, 0, subcell_grid_size); // Vertical anchor
     let sw_anchor_h = SubCellCoord::new(9, 10, 1, 1, subcell_grid_size); // Horizontal anchor
 
-    reservation_mgr.try_reserve(sw_diagonal, 999); // Block with different actor
-    reservation_mgr.try_reserve(sw_anchor_v, 999);
-    reservation_mgr.try_reserve(sw_anchor_h, 999);
+    reservation_mgr.try_reserve(sw_diagonal.to_subpoint(), 999); // Block with different actor
+    reservation_mgr.try_reserve(sw_anchor_v.to_subpoint(), 999);
+    reservation_mgr.try_reserve(sw_anchor_h.to_subpoint(), 999);
 
     // Update actor (should try to reserve next subcell)
     let reached = actor.update_subcell_destination_direct(
@@ -123,9 +123,9 @@ fn test_ne_blocked_tries_cardinal() {
     let ne_anchor_v = SubCellCoord::new(10, 9, 0, 1, subcell_grid_size); // Vertical anchor (N)
     let ne_anchor_h = SubCellCoord::new(11, 10, 0, 0, subcell_grid_size); // Horizontal anchor (E)
 
-    reservation_mgr.try_reserve(ne_diagonal, 999);
-    reservation_mgr.try_reserve(ne_anchor_v, 999);
-    reservation_mgr.try_reserve(ne_anchor_h, 999);
+    reservation_mgr.try_reserve(ne_diagonal.to_subpoint(), 999);
+    reservation_mgr.try_reserve(ne_anchor_v.to_subpoint(), 999);
+    reservation_mgr.try_reserve(ne_anchor_h.to_subpoint(), 999);
 
     let reached = actor.update_subcell_destination_direct(
         0.016,
@@ -200,7 +200,7 @@ fn test_all_directions_blocked_actor_waits() {
     ];
 
     for neighbor in &neighbors {
-        reservation_mgr.try_reserve(*neighbor, 999);
+        reservation_mgr.try_reserve(*neighbor.to_subpoint(), 999);
     }
 
     let reached = actor.update_subcell_destination_direct(
@@ -343,13 +343,13 @@ fn test_only_best_diagonal_tried() {
     // Block SW diagonal (best aligned) and its anchors
     let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let sw_diagonal = SubCellCoord::new(9, 11, 1, 0, subcell_grid_size);
-    reservation_mgr.try_reserve(sw_diagonal, 999);
+    reservation_mgr.try_reserve(sw_diagonal.to_subpoint(), 999);
 
     // Also block both anchors for SW
     let sw_anchor_v = SubCellCoord::new(10, 11, 0, 0, subcell_grid_size); // S
     let sw_anchor_h = SubCellCoord::new(9, 10, 1, 1, subcell_grid_size); // W
-    reservation_mgr.try_reserve(sw_anchor_v, 999);
-    reservation_mgr.try_reserve(sw_anchor_h, 999);
+    reservation_mgr.try_reserve(sw_anchor_v.to_subpoint(), 999);
+    reservation_mgr.try_reserve(sw_anchor_h.to_subpoint(), 999);
 
     // Leave SE diagonal open (worse alignment but not blocked)
     // But per spec, actor should NOT try SE - should go to cardinals

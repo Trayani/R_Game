@@ -51,8 +51,8 @@ fn test_affinity_spawn_136_525_dest_16_31() {
     let dest = Position { x: dest_cell_x, y: dest_cell_y };
     actor.set_subcell_destination(dest);
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(start_subcell, 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(start_subcell.to_subpoint(), 0);
 
     // Run just a few iterations to see initial affinity choices
     let delta_time = 0.016;

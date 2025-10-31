@@ -254,8 +254,8 @@ fn test_original_bug_case_175_477_to_19_28() {
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     // Setup reservation manager
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(actual_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(actual_psc.clone().to_subpoint(), 0);
 
     // Run one update to trigger reservation and affinity calculation
     actor.update_subcell_destination_direct(
@@ -317,8 +317,8 @@ fn test_actor_at_subcell_boundary() {
     actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(actual_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(actual_psc.clone().to_subpoint(), 0);
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
@@ -369,8 +369,8 @@ fn test_diagonal_movement_northeast() {
     actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(actual_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(actual_psc.clone().to_subpoint(), 0);
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
@@ -421,8 +421,8 @@ fn test_diagonal_movement_southwest() {
     actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(actual_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(actual_psc.clone().to_subpoint(), 0);
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
@@ -473,8 +473,8 @@ fn test_multiple_updates_psc_lag() {
     actor.current_subcell = Some(initial_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(initial_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(initial_psc.clone().to_subpoint(), 0);
 
     println!("\n{:=<70}", "");
     println!("Test: multiple_updates_psc_lag (5 iterations)");
@@ -574,8 +574,8 @@ fn test_high_speed_amplified_psc_lag() {
     actor.current_subcell = Some(actual_psc.to_subpoint());
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
-    let mut reservation_mgr = SubPointReservationManager::new(2);
-    reservation_mgr.set_current(actual_psc.clone(), 0);
+    let mut reservation_mgr = SubPointReservationManager::new(2, 1000, 1000);
+    reservation_mgr.set_current(actual_psc.clone().to_subpoint(), 0);
 
     actor.update_subcell_destination_direct(
         0.016, &mut reservation_mgr,
