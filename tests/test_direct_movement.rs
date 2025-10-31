@@ -2,7 +2,8 @@
 // Validates actor state transitions and subcell crossing behavior
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -44,7 +45,7 @@ fn test_simple_diagonal_movement_ne() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Simulation parameters
@@ -253,7 +254,7 @@ fn test_simple_diagonal_movement_se() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Simulation parameters
@@ -462,7 +463,7 @@ fn test_simple_diagonal_movement_sw() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Simulation parameters
@@ -671,7 +672,7 @@ fn test_simple_diagonal_movement_nw() {
     println!("Distance: {:.2} cells",
         ((dest.x as f32 - actor.fpos_x).powi(2) + (dest.y as f32 - actor.fpos_y).powi(2)).sqrt());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Simulation parameters

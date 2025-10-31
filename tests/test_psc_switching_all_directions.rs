@@ -11,7 +11,8 @@
 
 use rustgame3::actor::Actor;
 use rustgame3::pathfinding::Position;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 
 /// Helper to create a simple actor at a given position
 fn create_actor(id: usize, x: f32, y: f32, cell_width: f32, cell_height: f32, subcell_grid_size: i32) -> Actor {
@@ -102,7 +103,7 @@ fn test_multi_step_path_0_0_to_3_1() {
     let dest_y = 1;
     actor.set_subcell_destination(Position { x: dest_x, y: dest_y });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Simulate movement
@@ -184,7 +185,7 @@ fn test_diagonal_ne_prefer_horizontal() {
     // Destination is east-northeast (3, 1) - more horizontal than vertical
     actor.set_subcell_destination(Position { x: 3, y: 1 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -237,7 +238,7 @@ fn test_diagonal_ne_prefer_vertical() {
     // Destination is north-northeast (1, -3) - more vertical than horizontal
     actor.set_subcell_destination(Position { x: 1, y: -3 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -289,7 +290,7 @@ fn test_cardinal_east() {
     // Destination is directly east (3, 0)
     actor.set_subcell_destination(Position { x: 3, y: 0 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -341,7 +342,7 @@ fn test_cardinal_north() {
     // Destination is directly north (0, -3)
     actor.set_subcell_destination(Position { x: 0, y: -3 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -393,7 +394,7 @@ fn test_diagonal_se() {
     // Destination is southeast (3, 3)
     actor.set_subcell_destination(Position { x: 3, y: 3 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -445,7 +446,7 @@ fn test_diagonal_sw() {
     // Destination is southwest (-3, 3)
     actor.set_subcell_destination(Position { x: -3, y: 3 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation
@@ -497,7 +498,7 @@ fn test_diagonal_nw() {
     // Destination is northwest (-3, -3)
     actor.set_subcell_destination(Position { x: -3, y: -3 });
 
-    let mut reservation_manager = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_manager = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let mut tracker = PSCTracker::new();
 
     // Run simulation

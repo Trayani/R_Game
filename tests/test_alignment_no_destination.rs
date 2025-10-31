@@ -7,7 +7,8 @@
 /// - Actor should stay idle at subcell center until destination is set
 
 use rustgame3::Actor;
-use rustgame3::subcell::SubCellReservationManager;
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
 #[test]
@@ -45,7 +46,7 @@ fn test_automatic_alignment_without_destination() {
     println!("Spawned Actor {} at ({:.1}, {:.1})", actor.id, start_x, start_y);
     println!("NO DESTINATION SET - actor should align automatically\n");
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Run simulation WITHOUT setting destination
     let max_iterations = 200;

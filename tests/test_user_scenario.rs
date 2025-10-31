@@ -2,7 +2,8 @@
 // Spawn at (122.0, 359.0), destination cell (11, 39)
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -68,7 +69,7 @@ fn test_user_scenario_spawn_122_359_dest_11_39() {
     let dest = Position { x: dest_cell_x, y: dest_cell_y };
     actor.set_subcell_destination(dest);
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Run simulation

@@ -15,7 +15,8 @@
 /// Actors will align first, then would start navigating, but test stops at alignment.
 
 use rustgame3::Actor;
-use rustgame3::subcell::SubCellReservationManager;
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
 #[test]
@@ -76,7 +77,7 @@ fn test_four_actors_psc_alignment_no_destination() {
     println!("✓ Set destination cell ({}, {}) - triggers PSC_ALIGNMENT", dest_cell_x, dest_cell_y);
     println!("✓ Actors will first align to nearest subcells before navigation\n");
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Run simulation
     let max_iterations = 200;  // Should complete alignment quickly

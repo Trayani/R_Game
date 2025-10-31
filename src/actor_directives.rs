@@ -269,7 +269,7 @@ pub fn is_moving_toward_destination(
 fn handle_no_subcell_state(
     actor: &mut Actor,
     delta_time: f32,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
     enable_early_reservation: bool,
     enable_anti_cross: bool,
     track_movement: bool,
@@ -292,7 +292,7 @@ fn handle_no_subcell_state(
 fn handle_psc_alignment_state(
     actor: &mut Actor,
     delta_time: f32,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
     enable_early_reservation: bool,
     enable_anti_cross: bool,
     track_movement: bool,
@@ -320,7 +320,7 @@ fn try_reservation_with_fallback(
     dy_to_dest: f32,
     dest_screen_x: f32,
     dest_screen_y: f32,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
     enable_anti_cross: bool,
     track_movement: bool,
     try_cardinal_first: bool,
@@ -373,7 +373,7 @@ fn try_reservation_with_fallback(
 /// Handle Idle state - actor at subcell center, ready to move
 fn handle_idle_state(
     actor: &mut Actor,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
     enable_anti_cross: bool,
     track_movement: bool,
 ) -> bool {
@@ -443,7 +443,7 @@ fn handle_idle_state(
 pub fn update_actor(
     actor: &mut Actor,
     delta_time: f32,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
     enable_early_reservation: bool,
     enable_anti_cross: bool,
     track_movement: bool,

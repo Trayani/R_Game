@@ -5,7 +5,8 @@
 
 use rustgame3::Actor;
 use rustgame3::pathfinding::Position;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
 /// Test Case 1: SW diagonal blocked → should try S (down) cardinal
@@ -44,7 +45,7 @@ fn test_sw_blocked_tries_s_cardinal() {
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     // Block SW diagonal (9, 11, 1, 0) and its anchor
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let sw_diagonal = SubCellCoord::new(9, 11, 1, 0, subcell_grid_size);
     let sw_anchor_v = SubCellCoord::new(10, 11, 0, 0, subcell_grid_size); // Vertical anchor
     let sw_anchor_h = SubCellCoord::new(9, 10, 1, 1, subcell_grid_size); // Horizontal anchor
@@ -117,7 +118,7 @@ fn test_ne_blocked_tries_cardinal() {
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     // Block NE diagonal and both possible anchors
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let ne_diagonal = SubCellCoord::new(11, 9, 0, 1, subcell_grid_size);
     let ne_anchor_v = SubCellCoord::new(10, 9, 0, 1, subcell_grid_size); // Vertical anchor (N)
     let ne_anchor_h = SubCellCoord::new(11, 10, 0, 0, subcell_grid_size); // Horizontal anchor (E)
@@ -186,7 +187,7 @@ fn test_all_directions_blocked_actor_waits() {
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     // Block ALL neighbors (current is 10,10,0,0)
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let neighbors = [
         SubCellCoord::new(9, 9, 1, 1, subcell_grid_size),   // NW
         SubCellCoord::new(10, 9, 0, 1, subcell_grid_size),  // N
@@ -258,7 +259,7 @@ fn test_multiple_actors_diagonal_fallback() {
         actors.push(actor);
     }
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Run one frame - actors should reserve without backwards movement
     let mut movements = Vec::new();
@@ -340,7 +341,7 @@ fn test_only_best_diagonal_tried() {
     actor.set_subcell_destination(Position { x: dest_cell_x, y: dest_cell_y });
 
     // Block SW diagonal (best aligned) and its anchors
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
     let sw_diagonal = SubCellCoord::new(9, 11, 1, 0, subcell_grid_size);
     reservation_mgr.try_reserve(sw_diagonal, 999);
 

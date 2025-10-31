@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use macroquad::prelude::*;
-use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubCellReservationManager, SubPoint, spread_cell_destinations};
+use rustgame3::{Action, ActionLog, Actor, Affinity, Config, Grid, MovementEvent, raycast, SaveState, SubPointReservationManager, SubPoint, spread_cell_destinations};
 use rustgame3::corners::{detect_all_corners, filter_interesting_corners, Corner, CornerDirection};
 use rustgame3::pathfinding::{find_path, find_path_with_cache, Position};
 use std::collections::HashSet;
@@ -137,7 +137,7 @@ struct VisState {
     subcell_mode: SubCellMode,
     subcell_offset: SubCellOffset,  // Offset for sub-cell grid alignment
     subcell_movement_enabled: bool,
-    subcell_reservation_manager: SubCellReservationManager,
+    subcell_reservation_manager: SubPointReservationManager,
     show_subcell_markers: bool,  // Toggle for green/yellow sub-cell debug markers
     early_reservation_enabled: bool,  // If true, reserve immediately after switching current
     filter_backward_moves: bool,  // If true, filter out candidates that move away from destination
@@ -218,7 +218,7 @@ impl VisState {
             subcell_mode,
             subcell_offset: SubCellOffset::from_string(&config.subcell.offset),
             subcell_movement_enabled: config.subcell.movement_enabled,
-            subcell_reservation_manager: SubCellReservationManager::new(subcell_grid_size),
+            subcell_reservation_manager: SubPointReservationManager::new(subcell_grid_size, config.grid.cols, config.grid.rows),
             show_subcell_markers: config.subcell.show_markers,
             early_reservation_enabled: config.subcell.early_reservation_enabled,
             filter_backward_moves: true,  // Enabled by default
@@ -1295,6 +1295,7 @@ impl VisState {
                 let (rx, ry) = reserved_sc.to_screen_center_with_offset(
                     self.cell_width,
                     self.cell_height,
+                    self.subcell_reservation_manager.grid_size(),
                     offset_x,
                     offset_y
                 );
@@ -1306,6 +1307,7 @@ impl VisState {
                 let (px, py) = psc.to_screen_center_with_offset(
                     self.cell_width,
                     self.cell_height,
+                    self.subcell_reservation_manager.grid_size(),
                     offset_x,
                     offset_y
                 );

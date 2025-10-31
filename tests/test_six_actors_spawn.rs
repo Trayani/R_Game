@@ -7,7 +7,8 @@
 /// This tests the edge case of more actors than available subcells.
 
 use rustgame3::Actor;
-use rustgame3::subcell::SubCellReservationManager;
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 use std::collections::HashSet;
 
@@ -53,7 +54,7 @@ fn test_six_actors_at_same_location() {
     println!("    a) Wait in NoSubcell state, OR");
     println!("    b) Reserve subcells in adjacent cells\n");
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Run simulation to let actors reserve subcells
     let max_iterations = 200;

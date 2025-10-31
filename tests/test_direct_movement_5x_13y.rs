@@ -2,7 +2,8 @@
 // Verifies that actor moves directly without zigzagging
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -69,7 +70,7 @@ fn test_direct_movement_plus_5x_plus_13y() {
     let dest = Position { x: dest_cell_x, y: dest_cell_y };
     actor.set_subcell_destination(dest);
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Track movement for analysis

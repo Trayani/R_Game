@@ -2,7 +2,8 @@
 // User reports NE-H was optimal but actor traveled as if NE-V was selected
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -50,7 +51,7 @@ fn test_affinity_spawn_136_525_dest_16_31() {
     let dest = Position { x: dest_cell_x, y: dest_cell_y };
     actor.set_subcell_destination(dest);
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Run just a few iterations to see initial affinity choices

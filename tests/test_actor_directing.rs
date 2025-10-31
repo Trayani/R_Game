@@ -2,7 +2,8 @@
 // Tests based on design/actor_orientation/actor_directing_position_tests.tsv
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::config;
 use rustgame3::pathfinding::Position;
 
@@ -124,7 +125,7 @@ fn load_actor_directing_tests() -> Vec<ActorDirectingTest> {
 fn run_alternative_test(
     test: &ActorDirectingTest,
     epsilon: f32,
-    reservation_mgr: &mut SubCellReservationManager,
+    reservation_mgr: &mut SubPointReservationManager,
 ) -> Result<(), String> {
     // Skip tests without alternative data
     if test.alt1_dir.is_empty() {
@@ -738,7 +739,7 @@ fn test_phase1_alternatives() {
 
     for test in p1_tests {
         // Create FRESH reservation manager for each test to avoid state pollution
-        let mut reservation_mgr = SubCellReservationManager::new(2);
+        let mut reservation_mgr = SubPointReservationManager::new(2);
 
         match run_alternative_test(test, epsilon, &mut reservation_mgr) {
             Ok(()) => {
@@ -777,7 +778,7 @@ fn test_phase2_alternatives() {
     println!("\n=== Phase 2: Alternative Direction Tests (P1, P2, P3) ===");
     println!("Running {} alternative tests...\n", core_tests.len());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     let mut passed = 0;
     let mut failed = 0;
     let epsilon = 0.02;
@@ -822,7 +823,7 @@ fn test_phase3_alternatives() {
     println!("\n=== Phase 3: Alternative Direction Tests (P4-P7 Edge Cases) ===");
     println!("Running {} alternative tests...\n", edge_tests.len());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     let mut passed = 0;
     let mut failed = 0;
     let epsilon = 0.02;
@@ -865,7 +866,7 @@ fn test_phase4_alternatives() {
     println!("\n=== Phase 4: Alternative Direction Tests (P8-P9 Corner Cases) ===");
     println!("Running {} alternative tests...\n", corner_tests.len());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     let mut passed = 0;
     let mut failed = 0;
     let epsilon = 0.02;
@@ -904,7 +905,7 @@ fn test_all_alternatives_comprehensive() {
     println!("\n=== Comprehensive Alternative Tests: All Phases ===");
     println!("Running {} alternative tests...\n", alt_tests.len());
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     let mut passed = 0;
     let mut failed = 0;
     let mut failed_tests = Vec::new();

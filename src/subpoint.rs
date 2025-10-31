@@ -455,6 +455,27 @@ impl SubPointReservationManager {
     pub fn reservation_count(&self) -> usize {
         self.reservations.len()
     }
+
+    /// Set the grid size (clears all reservations and current positions)
+    pub fn set_grid_size(&mut self, grid_size: i32) {
+        self.grid_size = grid_size;
+        self.subcell_width = self.world_cols * grid_size;
+        self.clear(); // Clear everything since grid size changed
+    }
+
+    /// Get all reserved SubPoints (for visualization)
+    pub fn get_all_reservations(&self) -> impl Iterator<Item = SubPoint> + '_ {
+        self.reservations.keys().map(move |&index| {
+            SubPoint::from_index(index, self.subcell_width)
+        })
+    }
+
+    /// Get all current SubPoints (for visualization)
+    pub fn get_all_current_subcells(&self) -> impl Iterator<Item = SubPoint> + '_ {
+        self.current_points.values().map(move |&index| {
+            SubPoint::from_index(index, self.subcell_width)
+        })
+    }
 }
 
 #[cfg(test)]

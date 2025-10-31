@@ -15,7 +15,8 @@
 /// - Both affinity: clamp both (target at corner)
 
 use rustgame3::actor::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 
 /// Helper to create actor for testing
 /// Uses the same grid dimensions as the original bug scenario:

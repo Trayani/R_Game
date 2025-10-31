@@ -1,7 +1,7 @@
 /// Test that multiple actors starting from the same position naturally split apart
 /// when moving toward the same destination, due to exclusive subcell reservations.
 
-use rustgame3::{Actor, SubCellReservationManager, ReservationEagerness, ReleaseEagerness};
+use rustgame3::{Actor, SubPointReservationManager, ReservationEagerness, ReleaseEagerness};
 use rustgame3::pathfinding::Position;
 use std::collections::HashSet;
 
@@ -52,7 +52,7 @@ fn test_five_actors_split_from_same_start() {
         actor
     }).collect();
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Simulation parameters
     let delta_time = 0.016; // ~60 FPS
@@ -251,7 +251,7 @@ fn test_actors_dont_overlap_during_movement() {
         actor
     }).collect();
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     let delta_time = 0.016;
     let max_iterations = 200;

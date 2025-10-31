@@ -11,7 +11,8 @@
 
 use rustgame3::Actor;
 use rustgame3::pathfinding::Position;
-use rustgame3::subcell::SubCellReservationManager;
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 use std::collections::HashSet;
 
@@ -68,7 +69,7 @@ fn test_automated_simulation_with_diagonal_fallback() {
     println!("NOTE: Per actor_states.txt, actors will first align to nearest subcell.");
     println!("      PSC_ALIGNMENT movements may go backwards - this is expected!\n");
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Track which actors have completed PSC_ALIGNMENT
     let mut actors_aligned: HashSet<usize> = HashSet::new();

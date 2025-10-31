@@ -728,7 +728,7 @@ impl Actor {
     fn check_anti_cross(
         from: &SubPoint,
         to: &SubPoint,
-        reservation_manager: &crate::subcell::SubCellReservationManager,
+        reservation_manager: &crate::subpoint::SubPointReservationManager,
         actor_id: usize,
         grid_size: i32,
     ) -> bool {
@@ -739,11 +739,8 @@ impl Actor {
 
         // Get counter-diagonal cells using SubPoint directly
         let counter_diag_points = crate::subcell::get_counter_diagonal_subpoints(from, to);
-        // Convert to SubCellCoord for reservation manager (temporary until manager migrated)
-        let counter1_coord = SubCellCoord::from_subpoint(&counter_diag_points[0], grid_size);
-        let counter2_coord = SubCellCoord::from_subpoint(&counter_diag_points[1], grid_size);
-        let owner1 = reservation_manager.get_owner(&counter1_coord);
-        let owner2 = reservation_manager.get_owner(&counter2_coord);
+        let owner1 = reservation_manager.get_owner(&counter_diag_points[0]);
+        let owner2 = reservation_manager.get_owner(&counter_diag_points[1]);
 
         // Block if SAME other actor owns BOTH counter-diagonal cells
         if let (Some(id1), Some(id2)) = (owner1, owner2) {
@@ -1068,7 +1065,7 @@ impl Actor {
         cell_height: f32,
         subcell_offset_x: f32,
         subcell_offset_y: f32,
-        reservation_manager: &crate::subcell::SubCellReservationManager,
+        reservation_manager: &crate::subpoint::SubPointReservationManager,
         actor_id: usize,
     ) -> Option<f32> {
         // Get all 8 neighbors FROM the candidate position
@@ -1089,7 +1086,7 @@ impl Actor {
 
         for neighbor in &neighbors {
             // Skip if reserved by ANOTHER actor (we're allowed to move through our own reservations)
-            if let Some(reserver_id) = reservation_manager.is_reserved(neighbor) {
+            if let Some(reserver_id) = reservation_manager.get_owner(&neighbor.to_subpoint()) {
                 if reserver_id != actor_id {
                     continue; // Reserved by someone else, skip
                 }
@@ -1179,7 +1176,7 @@ impl Actor {
         dir_y: f32,
         dest_screen_x: f32,
         dest_screen_y: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
@@ -1220,7 +1217,7 @@ impl Actor {
         dir_y: f32,
         dest_screen_x: f32,
         dest_screen_y: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
@@ -1285,7 +1282,7 @@ impl Actor {
             // For a diagonal move, we need one H or V anchor
             if let Some(anchor) = find_anchor_cell(&current_subpoint, &diagonal_subpoint) {
                 // Try to reserve both diagonal and anchor atomically
-                if reservation_manager.try_reserve_multiple(&[*diagonal, SubCellCoord::from_subpoint(&anchor, self.subcell_grid_size)], self.id) {
+                if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), anchor], self.id) {
                     self.reserved_subcell = Some(diagonal_subpoint);
                     self.extra_reserved_subcells = vec![anchor];
                     if track_movement {
@@ -1326,7 +1323,7 @@ impl Actor {
         previous_current: Option<&SubCellCoord>,
         dest_screen_x: f32,
         dest_screen_y: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
@@ -1455,8 +1452,8 @@ impl Actor {
             if Self::check_anti_cross(&current_subpoint, &diagonal_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
                 // Get counter-diagonal cells for logging
                 let counter_diag = crate::subcell::get_counter_diagonal_subcells(current, diagonal);
-                let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-                let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                let owner1 = reservation_manager.get_owner(&counter_diag[0].to_subpoint());
+                let owner2 = reservation_manager.get_owner(&counter_diag[1].to_subpoint());
                 self.diagnostic_messages.push(format!(
                     "[DIAG RESERVE] Actor {} BEST diagonal BLOCKED by anti-cross: counter-diag cells ({},{},{},{}) owner={:?} and ({},{},{},{}) owner={:?}",
                     self.id,
@@ -1473,8 +1470,8 @@ impl Actor {
                     let prev_subpoint = prev.to_subpoint();
                     if Self::check_anti_cross(&prev_subpoint, &current_subpoint, reservation_manager, self.id, self.subcell_grid_size) {
                         let counter_diag = crate::subcell::get_counter_diagonal_subcells(prev, current);
-                        let owner1 = reservation_manager.get_owner(&counter_diag[0]);
-                        let owner2 = reservation_manager.get_owner(&counter_diag[1]);
+                        let owner1 = reservation_manager.get_owner(&counter_diag[0].to_subpoint());
+                        let owner2 = reservation_manager.get_owner(&counter_diag[1].to_subpoint());
                         self.diagnostic_messages.push(format!(
                             "[DIAG RESERVE] Actor {} BEST diagonal BLOCKED by anti-cross (prev check): counter-diag owner={:?} and {:?}",
                             self.id, owner1, owner2
@@ -1517,9 +1514,9 @@ impl Actor {
             }
 
             // Check ownership before attempting reservation
-            let diag_owner = reservation_manager.get_owner(diagonal);
+            let diag_owner = reservation_manager.get_owner(&diagonal.to_subpoint());
             let anchor_coord = SubCellCoord::from_subpoint(&affinity_result.anchor, self.subcell_grid_size);
-            let anchor_owner = reservation_manager.get_owner(&anchor_coord);
+            let anchor_owner = reservation_manager.get_owner(&anchor_coord.to_subpoint());
             self.diagnostic_messages.push(format!(
                 "[DIAG RESERVE] Actor {} BEST diagonal: affinity={:?} anchor={} | Ownership: diagonal={:?} anchor={:?}",
                 self.id, affinity_result.affinity,
@@ -1531,7 +1528,7 @@ impl Actor {
             if track_movement {
                 println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + anchor...");
             }
-            if reservation_manager.try_reserve_multiple(&[*diagonal, anchor_coord], self.id) {
+            if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), anchor_coord.to_subpoint()], self.id) {
                 self.reserved_subcell = Some(diagonal_subpoint);
                 self.extra_reserved_subcells = vec![affinity_result.anchor];
                 // LOCK target position and affinity (actor_directing_v2.txt)
@@ -1588,7 +1585,7 @@ impl Actor {
 
                 // Check ownership of opposite anchor
                 let opp_anchor_coord = SubCellCoord::from_subpoint(&opposite_anchor, self.subcell_grid_size);
-                let opp_anchor_owner = reservation_manager.get_owner(&opp_anchor_coord);
+                let opp_anchor_owner = reservation_manager.get_owner(&opp_anchor_coord.to_subpoint());
                 self.diagnostic_messages.push(format!(
                     "[DIAG RESERVE] Actor {} trying OPPOSITE affinity: opposite_anchor={} owner={:?}",
                     self.id,
@@ -1599,7 +1596,7 @@ impl Actor {
                 if track_movement {
                     println!("[RESERVE V2 DEBUG]   Attempting to reserve diagonal + opposite anchor...");
                 }
-                if reservation_manager.try_reserve_multiple(&[*diagonal, opp_anchor_coord], self.id) {
+                if reservation_manager.try_reserve_multiple(&[diagonal.to_subpoint(), opp_anchor_coord.to_subpoint()], self.id) {
                     self.reserved_subcell = Some(diagonal_subpoint);
                     self.extra_reserved_subcells = vec![opposite_anchor];
 
@@ -1860,7 +1857,7 @@ impl Actor {
     fn try_reserve_any_available_in_current_cell(
         &mut self,
         current: &SubCellCoord,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         track_movement: bool,
     ) -> bool {
         // Get all subcells in the current supercell (cell)
@@ -1907,7 +1904,7 @@ impl Actor {
                 continue;
             }
 
-            if reservation_manager.try_reserve(*sc, self.id) {
+            if reservation_manager.try_reserve(sc.to_subpoint(), self.id) {
                 self.reserved_subcell = Some(sc.to_subpoint());
                 self.extra_reserved_subcells.clear();
                 // Clear locked values when changing reservation
@@ -2039,7 +2036,7 @@ impl Actor {
         dir_y: f32,
         dest_screen_x: f32,
         dest_screen_y: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         track_movement: bool,
     ) -> bool {
         // Temporary: convert to SubPoint for new helper functions
@@ -2117,7 +2114,7 @@ impl Actor {
 
         for candidate_group in priority_order {
             for candidate in candidate_group.iter() {
-                if reservation_manager.try_reserve(*candidate, self.id) {
+                if reservation_manager.try_reserve(candidate.to_subpoint(), self.id) {
                     let candidate_subpoint = candidate.to_subpoint();
                     self.reserved_subcell = Some(candidate_subpoint);
                     self.extra_reserved_subcells.clear();
@@ -2166,7 +2163,7 @@ impl Actor {
         dir_y: f32,
         dest_screen_x: f32,
         dest_screen_y: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_square_reservation: bool,
         enable_diagonal_constraint: bool,
         enable_no_diagonal: bool,
@@ -2208,8 +2205,9 @@ impl Actor {
                 // Try to reserve all four cells atomically
                 let mut all_cells = vec![best];
                 all_cells.extend_from_slice(&additional_cells);
+                let all_cells_subpoint: Vec<SubPoint> = all_cells.iter().map(|c| c.to_subpoint()).collect();
 
-                if reservation_manager.try_reserve_multiple(&all_cells, self.id) {
+                if reservation_manager.try_reserve_multiple(&all_cells_subpoint, self.id) {
                     // Successfully reserved square - move to best cell
                     self.reserved_subcell = Some(best.to_subpoint());
                     // Track the additional 3 cells
@@ -2294,7 +2292,7 @@ impl Actor {
                 if let Some(anchor) = find_anchor_cell(&current_subpoint, &candidate_subpoint) {
                     let anchor_coord = SubCellCoord::from_subpoint(&anchor, self.subcell_grid_size);
                     // Try to reserve both anchor and diagonal atomically
-                    if reservation_manager.try_reserve_multiple(&[anchor_coord, *candidate], self.id) {
+                    if reservation_manager.try_reserve_multiple(&[anchor_coord.to_subpoint(), candidate.to_subpoint()], self.id) {
                         self.reserved_subcell = Some(candidate_subpoint);
                         // Track the anchor as extra reservation
                         self.extra_reserved_subcells = vec![anchor];
@@ -2309,7 +2307,7 @@ impl Actor {
                 continue;
             } else {
                 // Non-diagonal or diagonal constraint disabled: single reservation
-                if reservation_manager.try_reserve(*candidate, self.id) {
+                if reservation_manager.try_reserve(candidate.to_subpoint(), self.id) {
                     self.reserved_subcell = Some(candidate_subpoint);
                     // Clear extra reserved cells (single-cell only)
                     self.extra_reserved_subcells.clear();
@@ -2482,7 +2480,7 @@ impl Actor {
     pub(crate) fn update_subcell_destination_direct_impl(
         &mut self,
         delta_time: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_early_reservation: bool,
         filter_backward: bool,
         enable_anti_cross: bool,
@@ -2609,7 +2607,7 @@ impl Actor {
                 // Try to reserve the nearest available subcell (across all cells in spiral)
                 let mut reserved_subcell = None;
                 for sc in &all_candidate_subcells {
-                    if reservation_manager.try_reserve(*sc, self.id) {
+                    if reservation_manager.try_reserve(sc.to_subpoint(), self.id) {
                         reserved_subcell = Some(*sc);
                         if always_trace {
                             println!("[ALIGN] Actor {} reserved subcell ({},{},{},{}) at distance {:.1}px from ({:.1},{:.1})",
@@ -2638,7 +2636,7 @@ impl Actor {
 
                 let c = reserved_subcell.unwrap();
                 self.current_subcell = Some(c.to_subpoint());
-                reservation_manager.set_current(c, self.id);
+                reservation_manager.set_current(c.to_subpoint(), self.id);
 
                 // Enter PscAlignment state (NoSubcell → PscAlignment transition)
                 self.alignment_state = AlignmentState::PscAlignment;
@@ -2794,18 +2792,18 @@ impl Actor {
             // Release all reservations except the destination sub-cell
             let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
             if current_coord != dest_subcell {
-                reservation_manager.release(current_coord, self.id);
+                reservation_manager.release(current_coord.to_subpoint(), self.id);
             }
             if let Some(reserved) = self.reserved_subcell {
                 let reserved_coord = SubCellCoord::from_subpoint(&reserved, self.subcell_grid_size);
                 if reserved_coord != dest_subcell {
-                    reservation_manager.release(reserved_coord, self.id);
+                    reservation_manager.release(reserved_coord.to_subpoint(), self.id);
                 }
             }
             for extra in &self.extra_reserved_subcells {
                 let extra_coord = SubCellCoord::from_subpoint(extra, self.subcell_grid_size);
                 if extra_coord != dest_subcell {
-                    reservation_manager.release(extra_coord, self.id);
+                    reservation_manager.release(extra_coord.to_subpoint(), self.id);
                 }
             }
             self.extra_reserved_subcells.clear();
@@ -3222,14 +3220,14 @@ impl Actor {
                     let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                     let reserved_coord = SubCellCoord::from_subpoint(&reserved, self.subcell_grid_size);
                     if current_coord != reserved_coord {
-                        reservation_manager.release(current_coord, self.id);
+                        reservation_manager.release(current_coord.to_subpoint(), self.id);
                     }
 
                     // Release extra reserved cells (not chosen as PSC)
                     for extra in &self.extra_reserved_subcells {
                         if *extra != new_psc {
                             let extra_coord = SubCellCoord::from_subpoint(extra, self.subcell_grid_size);
-                            reservation_manager.release(extra_coord, self.id);
+                            reservation_manager.release(extra_coord.to_subpoint(), self.id);
                         }
                     }
                     self.extra_reserved_subcells.clear();
@@ -3243,7 +3241,7 @@ impl Actor {
 
                     // Register the new current subcell
                     let new_psc_coord = SubCellCoord::from_subpoint(&new_psc, self.subcell_grid_size);
-                    reservation_manager.set_current(new_psc_coord, self.id);
+                    reservation_manager.set_current(new_psc_coord.to_subpoint(), self.id);
 
                     // Enter PscAlignment state for new PSC (Move → PscAlignment transition)
                     self.alignment_state = AlignmentState::PscAlignment;
@@ -3436,7 +3434,7 @@ impl Actor {
     pub fn update_subcell_destination_direct(
         &mut self,
         delta_time: f32,
-        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_early_reservation: bool,
         _filter_backward: bool, // Unused, kept for API compatibility
         enable_anti_cross: bool,

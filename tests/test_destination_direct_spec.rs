@@ -9,7 +9,8 @@
 /// - Section 6: Algorithm Summary (Q6.1-Q6.3)
 
 use rustgame3::{Grid, Actor};
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 
 // ===========================================================================
@@ -23,7 +24,7 @@ fn test_q11_primary_subcell_concept() {
     let cell_height = 30.0;
     let grid_size = 2;
 
-    let _reservation_mgr = SubCellReservationManager::new(grid_size);
+    let _reservation_mgr = SubPointReservationManager::new(grid_size);
 
     // Spawn actor at position
     let actor = Actor::new(
@@ -174,7 +175,7 @@ fn test_q27_dynamic_discovery() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let _reservation_mgr = SubCellReservationManager::new(grid_size);
+    let _reservation_mgr = SubPointReservationManager::new(grid_size);
 
     // Create actor at position A
     let mut actor_a = Actor::new(1, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
@@ -334,7 +335,7 @@ fn test_q56_grid_boundary() {
 fn test_q57_atomic_reservation() {
     // Q5.7: Subcell reservation must be atomic (no race conditions)
     let grid_size = 2;
-    let mut reservation_mgr = SubCellReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
 
     let subcell = SubCellCoord::new(0, 0, 1, 1, grid_size);
 
@@ -361,7 +362,7 @@ fn test_q63_invariant_psc_exclusivity() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let mut reservation_mgr = SubCellReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
 
     let actor1 = Actor::new(0, 15.0, 15.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
     let actor2 = Actor::new(1, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
@@ -416,7 +417,7 @@ fn test_destination_direct_basic_movement() {
     let cell_width = 30.0;
     let cell_height = 30.0;
     let grid_size = 2;
-    let mut reservation_mgr = SubCellReservationManager::new(grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(grid_size);
 
     let mut actor = Actor::new(
         0,

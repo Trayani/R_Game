@@ -4,7 +4,8 @@
 // Actual: target points UP (wrong!)
 
 use rustgame3::Actor;
-use rustgame3::subcell::{SubCellCoord, SubCellReservationManager};
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::{SubCellCoord, };
 use rustgame3::pathfinding::Position;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 
@@ -51,7 +52,7 @@ fn test_target_direction_spawn_208_473_dest_20_27() {
     let dest = Position { x: dest_cell_x, y: dest_cell_y };
     actor.set_subcell_destination(dest);
 
-    let mut reservation_mgr = SubCellReservationManager::new(2);
+    let mut reservation_mgr = SubPointReservationManager::new(2);
     reservation_mgr.set_current(start_subcell, 0);
 
     // Run just a few iterations to see first directing decision

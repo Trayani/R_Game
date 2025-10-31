@@ -2,7 +2,8 @@
 /// do NOT align to the same subcell - each gets their own subcell
 
 use rustgame3::Actor;
-use rustgame3::subcell::SubCellReservationManager;
+use rustgame3::SubPointReservationManager;
+use rustgame3::subcell::;
 use rustgame3::config::{ReservationEagerness, ReleaseEagerness};
 use std::collections::HashSet;
 
@@ -43,7 +44,7 @@ fn test_actors_get_unique_subcells() {
     println!("Spawned {} actors at SAME position ({:.1}, {:.1})", actors.len(), start_x, start_y);
     println!("Each actor should reserve a DIFFERENT subcell\n");
 
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Run simulation to let actors reserve subcells
     let max_iterations = 100;

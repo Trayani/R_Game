@@ -4,7 +4,7 @@
 /// IMPORTANT: This test now loads config.toml to match GUI behavior exactly!
 /// If config.toml doesn't exist, it falls back to default values.
 
-use rustgame3::{SaveState, Grid, SubCellReservationManager, ReservationEagerness, ReleaseEagerness, Config};
+use rustgame3::{SaveState, Grid, SubPointReservationManager, ReservationEagerness, ReleaseEagerness, Config};
 use rustgame3::pathfinding::Position;
 use rustgame3::subcell::spread_cell_destinations;
 use std::collections::HashMap;
@@ -87,7 +87,7 @@ fn test_f9_load_and_p_destination() {
         enable_lookahead,
         psc_switch_threshold
     );
-    let mut reservation_mgr = SubCellReservationManager::new(subcell_grid_size);
+    let mut reservation_mgr = SubPointReservationManager::new(subcell_grid_size, 1000, 1000);
 
     // Step 2: Set destination to bottom-left (P key equivalent)
     // User said "bottom left place" - let's use cell (5, 35) as target
