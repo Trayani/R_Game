@@ -10,38 +10,38 @@
 /// - New diagonal: The subcell that completes the mirror triangle
 /// - Redundant subcell: The old subcell no longer needed (opposite the shared edge)
 
-use crate::subcell::{SubCellCoord, SubCellReservationManager};
+use crate::subpoint::{SubPoint, SubPointReservationManager};
 
 /// Represents a triangle formed by 3 subcell coordinates
 #[derive(Debug, Clone, PartialEq)]
 pub struct Triangle {
     /// The three vertices (subcell centers) forming the triangle
     /// Order: [PSC/base, vertex2, vertex3]
-    pub vertices: [SubCellCoord; 3],
+    pub vertices: [SubPoint; 3],
 }
 
 impl Triangle {
     /// Create a new triangle from 3 subcell coordinates
-    pub fn new(v1: SubCellCoord, v2: SubCellCoord, v3: SubCellCoord) -> Self {
+    pub fn new(v1: SubPoint, v2: SubPoint, v3: SubPoint) -> Self {
         Triangle {
             vertices: [v1, v2, v3],
         }
     }
 
     /// Get the PSC (base vertex) of the triangle
-    pub fn psc(&self) -> &SubCellCoord {
+    pub fn psc(&self) -> &SubPoint {
         &self.vertices[0]
     }
 
     /// Check if this triangle contains a given subcell as one of its vertices
-    pub fn contains_vertex(&self, sc: &SubCellCoord) -> bool {
+    pub fn contains_vertex(&self, sc: &SubPoint) -> bool {
         self.vertices.iter().any(|v| v == sc)
     }
 
     /// Get the two vertices that are NOT the given vertex (finds the opposite edge)
     /// Returns None if the given vertex is not in this triangle
-    pub fn get_opposite_edge(&self, vertex: &SubCellCoord) -> Option<[SubCellCoord; 2]> {
-        let others: Vec<SubCellCoord> = self.vertices
+    pub fn get_opposite_edge(&self, vertex: &SubPoint) -> Option<[SubPoint; 2]> {
+        let others: Vec<SubPoint> = self.vertices
             .iter()
             .filter(|v| *v != vertex)
             .copied()
@@ -62,13 +62,14 @@ impl Triangle {
         dest_y: f32,
         cell_width: f32,
         cell_height: f32,
-    ) -> SubCellCoord {
+        grid_size: i32,
+    ) -> SubPoint {
         // Calculate which vertex is furthest from destination
         let mut max_dist = -1.0;
         let mut redundant = self.vertices[0];
 
         for vertex in &self.vertices {
-            let (vx, vy) = vertex.to_screen_center(cell_width, cell_height);
+            let (vx, vy) = vertex.to_screen_center(cell_width, cell_height, grid_size);
             let dx = dest_x - vx;
             let dy = dest_y - vy;
             let dist = (dx * dx + dy * dy).sqrt();
@@ -89,11 +90,11 @@ pub struct MirrorTriangleInfo {
     /// The current triangle configuration
     pub current_triangle: Triangle,
     /// The shared edge (2 subcells common to both current and mirror)
-    pub shared_edge: [SubCellCoord; 2],
+    pub shared_edge: [SubPoint; 2],
     /// The new diagonal subcell that completes the mirror triangle
-    pub new_diagonal: SubCellCoord,
+    pub new_diagonal: SubPoint,
     /// The redundant subcell to release (from current triangle)
-    pub redundant: SubCellCoord,
+    pub redundant: SubPoint,
     /// The resulting mirror triangle
     pub mirror_triangle: Triangle,
 }
@@ -108,13 +109,14 @@ pub struct MirrorTriangleInfo {
 ///
 /// Returns: MirrorTriangleInfo describing the mirror transition, or None if not applicable
 pub fn identify_mirror_triangle(
-    current_psc: &SubCellCoord,
-    reserved_diagonal: &SubCellCoord,
-    anchor: &SubCellCoord,
+    current_psc: &SubPoint,
+    reserved_diagonal: &SubPoint,
+    anchor: &SubPoint,
     dest_x: f32,
     dest_y: f32,
     cell_width: f32,
     cell_height: f32,
+    grid_size: i32,
 ) -> Option<MirrorTriangleInfo> {
     // Current triangle: (current_psc, reserved_diagonal, anchor)
     let current_triangle = Triangle::new(*current_psc, *reserved_diagonal, *anchor);
@@ -122,7 +124,7 @@ pub fn identify_mirror_triangle(
     // The shared edge should be the two vertices closest to destination
     // Typically: (reserved_diagonal, anchor) - the edge actor is approaching
     let redundant = current_triangle.find_redundant_for_direction(
-        dest_x, dest_y, cell_width, cell_height
+        dest_x, dest_y, cell_width, cell_height, grid_size
     );
 
     let shared_edge = current_triangle.get_opposite_edge(&redundant)?;
@@ -155,7 +157,7 @@ pub fn identify_mirror_triangle(
     // 1. Is diagonal from at least one of the shared edge vertices
     // 2. Is closest to the destination direction
 
-    let (diag_x, diag_y) = reserved_diagonal.to_screen_center(cell_width, cell_height);
+    let (diag_x, diag_y) = reserved_diagonal.to_screen_center(cell_width, cell_height, grid_size);
     let dir_to_dest_x = dest_x - diag_x;
     let dir_to_dest_y = dest_y - diag_y;
     let dest_dir_len = (dir_to_dest_x * dir_to_dest_x + dir_to_dest_y * dir_to_dest_y).sqrt();
@@ -173,12 +175,10 @@ pub fn identify_mirror_triangle(
 
     for candidate in &candidates {
         // Check if candidate is diagonal from reserved_diagonal
-        let dx_cells = (candidate.cell_x - reserved_diagonal.cell_x).abs();
-        let dy_cells = (candidate.cell_y - reserved_diagonal.cell_y).abs();
-        let dx_subs = (candidate.sub_x - reserved_diagonal.sub_x).abs();
-        let dy_subs = (candidate.sub_y - reserved_diagonal.sub_y).abs();
+        let dx = (candidate.x - reserved_diagonal.x).abs();
+        let dy = (candidate.y - reserved_diagonal.y).abs();
 
-        let is_diagonal = (dx_cells > 0 || dx_subs > 0) && (dy_cells > 0 || dy_subs > 0);
+        let is_diagonal = dx > 0 && dy > 0;
 
         if !is_diagonal {
             continue; // Must be diagonal for mirror
@@ -191,6 +191,7 @@ pub fn identify_mirror_triangle(
             norm_dest_y,
             cell_width,
             cell_height,
+            grid_size,
         );
 
         if score > best_score {
@@ -219,7 +220,7 @@ pub fn identify_mirror_triangle(
 pub fn try_reserve_mirror(
     mirror_info: &MirrorTriangleInfo,
     actor_id: usize,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut SubPointReservationManager,
 ) -> bool {
     // The shared edge should already be reserved by this actor
     // We only need to reserve the new diagonal
@@ -251,9 +252,9 @@ pub fn try_reserve_mirror(
 
 /// Release the redundant subcell from the old triangle
 pub fn release_redundant(
-    redundant: &SubCellCoord,
+    redundant: &SubPoint,
     actor_id: usize,
-    reservation_manager: &mut SubCellReservationManager,
+    reservation_manager: &mut SubPointReservationManager,
 ) {
     reservation_manager.release(*redundant, actor_id);
     println!("[MIRROR] Actor {} released redundant: {:?}", actor_id, redundant);
@@ -265,9 +266,9 @@ mod tests {
 
     #[test]
     fn test_triangle_creation() {
-        let v1 = SubCellCoord::new(0, 0, 0, 0, 2);
-        let v2 = SubCellCoord::new(0, 0, 1, 1, 2);
-        let v3 = SubCellCoord::new(0, 0, 1, 0, 2);
+        let v1 = SubPoint::from_cell_subcell(0, 0, 0, 0, 2);
+        let v2 = SubPoint::from_cell_subcell(0, 0, 1, 1, 2);
+        let v3 = SubPoint::from_cell_subcell(0, 0, 1, 0, 2);
 
         let triangle = Triangle::new(v1, v2, v3);
 
@@ -278,9 +279,9 @@ mod tests {
 
     #[test]
     fn test_opposite_edge() {
-        let v1 = SubCellCoord::new(0, 0, 0, 0, 2);
-        let v2 = SubCellCoord::new(0, 0, 1, 1, 2);
-        let v3 = SubCellCoord::new(0, 0, 1, 0, 2);
+        let v1 = SubPoint::from_cell_subcell(0, 0, 0, 0, 2);
+        let v2 = SubPoint::from_cell_subcell(0, 0, 1, 1, 2);
+        let v3 = SubPoint::from_cell_subcell(0, 0, 1, 0, 2);
 
         let triangle = Triangle::new(v1, v2, v3);
 
@@ -296,9 +297,9 @@ mod tests {
         let cell_height = 30.0;
 
         // Current triangle: (0,0,0,0) -> (0,0,1,1) with anchor (0,0,1,0)
-        let psc = SubCellCoord::new(0, 0, 0, 0, 2);
-        let diagonal = SubCellCoord::new(0, 0, 1, 1, 2);
-        let anchor = SubCellCoord::new(0, 0, 1, 0, 2);
+        let psc = SubPoint::from_cell_subcell(0, 0, 0, 0, 2);
+        let diagonal = SubPoint::from_cell_subcell(0, 0, 1, 1, 2);
+        let anchor = SubPoint::from_cell_subcell(0, 0, 1, 0, 2);
 
         // Destination: moving NE
         let dest_x = 100.0;
@@ -307,7 +308,7 @@ mod tests {
         let mirror_info = identify_mirror_triangle(
             &psc, &diagonal, &anchor,
             dest_x, dest_y,
-            cell_width, cell_height
+            cell_width, cell_height, 2
         );
 
         assert!(mirror_info.is_some(), "Should identify mirror triangle");
