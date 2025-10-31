@@ -50,7 +50,7 @@ fn test_q11_primary_subcell_concept() {
     // Verify PSC is based on actor position
     let expected_psc = SubCellCoord::from_screen_pos_with_offset(
         45.0, 45.0, cell_width, cell_height, grid_size, 0.0, 0.0
-    );
+    ).to_subpoint();
     assert_eq!(psc, expected_psc, "PSC should be determined by actor float position");
 }
 
@@ -216,7 +216,7 @@ fn test_q31_target_depends_on_reservation() {
     if actor.reserved_subcell.is_none() {
         // Target should be PSC center
         let psc = actor.current_subcell.unwrap();
-        let (center_x, center_y) = psc.to_screen_center(cell_width, cell_height);
+        let (center_x, center_y) = psc.to_screen_center(cell_width, cell_height, grid_size);
         println!("No reservation: target should be PSC center ({:.1}, {:.1})", center_x, center_y);
     }
 
@@ -280,11 +280,12 @@ fn test_q51_destination_in_psc() {
 
     let mut actor = Actor::new(0, 45.0, 45.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
     let psc = actor.current_subcell.unwrap();
+    let (psc_cell_x, psc_cell_y) = psc.to_cell(grid_size);
 
     // Set destination to cell containing PSC
     let dest = Position {
-        x: psc.cell_x,
-        y: psc.cell_y
+        x: psc_cell_x,
+        y: psc_cell_y
     };
     actor.set_subcell_destination(dest);
 
@@ -316,9 +317,10 @@ fn test_q56_grid_boundary() {
     // Spawn at top-left corner (0, 0)
     let actor = Actor::new(0, 5.0, 5.0, 10.0, 50.0, 5.0, cell_width, cell_height, grid_size, 0.0, 0.0, true, 0.5);
     let psc = actor.current_subcell.unwrap();
+    let (psc_cell_x, psc_cell_y) = psc.to_cell(grid_size);
 
-    assert_eq!(psc.cell_x, 0);
-    assert_eq!(psc.cell_y, 0);
+    assert_eq!(psc_cell_x, 0);
+    assert_eq!(psc_cell_y, 0);
 
     // Get neighbors - some will be outside grid
     let neighbors = psc.get_neighbors();
@@ -371,9 +373,11 @@ fn test_q63_invariant_psc_exclusivity() {
     let psc1 = actor1.current_subcell.unwrap();
     let psc2 = actor2.current_subcell.unwrap();
 
-    // Register with reservation manager
-    reservation_mgr.set_current(psc1, actor1.id);
-    reservation_mgr.set_current(psc2, actor2.id);
+    // Register with reservation manager (convert to SubCellCoord temporarily)
+    let psc1_coord = SubCellCoord::from_subpoint(&psc1, grid_size);
+    let psc2_coord = SubCellCoord::from_subpoint(&psc2, grid_size);
+    reservation_mgr.set_current(psc1_coord, actor1.id);
+    reservation_mgr.set_current(psc2_coord, actor2.id);
 
     // PSCs must be different (since spawn positions are different)
     assert_ne!(psc1, psc2, "Two actors at different positions must have different PSCs");

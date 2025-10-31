@@ -128,8 +128,10 @@ fn test_diagnose_actor_stopping() {
                 if moved { "MOVING" } else { "STOPPED" });
 
             if let Some(ref subcell) = actor.current_subcell {
+                let (cell_x, cell_y) = subcell.to_cell(actor.subcell_grid_size);
+                let (sub_x, sub_y) = subcell.subcell_offset(actor.subcell_grid_size);
                 println!("                    Subcell: ({},{},{},{}) | Reservations: {}",
-                    subcell.cell_x, subcell.cell_y, subcell.sub_x, subcell.sub_y,
+                    cell_x, cell_y, sub_x, sub_y,
                     reservation_mgr.reservation_count());
             }
 

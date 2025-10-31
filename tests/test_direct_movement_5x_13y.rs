@@ -140,8 +140,10 @@ fn test_direct_movement_plus_5x_plus_13y() {
                 if moved { "MOVING" } else { "STOPPED" });
 
             if let Some(ref sc) = actor.current_subcell {
+                let (cell_x, cell_y) = sc.to_cell(actor.subcell_grid_size);
+                let (sub_x, sub_y) = sc.subcell_offset(actor.subcell_grid_size);
                 println!("                   Subcell: ({},{},{},{}) | Reservations: {}",
-                    sc.cell_x, sc.cell_y, sc.sub_x, sc.sub_y,
+                    cell_x, cell_y, sub_x, sub_y,
                     reservation_mgr.reservation_count());
             }
         }
