@@ -5,7 +5,9 @@
 ///
 /// YOU (the user) will maintain this file directly.
 
-use crate::subcell::SubCellCoord;
+use crate::actor::Actor;
+use crate::subcell::{SubCellCoord, SubCellReservationManager};
+use crate::config::{ReservationEagerness, ReleaseEagerness};
 
 /// Calculate Euclidean distance between two points
 fn distance(p1: (f32, f32), p2: (f32, f32)) -> f32 {
@@ -227,4 +229,40 @@ pub fn is_moving_toward_destination(
     let dot_product = movement_x * dest_x + movement_y * dest_y;
 
     dot_product > 0.0
+}
+
+// ============================================================================
+// UPDATE ACTOR - DECISION ROOT
+// ============================================================================
+
+/// Main update function - serves as the decision root for actor behavior
+///
+/// This function orchestrates all actor decisions and delegates to execution functions.
+/// All decision logic flows through this function, making it easy to understand and modify.
+///
+/// Returns: true if actor reached destination, false otherwise
+pub fn update_actor(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut SubCellReservationManager,
+    enable_early_reservation: bool,
+    enable_anti_cross: bool,
+    track_movement: bool,
+    reservation_eagerness: ReservationEagerness,
+    release_eagerness: ReleaseEagerness,
+) -> bool {
+    // For now, delegate to the internal implementation in actor.rs
+    // TODO: Gradually refactor to extract decision logic here
+    // This function serves as the decision root - all actor updates flow through here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        enable_early_reservation,
+        false, // filter_backward (unused)
+        enable_anti_cross,
+        track_movement,
+        0.0, // reservation_threshold_distance (unused)
+        reservation_eagerness,
+        release_eagerness,
+    )
 }

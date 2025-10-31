@@ -2371,7 +2371,9 @@ impl Actor {
     ///
     /// # Parameters
     /// - Same as `update_subcell`
-    pub fn update_subcell_destination_direct(
+    /// Internal implementation of update_subcell_destination_direct
+    /// Called by actor_directives::update_actor() (the decision root)
+    pub(crate) fn update_subcell_destination_direct_impl(
         &mut self,
         delta_time: f32,
         reservation_manager: &mut crate::subcell::SubCellReservationManager,
@@ -3299,6 +3301,33 @@ impl Actor {
             println!("  [RETURN] Returning false (not reached destination)");
         }
         false
+    }
+
+    /// Public API for updating actor with destination-direct movement
+    /// Delegates to actor_directives::update_actor() (the decision root)
+    pub fn update_subcell_destination_direct(
+        &mut self,
+        delta_time: f32,
+        reservation_manager: &mut crate::subcell::SubCellReservationManager,
+        enable_early_reservation: bool,
+        _filter_backward: bool, // Unused, kept for API compatibility
+        enable_anti_cross: bool,
+        track_movement: bool,
+        _reservation_threshold_distance: f32, // Unused, kept for API compatibility
+        reservation_eagerness: crate::config::ReservationEagerness,
+        release_eagerness: crate::config::ReleaseEagerness,
+    ) -> bool {
+        // Delegate to actor_directives::update_actor() (the decision root)
+        actor_directives::update_actor(
+            self,
+            delta_time,
+            reservation_manager,
+            enable_early_reservation,
+            enable_anti_cross,
+            track_movement,
+            reservation_eagerness,
+            release_eagerness,
+        )
     }
 }
 
