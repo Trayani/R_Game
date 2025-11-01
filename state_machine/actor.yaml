@@ -10,7 +10,7 @@ MOVE:
   - PROC:switch_pp:
       DO: release_reserved(actor.ppId)
       SET NEXT: actor.reserved_point
-      IF actor.dir.direct && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
+      IF actor.reserved_anchor.not_null && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
         SET NEXT: actor.reserved_anchor
         SET actor.reserved_anchor: null
       ELSE:
