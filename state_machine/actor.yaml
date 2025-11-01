@@ -1,0 +1,148 @@
+## STATES
+MOVE:
+  - SET CDT: distance_to_target
+  - DO: move_to_target
+  - SET NDT: distance_to_target
+  - IF OR( CDT.x > NDT.x, CDT.y > NDT.y):
+      - SET state	IDLE
+
+IDLE:
+  - IF !dest.set: PASS                # PASS means terminate early
+  - SET OD: optimal_direction
+  - IF !OD.set:
+      SET OD: alternative_direction
+  - IF OD.set:
+      SET target: OD
+
+## TYPES
+DirectionTypeCardinality: H | V | N   # horizontal | vertical | none
+
+DirectionType:
+  fields:
+    cardinality: DirectionTypeCardinality
+    south: bool
+    east: bool
+  const:
+    - NORTH(V, false, false)
+    - SOUTH(V, true, false)
+    - EAST(H, false, true)
+    - WEST(H, false, false)
+    - NORTH_WEST(N, false, false)
+    - NORTH_EAST(N, false, true)
+    - SOUTH_WEST(N, true, false)
+    - SOUTH_EAST(N, true, true)
+  alias: DT
+
+f2: float x, float y
+f2n: float x, float y, bool set
+i2: int x, int y
+i2n: int x, int y, bool set
+Direction: DT type, bool direct, bool set
+Actor:
+  pos: f2     # float-precise position of the actor in the grid
+  pp: i2n     # primary point (also called subPoint) that denotes the actor's normalized position (for the purpose of path finding and crowd control)
+  dest: i2n   # int-point of the destination that the actor should move to
+  target: f2n # float-point of the actor's currently approached position. 'target' is dynamically changing to guide the actor to 'dest'
+  dir: Direction  # categorization of the actor's direction of motion
+
+
+
+
+
+
+
+
+## PROCEDURES
+proc:
+  dir_type:DirectionType:
+    - SET south: actor.pp.y < actor.dest.y
+    - IF actor.pp.x == actor.dest.x: RETURN  (V, south, false)
+    - SET east: actor.pp.x < actor.dest.x
+    - IF actor.pp.y == actor.dest.y: RETURN  (H, false, east)
+    - RETURN: (N, south, east)
+
+
+  optimal_direction(DT d) :Direction:
+    - IF d.cardinality == V:
+        RETURN: ( dir_type, false, try_reserve_point(offset_bool(d.south)))
+    - IF d.cardinality == H:
+        RETURN: ( dir_type, false, try_reserve_point(0 ,offset_bool(d.east)))
+    - SET diagonal: can_reserve_point(offset_bool(d.south), offset_bool(d.east))
+    - IF !diagonal:
+        RETURN: ( dir_type, false,  false )
+    - SET anchor_h: can_reserve_point(0, offset_bool(d.east))
+    - SET anchor_v: can_reserve_point(offset_bool(d.south), 0)
+    - IF !anchor_h & !anchor_v:
+        RETURN: ( dir_type, false,  false )
+    - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.y - actor.pp.y)
+    - IF affinity_h:
+        - IF anchor_h:
+          - try_reserve_point(offset_bool(d.south), offset_bool(d.east))
+          - try_reserve_point(0, offset_bool(d.east))
+          - RETURN: ( dir_type, true,  true )
+
+
+
+
+        - IF actor.pp.y == actor.dest.y: RETURN  (N, false, east)
+        - SET aff:Affinity: Affinity.V
+        - IF abs(dest.x - actor.pp.x) > abs(dest.x - actor.pp.x):
+            SET aff:Affinity: Affinity.H
+        - RETURN: (aff, south, east)
+
+    - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.x - actor.pp.x)
+
+    - IF affinity_h:
+        - try_reserve_point(offset_bool(d.south) ,0)
+
+
+
+
+    - SET cardinal: OR (actor.pp.x == actor.dest.x,  actor.pp.y == actor.dest.y )
+    - IF cardinal:
+        IF south: try_reserve_point(
+
+
+
+
+
+    - RETURN:
+        - actor.pp.x == actor.dest.x: true, south, false)
+        - actor.pp.y == actor.dest.y: true, false, east)
+
+
+
+        RETURN (true,
+
+
+    - IF cardinal:
+
+
+
+    - IF actor.pp.x == actor.dest.x:
+        IF actor.pp.y == actor.dest.y:
+
+# proc-ai has to be implemented by AI agent based on provided information
+proc-ai:
+  offset_bool (bool b): if(b) 1 else -1
+  distance_to_target:
+    x:float: abs(actor.target.x - actor.pos.x)
+    y:float: abs(actor.target.y - actor.pos.y)
+  move_to_target:
+    - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.target
+    - increment actor.pos by STEP
+
+  # the following 2 are
+  can_reserve_point( bool|int  x , bool|in y):
+    - convert bool parameters to int  (true = 1, false = -1)
+    - inquired point at (actor.pp.x + x, actor.pp.y + y)
+    - RETURN:
+        false: if the inquired point is already reserved by another actor
+        true: if the inquired point is not reserved or reserved by the inquiring actor
+  try_reserve_point( bool|int  x , bool|in y):
+    - IF can_reserve_point(x,y):
+        - mark the point as reserved  by this actor
+        - RETURN: true
+    - RETURN: false
+
+

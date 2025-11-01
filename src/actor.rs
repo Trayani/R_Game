@@ -2008,6 +2008,8 @@ impl Actor {
         let dx_to_dest = dest_screen_x - self.fpos_x;
         let dy_to_dest = dest_screen_y - self.fpos_y;
 
+
+
         // Calculate movement target
         // Use locked_target if set (DestinationDirect mode), otherwise use reserved subcell center
         let (target_x, target_y) = if let Some((locked_x, locked_y)) = self.locked_target {

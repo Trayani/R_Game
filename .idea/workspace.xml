@@ -13,6 +13,9 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.db" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/actor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/actor.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,10 +66,12 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Cargo.Build `Run rustgame3`.executor&quot;: &quot;Run&quot;,
     &quot;Cargo.Run rustgame3.executor&quot;: &quot;Debug&quot;,
     &quot;Cargo.Test ray.executor&quot;: &quot;Debug&quot;,
     &quot;Cargo.Test test_actor_directing.executor&quot;: &quot;Debug&quot;,
     &quot;Cargo.Test test_save_state_simulation.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.clean.executor&quot;: &quot;Run&quot;,
     &quot;Cargo.test.executor&quot;: &quot;Debug&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -82,7 +87,7 @@
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
     &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.build.tool.cargo&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;language.rust.cargo.check&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -210,7 +215,8 @@
     </recent_temporary>
   </component>
   <component name="RustProjectSettings">
-    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="explicitPathToStdlib" value="$USER_HOME$/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library" />
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin" />
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -226,6 +232,8 @@
       <workItem from="1760796207505" duration="54238000" />
       <workItem from="1761107967090" duration="8763000" />
       <workItem from="1761224653269" duration="11882000" />
+      <workItem from="1761987539955" duration="188000" />
+      <workItem from="1761987748427" duration="14624000" />
     </task>
     <servers />
   </component>
@@ -292,13 +300,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/src/actor.rs</url>
-          <line>1734</line>
-          <option name="timeStamp" value="4" />
+          <line>2054</line>
+          <option name="timeStamp" value="5" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/src/actor.rs</url>
-          <line>2047</line>
-          <option name="timeStamp" value="5" />
+          <line>2001</line>
+          <option name="timeStamp" value="7" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -350,5 +358,9 @@
         <watch expression="target_y" />
       </configuration>
     </watches-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
