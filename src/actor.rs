@@ -1993,6 +1993,11 @@ impl Actor {
     ) -> bool {
         // Move state: Actor has current_subcell, reserved_subcell, and destination
 
+        // DEBUG: Confirm execute_move_state is being called
+        if self.id == 0 && track_movement {
+            println!("[EXECUTE_MOVE_STATE] Actor {} entering execute_move_state", self.id);
+        }
+
         let current = self.current_subcell.expect("Move state requires current_subcell");
         let reserved = self.reserved_subcell.expect("Move state requires reserved_subcell");
         let dest = self.subcell_destination.expect("Move state requires destination");
@@ -2678,6 +2683,13 @@ impl Actor {
         };
 
         // Check if we should switch from reserved to current (triangle-based switching)
+        // NOTE: Move state is now handled by execute_move_state() via handle_move_state()
+        // Skip Move state handling here to avoid duplicate logic
+        if self.alignment_state == AlignmentState::Move {
+            // Move state handled by execute_move_state(), return early
+            return false;
+        }
+
         if let Some(reserved) = self.reserved_subcell {
             if always_trace || (self.id == 0 && track_movement) {
                 println!("  [STATE] Has reservation: {:?}", reserved);
