@@ -315,7 +315,7 @@ fn handle_psc_alignment_state(
 /// Returns true if either strategy succeeded
 fn try_reservation_with_fallback(
     actor: &mut Actor,
-    current: &SubCellCoord,
+    current: &SubPoint,
     dx_to_dest: f32,
     dy_to_dest: f32,
     dest_screen_x: f32,
@@ -338,8 +338,6 @@ fn try_reservation_with_fallback(
         ) || actor.try_reserve_diagonal_with_anchor(
             current,
             None,
-            dx_to_dest,
-            dy_to_dest,
             dest_screen_x,
             dest_screen_y,
             reservation_manager,
@@ -351,8 +349,6 @@ fn try_reservation_with_fallback(
         actor.try_reserve_diagonal_with_anchor(
             current,
             None,
-            dx_to_dest,
-            dy_to_dest,
             dest_screen_x,
             dest_screen_y,
             reservation_manager,
@@ -405,12 +401,9 @@ fn handle_idle_state(
     // Per actor_directing_v2.txt: Spec A1 (cardinal) vs A2 (diagonal)
     let is_cardinal = check_cardinal_alignment(&current, &dest, actor.subcell_grid_size).is_some();
 
-    // Temporarily convert back to SubCellCoord for methods that haven't been migrated yet
-    let current_coord = crate::subcell::SubCellCoord::from_subpoint(&current, actor.subcell_grid_size);
-
     let success = try_reservation_with_fallback(
         actor,
-        &current_coord,
+        &current,
         dx_to_dest,
         dy_to_dest,
         dest_screen_x,

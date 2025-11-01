@@ -7,8 +7,7 @@
 ///
 /// This module is called by actor_directives.rs (decision root) to execute decisions.
 
-use crate::subcell::SubCellReservationManager;
-use crate::subpoint::SubPoint;
+use crate::subpoint::{SubPoint, SubPointReservationManager};
 
 // ============================================================================
 // SPIRAL SEARCH HELPERS
@@ -112,7 +111,7 @@ pub fn find_anchor_cell(current: &SubPoint, target: &SubPoint) -> Option<SubPoin
 pub fn check_anti_cross(
     from: &SubPoint,
     to: &SubPoint,
-    reservation_manager: &SubCellReservationManager,
+    reservation_manager: &SubPointReservationManager,
     self_id: usize,
     grid_size: i32,
 ) -> bool {
@@ -131,13 +130,9 @@ pub fn check_anti_cross(
         y: from.y,
     };
 
-    // Convert to SubCellCoord for reservation manager lookup
-    let counter1_coord = crate::subcell::SubCellCoord::from_subpoint(&counter1, grid_size);
-    let counter2_coord = crate::subcell::SubCellCoord::from_subpoint(&counter2, grid_size);
-
     // Check if SAME actor owns BOTH counter-diagonal cells
-    let owner1 = reservation_manager.get_owner(&counter1_coord);
-    let owner2 = reservation_manager.get_owner(&counter2_coord);
+    let owner1 = reservation_manager.get_owner(&counter1);
+    let owner2 = reservation_manager.get_owner(&counter2);
 
     match (owner1, owner2) {
         (Some(id1), Some(id2)) if id1 == id2 && id1 != self_id => {

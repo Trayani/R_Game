@@ -1170,23 +1170,18 @@ impl Actor {
     /// - `previous_current`: Optional previous position for anti-cross check
     pub(crate) fn try_reserve_diagonal_with_anchor(
         &mut self,
-        current: &SubCellCoord,
-        previous_current: Option<&SubCellCoord>,
-        _dir_x: f32,
-        _dir_y: f32,
+        current: &SubPoint,
+        previous_current: Option<&SubPoint>,
         dest_screen_x: f32,
         dest_screen_y: f32,
         reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         enable_anti_cross: bool,
         track_movement: bool,
     ) -> bool {
-        // Convert SubCellCoord to SubPoint at boundary
-        // (Legacy v1 algorithm removed - always use v2 ray-rectangle intersection)
-        let current_sp = current.to_subpoint();
-        let previous_sp = previous_current.map(|p| p.to_subpoint());
+        // Direct call - no conversion needed (v1 algorithm removed, always use v2 ray-rectangle intersection)
         self.try_reserve_diagonal_with_affinity(
-            &current_sp,
-            previous_sp.as_ref(),
+            current,
+            previous_current,
             dest_screen_x,
             dest_screen_y,
             reservation_manager,
@@ -1538,10 +1533,9 @@ impl Actor {
             self.id
         ));
 
-        // Convert back to SubCellCoord for calling legacy horizontal/vertical method
-        let current_coord = crate::subcell::SubCellCoord::from_subpoint(current, self.subcell_grid_size);
+        // Try H/V fallback with SubPoint directly
         let cardinal_success = self.try_reserve_horizontal_vertical(
-            &current_coord,
+            current,
             dx_to_dest,
             dy_to_dest,
             dest_screen_x,
@@ -1730,7 +1724,7 @@ impl Actor {
 
     pub(crate) fn try_reserve_horizontal_vertical(
         &mut self,
-        current: &SubCellCoord,
+        current: &SubPoint,
         dir_x: f32,
         dir_y: f32,
         dest_screen_x: f32,
@@ -1738,9 +1732,6 @@ impl Actor {
         reservation_manager: &mut crate::subpoint::SubPointReservationManager,
         track_movement: bool,
     ) -> bool {
-        // Temporary: convert to SubPoint for new helper functions
-        let current_subpoint = current.to_subpoint();
-
         let neighbors = current.get_neighbors();
 
         // Priority list per spec Q2.3:
@@ -1753,11 +1744,11 @@ impl Actor {
         let horizontal_dominant = abs_dx > abs_dy;
 
         // Separate H and V candidates
-        let mut horizontal_candidates: Vec<SubCellCoord> = Vec::new();
-        let mut vertical_candidates: Vec<SubCellCoord> = Vec::new();
+        let mut horizontal_candidates: Vec<SubPoint> = Vec::new();
+        let mut vertical_candidates: Vec<SubPoint> = Vec::new();
 
         for n in neighbors.iter() {
-            if is_diagonal_move(&current_subpoint, &n.to_subpoint()) {
+            if crate::subpoint::is_diagonal_move(current, n) {
                 continue; // Skip diagonals
             }
 
@@ -1771,6 +1762,7 @@ impl Actor {
                 dest_screen_y,
                 self.cell_width,
                 self.cell_height,
+                self.subcell_grid_size,
                 self.subcell_offset_x,
                 self.subcell_offset_y,
                 self.distance_tolerance_multiplier,
@@ -1779,10 +1771,15 @@ impl Actor {
             }
 
             // Check if it's horizontal or vertical
-            let dx_cells = (n.cell_x - current.cell_x).abs();
-            let dy_cells = (n.cell_y - current.cell_y).abs();
-            let dx_subs = (n.sub_x - current.sub_x).abs();
-            let dy_subs = (n.sub_y - current.sub_y).abs();
+            let (current_cell_x, current_cell_y) = current.to_cell(self.subcell_grid_size);
+            let (n_cell_x, n_cell_y) = n.to_cell(self.subcell_grid_size);
+            let (current_sub_x, current_sub_y) = current.subcell_offset(self.subcell_grid_size);
+            let (n_sub_x, n_sub_y) = n.subcell_offset(self.subcell_grid_size);
+
+            let dx_cells = (n_cell_x - current_cell_x).abs();
+            let dy_cells = (n_cell_y - current_cell_y).abs();
+            let dx_subs = (n_sub_x - current_sub_x).abs();
+            let dy_subs = (n_sub_y - current_sub_y).abs();
 
             if (dx_cells > 0 || dx_subs > 0) && dy_cells == 0 && dy_subs == 0 {
                 horizontal_candidates.push(*n);
@@ -1793,19 +1790,19 @@ impl Actor {
 
         // Sort each group by alignment score
         horizontal_candidates.sort_by(|a, b| {
-            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height);
-            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height);
+            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height, self.subcell_grid_size);
+            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height, self.subcell_grid_size);
             score_b.partial_cmp(&score_a).unwrap()
         });
 
         vertical_candidates.sort_by(|a, b| {
-            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height);
-            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height);
+            let score_a = current.alignment_score(a, dir_x, dir_y, self.cell_width, self.cell_height, self.subcell_grid_size);
+            let score_b = current.alignment_score(b, dir_x, dir_y, self.cell_width, self.cell_height, self.subcell_grid_size);
             score_b.partial_cmp(&score_a).unwrap()
         });
 
         // Try in priority order: dominant direction first, then perpendicular
-        let priority_order: Vec<&Vec<SubCellCoord>> = if horizontal_dominant {
+        let priority_order: Vec<&Vec<SubPoint>> = if horizontal_dominant {
             vec![&horizontal_candidates, &vertical_candidates]
         } else {
             vec![&vertical_candidates, &horizontal_candidates]
@@ -1813,9 +1810,8 @@ impl Actor {
 
         for candidate_group in priority_order {
             for candidate in candidate_group.iter() {
-                if reservation_manager.try_reserve(candidate.to_subpoint(), self.id) {
-                    let candidate_subpoint = candidate.to_subpoint();
-                    self.reserved_subcell = Some(candidate_subpoint);
+                if reservation_manager.try_reserve(*candidate, self.id) {
+                    self.reserved_subcell = Some(*candidate);
                     self.extra_reserved_subcells.clear();
 
                     // Calculate locked target for H/V movement using simple distance-based affinity
@@ -1823,8 +1819,8 @@ impl Actor {
                     let affinity_result = self.calculate_simple_affinity_and_target(
                         self.fpos_x,
                         self.fpos_y,
-                        &current_subpoint,
-                        &candidate_subpoint,
+                        current,
+                        candidate,
                         dest_screen_x,
                         dest_screen_y,
                     );
@@ -2813,14 +2809,9 @@ impl Actor {
                         // Always attempt reservation after switching (no eagerness check)
                         // Eagerness only applies to early reservations (next-next cell)
                         // DestinationDirect: Try diagonal+anchor first, fallback to H/V
-                        // Note: current is SubPoint (new_psc), need to convert for legacy methods
-                        let current_coord_for_reserve = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
-                        let previous_current_coord = SubCellCoord::from_subpoint(&previous_current, self.subcell_grid_size);
                         let diag_success = self.try_reserve_diagonal_with_anchor(
-                            &current_coord_for_reserve,
-                            Some(&previous_current_coord),
-                            dx_to_dest,
-                            dy_to_dest,
+                            &current,
+                            Some(&previous_current),
                             dest_screen_x,
                             dest_screen_y,
                             reservation_manager,
@@ -2834,7 +2825,7 @@ impl Actor {
                             }
                             // Diagonal failed, try H/V
                             let hv_success = self.try_reserve_horizontal_vertical(
-                                &current_coord_for_reserve,
+                                &current,
                                 dx_to_dest,
                                 dy_to_dest,
                                 dest_screen_x,
@@ -2881,12 +2872,9 @@ impl Actor {
                 }
 
                 // Try diagonal+anchor first
-                let current_coord = SubCellCoord::from_subpoint(&current, self.subcell_grid_size);
                 let diagonal_success = self.try_reserve_diagonal_with_anchor(
-                    &current_coord,
+                    &current,
                     None,
-                    dx_to_dest,
-                    dy_to_dest,
                     dest_screen_x,
                     dest_screen_y,
                     reservation_manager,
@@ -2906,7 +2894,7 @@ impl Actor {
                         println!("  [RESERVE] Diagonal+anchor FAILED, trying H/V fallback");
                     }
                     let hv_success = self.try_reserve_horizontal_vertical(
-                        &current_coord,
+                        &current,
                         dx_to_dest,
                         dy_to_dest,
                         dest_screen_x,
