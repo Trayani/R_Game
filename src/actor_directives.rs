@@ -431,20 +431,15 @@ fn handle_move_state(
     enable_anti_cross: bool,
     track_movement: bool,
 ) -> bool {
-    // Move state: Actor is moving toward reserved subcell
-    // Key decisions:
-    // 1. Should check for PSC switching (when has reservation & close to target)
-    // 2. Should switch to anchor vs reserved (diagonal moves)
-    // 3. Should attempt reservation after switching
-    // 4. Should attempt reservation when in Idle state
+    // Move state: Actor has a reservation and is moving toward it
+    // This is a self-contained handler like handle_idle_state
 
-    // For now, delegate to full implementation
-    // TODO: Extract decision logic here
-    actor.update_subcell_destination_direct_impl(
+    // Delegate to actor.rs for execution
+    // The actor.rs method contains the Move state-specific logic extracted from
+    // update_subcell_destination_direct_impl
+    actor.execute_move_state(
         delta_time,
         reservation_manager,
-        false, // enable_early_reservation (not used in Move state)
-        false, // filter_backward (not used)
         enable_anti_cross,
         track_movement
     )

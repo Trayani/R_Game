@@ -260,6 +260,7 @@ fn run_alternative_test(
 
     // NOW set up the actor AFTER blocking
     actor.current_subcell = Some(psc.to_subpoint());
+    actor.alignment_state = rustgame3::actor::AlignmentState::Idle;  // Set to Idle since we have current_subcell
 
     // Reserve actor's current position
     reservation_mgr.try_reserve(psc.to_subpoint(), 0);

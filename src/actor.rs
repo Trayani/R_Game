@@ -1980,6 +1980,252 @@ impl Actor {
     }
 
 
+    /// Execute Move state logic - actor has reservation and is moving toward it
+    ///
+    /// This is called by handle_move_state in actor_directives.rs
+    /// Contains all logic for the Move state extracted from update_subcell_destination_direct_impl
+    pub(crate) fn execute_move_state(
+        &mut self,
+        delta_time: f32,
+        reservation_manager: &mut crate::subpoint::SubPointReservationManager,
+        enable_anti_cross: bool,
+        track_movement: bool,
+    ) -> bool {
+        // Move state: Actor has current_subcell, reserved_subcell, and destination
+
+        let current = self.current_subcell.expect("Move state requires current_subcell");
+        let reserved = self.reserved_subcell.expect("Move state requires reserved_subcell");
+        let dest = self.subcell_destination.expect("Move state requires destination");
+
+        // Calculate destination in screen coordinates
+        let dest_screen_x = dest.x as f32 * self.cell_width + self.cell_width / 2.0;
+        let dest_screen_y = dest.y as f32 * self.cell_height + self.cell_height / 2.0;
+        let dx_to_dest = dest_screen_x - self.fpos_x;
+        let dy_to_dest = dest_screen_y - self.fpos_y;
+
+        // Calculate movement target
+        // Use locked_target if set (DestinationDirect mode), otherwise use reserved subcell center
+        let (target_x, target_y) = if let Some((locked_x, locked_y)) = self.locked_target {
+            (locked_x, locked_y)
+        } else {
+            reserved.to_screen_center_with_offset(
+                self.cell_width,
+                self.cell_height,
+                self.subcell_grid_size,
+                self.subcell_offset_x,
+                self.subcell_offset_y,
+            )
+        };
+
+        // Calculate distance to target
+        let dx_to_target = target_x - self.fpos_x;
+        let dy_to_target = target_y - self.fpos_y;
+        let dist_to_target = (dx_to_target * dx_to_target + dy_to_target * dy_to_target).sqrt();
+
+        // Move toward target
+        let movement = self.speed * delta_time;
+        if dist_to_target > 0.001 {
+            let move_dist = movement.min(dist_to_target);
+            self.fpos_x += (dx_to_target / dist_to_target) * move_dist;
+            self.fpos_y += (dy_to_target / dist_to_target) * move_dist;
+        }
+
+        // Recalculate distance AFTER movement
+        let dist_to_target_after = {
+            let dx = target_x - self.fpos_x;
+            let dy = target_y - self.fpos_y;
+            (dx * dx + dy * dy).sqrt()
+        };
+
+        // Check if should switch to new PSC
+        // Standard mode: switch when at boundary (cannot move further)
+        let should_switch = dist_to_target_after < 0.5;
+
+        if should_switch {
+            let previous_current = current;
+
+            // Choose new PSC (current, reserved, or anchor)
+            let new_psc = if let Some(anchor) = self.extra_reserved_subcells.get(0).copied() {
+                // Diagonal move - use directives to choose between current, reserved, and anchor
+                let current_center = current.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                let reserved_center = reserved.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                let anchor_center = anchor.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+
+                let should_use_anchor = actor_directives::should_switch_to_anchor(
+                    self.id,
+                    (self.fpos_x, self.fpos_y),
+                    current_center,
+                    anchor_center,
+                    (dest_screen_x, dest_screen_y),
+                );
+
+                let should_use_reserved = actor_directives::should_switch_to_reserved(
+                    self.id,
+                    (self.fpos_x, self.fpos_y),
+                    current_center,
+                    reserved_center,
+                    (dest_screen_x, dest_screen_y),
+                    true, // has_anchor
+                );
+
+                // Choose based on directive results
+                if should_use_anchor && should_use_reserved {
+                    // Both valid, choose closer to actor position
+                    let dist_to_anchor = {
+                        let dx = self.fpos_x - anchor_center.0;
+                        let dy = self.fpos_y - anchor_center.1;
+                        (dx * dx + dy * dy).sqrt()
+                    };
+                    let dist_to_reserved = {
+                        let dx = self.fpos_x - reserved_center.0;
+                        let dy = self.fpos_y - reserved_center.1;
+                        (dx * dx + dy * dy).sqrt()
+                    };
+
+                    if dist_to_reserved < dist_to_anchor {
+                        reserved
+                    } else {
+                        anchor
+                    }
+                } else if should_use_reserved {
+                    reserved
+                } else if should_use_anchor {
+                    anchor
+                } else {
+                    current  // Stay at current
+                }
+            } else {
+                // H/V move - use directive to decide current vs reserved
+                let current_center = current.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                let reserved_center = reserved.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+
+                let should_use_reserved = actor_directives::should_switch_to_reserved(
+                    self.id,
+                    (self.fpos_x, self.fpos_y),
+                    current_center,
+                    reserved_center,
+                    (dest_screen_x, dest_screen_y),
+                    false, // no anchor
+                );
+
+                if should_use_reserved {
+                    reserved
+                } else {
+                    current
+                }
+            };
+
+            // Perform PSC switch
+            if current != new_psc {
+                // Release old current subcell
+                reservation_manager.release(current, self.id);
+
+                // Release extra reserved cells (not chosen as PSC)
+                for extra in &self.extra_reserved_subcells.clone() {
+                    if *extra != new_psc {
+                        reservation_manager.release(*extra, self.id);
+                    }
+                }
+                self.extra_reserved_subcells.clear();
+
+                // Update to new PSC
+                self.current_subcell = Some(new_psc);
+                self.reserved_subcell = None;
+                self.locked_target = None;
+                self.locked_affinity = None;
+
+                // Register new current subcell
+                reservation_manager.set_current(new_psc, self.id);
+
+                // Enter PscAlignment state (Move → PscAlignment transition)
+                self.alignment_state = AlignmentState::PscAlignment;
+                let (center_x, center_y) = new_psc.to_screen_center_with_offset(
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+                self.alignment_target = Some((center_x, center_y));
+
+                if track_movement {
+                    self.movement_track.push((self.fpos_x, self.fpos_y));
+                }
+            }
+
+            // Attempt post-switch reservation
+            // Only if NOT entering PscAlignment and NOT at destination
+            if self.alignment_state != AlignmentState::PscAlignment {
+                let dest_subcell = crate::subpoint::SubPoint::from_screen_pos_with_offset(
+                    dest_screen_x,
+                    dest_screen_y,
+                    self.cell_width,
+                    self.cell_height,
+                    self.subcell_grid_size,
+                    self.subcell_offset_x,
+                    self.subcell_offset_y,
+                );
+
+                if new_psc != dest_subcell {
+                    // Try diagonal+anchor first, fallback to H/V
+                    let diag_success = self.try_reserve_diagonal_with_anchor(
+                        &new_psc,
+                        Some(&previous_current),
+                        dest_screen_x,
+                        dest_screen_y,
+                        reservation_manager,
+                        enable_anti_cross,
+                        track_movement,
+                    );
+
+                    if !diag_success {
+                        self.try_reserve_horizontal_vertical(
+                            &new_psc,
+                            dx_to_dest,
+                            dy_to_dest,
+                            dest_screen_x,
+                            dest_screen_y,
+                            reservation_manager,
+                            track_movement,
+                        );
+                    }
+                }
+            }
+        }
+
+        false // Not at destination yet
+    }
+
     /// Update sub-cell movement with destination-direct strategy
     /// Returns true if destination reached, false otherwise
     ///

@@ -33,6 +33,7 @@ fn test_simple_diagonal_movement_ne() {
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
     let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
+    actor.alignment_state = rustgame3::actor::AlignmentState::Idle;  // Set to Idle since we have current_subcell
 
     // Set diagonal destination (NE direction, 4+ cells away)
     let dest = Position { x: 9, y: 1 };
@@ -242,6 +243,7 @@ fn test_simple_diagonal_movement_se() {
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
     let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
+    actor.alignment_state = rustgame3::actor::AlignmentState::Idle;  // Set to Idle since we have current_subcell
 
     // Set diagonal destination (SE direction, 4+ cells away)
     let dest = Position { x: 9, y: 9 };
@@ -451,6 +453,7 @@ fn test_simple_diagonal_movement_sw() {
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
     let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
+    actor.alignment_state = rustgame3::actor::AlignmentState::Idle;  // Set to Idle since we have current_subcell
 
     // Set diagonal destination (SW direction, 4+ cells away)
     let dest = Position { x: 1, y: 9 };
@@ -660,6 +663,7 @@ fn test_simple_diagonal_movement_nw() {
     let start_subcell = SubCellCoord::new(5, 5, 0, 0, 2);
     let start_subpoint = start_subcell.to_subpoint();
     actor.current_subcell = Some(start_subcell.to_subpoint());
+    actor.alignment_state = rustgame3::actor::AlignmentState::Idle;  // Set to Idle since we have current_subcell
 
     // Set diagonal destination (NW direction, 4+ cells away)
     let dest = Position { x: 1, y: 1 };
