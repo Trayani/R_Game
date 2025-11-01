@@ -1,18 +1,22 @@
 ## STATES
 MOVE:
-  - SET CDT: distance_to_target
   - DO: move_to_target
   - SET NDT: distance_to_target
-  - IF OR( CDT.x > NDT.x, CDT.y > NDT.y):
-      - SET state	IDLE
+  - IF AND(CDT.x < 0.5 ,  CDT.y < 0.5):
+      - SET stateIDLE
 
 IDLE:
   - IF !dest.set: PASS                # PASS means terminate early
-  - SET OD: optimal_direction
+  - SET d: opt_dir
+  - SET OD: optimal_direction(d)
   - IF !OD.set:
-      SET OD: alternative_direction
-  - IF OD.set:
-      SET target: OD
+      IF d.cardinality == V:
+        alternative_direction( DT(N, d.south, false), DT(N, d.south, true))
+      ELSE IF d.cardinality == H:
+        alternative_direction( DT(N, false,  d.east), DT(N, true,  d.east))
+      ELSE:
+        alternative_direction( DT(V, d.south,  false), DT(H, false  d.east))
+
 
 ## TYPES
 DirectionTypeCardinality: H | V | N   # horizontal | vertical | none
@@ -37,11 +41,13 @@ f2: float x, float y
 f2n: float x, float y, bool set
 i2: int x, int y
 i2n: int x, int y, bool set
-Direction: DT type, bool direct, bool set
+Direction: DT type, bool direct, bool set, f2 target
+
 Actor:
   pos: f2     # float-precise position of the actor in the grid
   pp: i2n     # primary point (also called subPoint) that denotes the actor's normalized position (for the purpose of path finding and crowd control)
-  dest: i2n   # int-point of the destination that the actor should move to
+  ppId: int32 # ID of the primary point, calculated as  pp.x + pp.y + grid.columns
+  dest: i2   # int-point of the destination that the actor should move to
   target: f2n # float-point of the actor's currently approached position. 'target' is dynamically changing to guide the actor to 'dest'
   dir: Direction  # categorization of the actor's direction of motion
 
@@ -50,81 +56,75 @@ Actor:
 
 
 
-
-
 ## PROCEDURES
 proc:
-  dir_type:DirectionType:
+  opt_dir:DirectionType:
     - SET south: actor.pp.y < actor.dest.y
     - IF actor.pp.x == actor.dest.x: RETURN  (V, south, false)
     - SET east: actor.pp.x < actor.dest.x
     - IF actor.pp.y == actor.dest.y: RETURN  (H, false, east)
     - RETURN: (N, south, east)
 
+  to_pos(int pointId):f2n:
+    SET y: pointId / grid_columns     #(this should round down)
+    RETURN: (pointId - y)*grid_cell_width, y*grid_cell_height
+  to_pos(int2 point):f2n:
+    RETURN: point.x*grid_cell_width, point.y*grid_cell_height
 
-  optimal_direction(DT d) :Direction:
+  alternative_direction(DT a, DT b):Direction:
+      - SET OD: optimal_direction(a)
+      - IF !OD.set:
+          - SET OD: optimal_direction(b)
+
+  optimal_direction(DT d):Direction:
+    - SET h_offset: (if d.east 1 else -1)
+    - SET v_offset: (if d.south 1 else -1)
+    - SET anchor_h_id: actor.ppId + h_offset
+    - SET anchor_v_id: actor.ppId + v_offset*grid_columns
     - IF d.cardinality == V:
-        RETURN: ( dir_type, false, try_reserve_point(offset_bool(d.south)))
+        RETURN:  ( dir_type, false, try_reserve_point( anchor_v_id), to_pos(anchor_v_id) )
+
     - IF d.cardinality == H:
-        RETURN: ( dir_type, false, try_reserve_point(0 ,offset_bool(d.east)))
-    - SET diagonal: can_reserve_point(offset_bool(d.south), offset_bool(d.east))
+        RETURN: ( dir_type, false, try_reserve_point( anchor_h_id), to_pos(anchor_h_id))
+
+    - SET diagonal_id: actor.pp.id + h_offset + v_offset*grid_columns
+    - SET diagonal: can_reserve_point(diagonal_id)
     - IF !diagonal:
         RETURN: ( dir_type, false,  false )
-    - SET anchor_h: can_reserve_point(0, offset_bool(d.east))
-    - SET anchor_v: can_reserve_point(offset_bool(d.south), 0)
+    - SET anchor_h: can_reserve_point( anchor_h_id)
+    - SET anchor_v: can_reserve_point( anchor_v_id)
     - IF !anchor_h & !anchor_v:
         RETURN: ( dir_type, false,  false )
     - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.y - actor.pp.y)
+    - SET DEST_POS: to_pos(dest)
+    - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
+    - SET RECT_Y: (actor.pp.y+v_offset) * grid_cell_height
     - IF affinity_h:
         - IF anchor_h:
-          - try_reserve_point(offset_bool(d.south), offset_bool(d.east))
-          - try_reserve_point(0, offset_bool(d.east))
-          - RETURN: ( dir_type, true,  true )
+            - SET SLOPE:  (DEST_POS.y - actor.pos.y) / (DEST_POS.x - actor.pos.x)         # line equation, please validate correctness
+            - SET TARGET_Y: RECT_X * SLOPE +  actor.pos.y
+            - IF d.south:
+                SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
+              ELSE :
+                SET TARGET_Y: max(min(TARGET_Y, RECT_Y), actor.pos.y)
+            - RETURN: ( dir_type, true,  try_reserve_point(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
+        - IF anchor_v:
+            RETURN: ( dir_type, true,  try_reserve_point(anchor_v_id , diagonal_id) , diagonal_id.to_pos )
+      ELSE:
+        - IF anchor_v:
+          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / (DEST_POS.y - actor.pos.y)         # line equation, please validate correctness
+          - SET TARGET_X: RECT_Y * SLOPE +  actor.pos.y                                 # line equation, please validate correctness
+          - IF d.east:
+              SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
+            ELSE :
+              SET TARGET_X: max(min(TARGET_X, RECT_X), actor.pos.x)
+          - RETURN: ( dir_type, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
+        - IF anchor_h:
+            RETURN: ( dir_type, true,  try_reserve_point(anchor_h_id , diagonal_id) , diagonal_id.to_pos )
 
-
-
-
-        - IF actor.pp.y == actor.dest.y: RETURN  (N, false, east)
-        - SET aff:Affinity: Affinity.V
-        - IF abs(dest.x - actor.pp.x) > abs(dest.x - actor.pp.x):
-            SET aff:Affinity: Affinity.H
-        - RETURN: (aff, south, east)
-
-    - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.x - actor.pp.x)
-
-    - IF affinity_h:
-        - try_reserve_point(offset_bool(d.south) ,0)
-
-
-
-
-    - SET cardinal: OR (actor.pp.x == actor.dest.x,  actor.pp.y == actor.dest.y )
-    - IF cardinal:
-        IF south: try_reserve_point(
-
-
-
-
-
-    - RETURN:
-        - actor.pp.x == actor.dest.x: true, south, false)
-        - actor.pp.y == actor.dest.y: true, false, east)
-
-
-
-        RETURN (true,
-
-
-    - IF cardinal:
-
-
-
-    - IF actor.pp.x == actor.dest.x:
-        IF actor.pp.y == actor.dest.y:
 
 # proc-ai has to be implemented by AI agent based on provided information
 proc-ai:
-  offset_bool (bool b): if(b) 1 else -1
   distance_to_target:
     x:float: abs(actor.target.x - actor.pos.x)
     y:float: abs(actor.target.y - actor.pos.y)
@@ -133,16 +133,24 @@ proc-ai:
     - increment actor.pos by STEP
 
   # the following 2 are
-  can_reserve_point( bool|int  x , bool|in y):
-    - convert bool parameters to int  (true = 1, false = -1)
-    - inquired point at (actor.pp.x + x, actor.pp.y + y)
+  can_reserve_point( int  pointId):
+    - inquire grid about the point at the id
+    - grid should store reservation information bound by point IDs
     - RETURN:
         false: if the inquired point is already reserved by another actor
         true: if the inquired point is not reserved or reserved by the inquiring actor
-  try_reserve_point( bool|int  x , bool|in y):
-    - IF can_reserve_point(x,y):
+  try_reserve_point(int  pointId ):
+    - IF can_reserve_point(pointId):
         - mark the point as reserved  by this actor
+        - RETURN: true
+    - RETURN: false
+  try_reserve_point(int  pointIdA , int pointIdB ):
+    - IF can_reserve_point(pointIdA) & can_reserve_point(pointIdB):
+        - mark both points as reserved  by this actor
         - RETURN: true
     - RETURN: false
 
 
+  grid_columns:int: returns number of column in the grid
+  grid_cell_width:float : returns a grid cell width, as displayed in the GUI
+  grid_cell_height:float : returns a grid cell height, as displayed in the GUI
