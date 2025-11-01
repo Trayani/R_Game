@@ -1,12 +1,38 @@
+
+# CONFIG
+CFG_PP_RELEASE AT: float  # range 0..1  , default: 0.6
+
 ## STATES
 MOVE:
   - DO: move_to_target
   - SET NDT: distance_to_target
-  - IF AND(CDT.x < 0.5 ,  CDT.y < 0.5):
-      - SET stateIDLE
+  - SET PD: distance_to_point(actor.pos)
+  - PROC:switch_pp:
+      DO: release_reserved(actor.ppId)
+      SET NEXT: actor.reserved_point
+      IF actor.dir.direct && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
+        SET NEXT: actor.reserved_anchor
+        SET actor.reserved_anchor: null
+      ELSE:
+        SET actor.reserved_point: null
+
+      SET actor.ppId: NEXT
+      SET actor.pp: NEXT.to_point
+
+    # PP switch
+  - IF !pp_switched && PD/(PD + NDT) > CFG_PP_RELEASE:              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+      DO: switch_pp
+
+
+  - IF AND(NDT.x < 0.5 ,  NDT.y < 0.5):
+      - IF !pp_switched:
+          DO: switch_pp
+      - DO: release_reserved(actor.reserved_point,  actor.reserved_anchor)
+      - SET state: IDLE
+
 
 IDLE:
-  - IF !dest.set: PASS                # PASS means terminate early
+  - IF dest.x < 0  || dest.y < 0: PASS                # PASS means terminate early
   - SET d: opt_dir
   - SET OD: optimal_direction(d)
   - IF !OD.set:
@@ -16,7 +42,9 @@ IDLE:
         alternative_direction( DT(N, false,  d.east), DT(N, true,  d.east))
       ELSE:
         alternative_direction( DT(V, d.south,  false), DT(H, false  d.east))
-
+  - IF OD.set:
+      SET actor.pp_switched: false
+      SET state: MOVE
 
 ## TYPES
 DirectionTypeCardinality: H | V | N   # horizontal | vertical | none
@@ -46,11 +74,13 @@ Direction: DT type, bool direct, bool set, f2 target
 Actor:
   pos: f2     # float-precise position of the actor in the grid
   pp: i2n     # primary point (also called subPoint) that denotes the actor's normalized position (for the purpose of path finding and crowd control)
-  ppId: int32 # ID of the primary point, calculated as  pp.x + pp.y + grid.columns
+  ppId: int32 # ID of the primary point, calculated as  pp.x + pp.y * grid_columns
   dest: i2   # int-point of the destination that the actor should move to
   dir: Direction  # categorization of the actor's direction of motion
-
-
+  speed: float   # motion speed
+  reserved_point: int?   # ID of a reserved point, that the actor is approaching
+  reserved_anchor: int?  #  ID of a secondary reserved point
+  pp_switched: bool
 
 
 
@@ -69,6 +99,10 @@ proc:
     RETURN: (pointId - y)*grid_cell_width, y*grid_cell_height
   to_pos(int2 point):f2n:
     RETURN: point.x*grid_cell_width, point.y*grid_cell_height
+  to_point(int pointId):i2:
+    SET y: pointId / grid_columns     #(this should round down)
+    RETURN: (pointId - y), y
+
 
   alternative_direction(DT a, DT b):Direction:
       - SET OD: optimal_direction(a)
@@ -127,9 +161,13 @@ proc-ai:
   distance_to_target:
     x:float: abs(actor.dir.target.x - actor.pos.x)
     y:float: abs(actor.dir.target.y - actor.pos.y)
+  distance_to_point(f2 point):
+    x:float: abs(point.x - actor.pos.x)
+    y:float: abs(point.y - actor.pos.y)
   move_to_target:
     - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.dir.target
     - increment actor.pos by STEP
+    - if STEP overshoots the destination, clamp the new position exactly to actor.dir.target
 
   # the following 2 are
   can_reserve_point( int  pointId):
@@ -141,15 +179,22 @@ proc-ai:
   try_reserve_point(int  pointId ):
     - IF can_reserve_point(pointId):
         - mark the point as reserved  by this actor
+        - actor.reserved_point = pointId
         - RETURN: true
     - RETURN: false
-  try_reserve_point(int  pointIdA , int pointIdB ):
+  try_reserve_point(int  pointId , int anchor ):
     - IF can_reserve_point(pointIdA) & can_reserve_point(pointIdB):
         - mark both points as reserved  by this actor
+        - actor.reserved_point = pointId
+        - actor.reserved_anchor = anchor
+        - if either reservation fails , the other must be reverted
         - RETURN: true
     - RETURN: false
+  release_reserved(vararg int?[]  pointId):
+    - ensure that each  point ID is open for reservation from the grid's perspective
+    - if a point ID is null, ignore
 
 
-  grid_columns:int: returns number of column in the grid
+  grid_columns:int : returns number of column in the grid
   grid_cell_width:float : returns a grid cell width, as displayed in the GUI
   grid_cell_height:float : returns a grid cell height, as displayed in the GUI
