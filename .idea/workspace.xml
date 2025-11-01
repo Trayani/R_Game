@@ -13,8 +13,8 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/actor.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/actor.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/actor_directives.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/actor_directives.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.db" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/action_log.json" beforeDir="false" afterPath="$PROJECT_DIR$/action_log.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -291,6 +291,11 @@
           <url>file://$PROJECT_DIR$/src/actor_directives.rs</url>
           <line>313</line>
           <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/actor.rs</url>
+          <line>1734</line>
+          <option name="timeStamp" value="4" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

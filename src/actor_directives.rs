@@ -423,6 +423,33 @@ fn handle_idle_state(
     false // Not at destination yet
 }
 
+/// Handle Move state - actor moving toward reserved subcell
+fn handle_move_state(
+    actor: &mut Actor,
+    delta_time: f32,
+    reservation_manager: &mut crate::subpoint::SubPointReservationManager,
+    enable_anti_cross: bool,
+    track_movement: bool,
+) -> bool {
+    // Move state: Actor is moving toward reserved subcell
+    // Key decisions:
+    // 1. Should check for PSC switching (when has reservation & close to target)
+    // 2. Should switch to anchor vs reserved (diagonal moves)
+    // 3. Should attempt reservation after switching
+    // 4. Should attempt reservation when in Idle state
+
+    // For now, delegate to full implementation
+    // TODO: Extract decision logic here
+    actor.update_subcell_destination_direct_impl(
+        delta_time,
+        reservation_manager,
+        false, // enable_early_reservation (not used in Move state)
+        false, // filter_backward (not used)
+        enable_anti_cross,
+        track_movement
+    )
+}
+
 // ============================================================================
 // UPDATE ACTOR - DECISION ROOT
 // ============================================================================
@@ -471,19 +498,12 @@ pub fn update_actor(
             enable_anti_cross,
             track_movement,
         ),
-        AlignmentState::Move => {
-
-
-            // Delegate to full implementation for now
-            // TODO: Extract Move-specific logic here
-            actor.update_subcell_destination_direct_impl(
-                delta_time,
-                reservation_manager,
-                enable_early_reservation,
-                false,
-                enable_anti_cross,
-                track_movement
-            )
-        }
+        AlignmentState::Move => handle_move_state(
+            actor,
+            delta_time,
+            reservation_manager,
+            enable_anti_cross,
+            track_movement,
+        ),
     }
 }
