@@ -1,13 +1,14 @@
 /// Actor YAML Converter - CLI tool
 ///
-/// Converts compact (human-friendly) actor.yaml to structured (machine-friendly) YAML.
+/// Converts original actor.yaml (human-friendly) to structured JSON (machine-friendly).
 ///
 /// Usage:
-///   cargo run --bin actor_converter <input.yaml> [output.yaml]
+///   cargo run --bin actor_converter <input.yaml> [output.json]
 ///
-/// If output file is not specified, prints to stdout.
+/// If output file is not specified, defaults to <input>.json
+/// Example: actor.yaml → actor.json
 
-use rustgame3::dsl::{ActorYAMLConverter, Validator};
+use rustgame3::dsl::{OriginalBehaviorSpec, ActorYAMLConverter};
 use std::env;
 use std::fs;
 use std::process;
@@ -16,62 +17,92 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        eprintln!("Usage: {} <input.yaml> [output.yaml]", args[0]);
+        eprintln!("Usage: {} <input.yaml> [output.json]", args[0]);
         eprintln!();
-        eprintln!("Converts compact actor YAML to structured YAML.");
+        eprintln!("Converts original actor YAML to structured JSON.");
         eprintln!();
         eprintln!("Examples:");
         eprintln!("  {} actor.yaml", args[0]);
-        eprintln!("  {} actor.yaml actor_compiled.yaml", args[0]);
+        eprintln!("  {} actor.yaml actor.json", args[0]);
+        eprintln!();
+        eprintln!("If no output file is specified, uses <input>.json");
         process::exit(1);
     }
 
     let input_file = &args[1];
-    let output_file = args.get(2);
+    let output_file = if let Some(output) = args.get(2) {
+        output.clone()
+    } else {
+        // Auto-generate: actor.yaml → actor.json
+        input_file.replace(".yaml", ".json")
+    };
 
-    // Read input file
-    let compact_yaml = match fs::read_to_string(input_file) {
-        Ok(content) => content,
+    println!("📖 Parsing {}...", input_file);
+
+    // Parse original format
+    let original = match OriginalBehaviorSpec::parse_from_file(input_file) {
+        Ok(spec) => {
+            println!("✅ Successfully parsed original format!");
+            println!("   States: {}", spec.states.len());
+            println!("   Config variables: {}", spec.config.len());
+            println!("   Procedures: {}", spec.procedures.len());
+            println!("   Native procedures: {}", spec.native_procedures.len());
+            println!("   Types: {}", spec.types.len());
+            spec
+        }
         Err(e) => {
-            eprintln!("❌ Error reading {}: {}", input_file, e);
+            eprintln!("❌ Parse error: {}", e);
             process::exit(1);
         }
     };
 
-    println!("📖 Reading {}", input_file);
+    println!();
+    println!("🔄 Converting to structured format...");
 
-    // Create converter
+    // Convert to structured format
     let converter = ActorYAMLConverter::new();
-
-    // Convert
-    println!("🔄 Converting...");
-    let structured_yaml = match converter.convert_str(&compact_yaml) {
-        Ok(yaml) => yaml,
+    let structured = match converter.convert_original_to_structured(original) {
+        Ok(spec) => {
+            println!("✅ Conversion successful!");
+            println!("   States: {}", spec.states.len());
+            for (name, actions) in &spec.states {
+                println!("     - {}: {} actions", name, actions.len());
+            }
+            spec
+        }
         Err(e) => {
             eprintln!("❌ Conversion error: {}", e);
             process::exit(1);
         }
     };
 
-    println!("✅ Conversion successful!");
+    println!();
+    println!("📝 Writing JSON to {}...", output_file);
 
-    // Output
-    match output_file {
-        Some(path) => {
-            match fs::write(path, &structured_yaml) {
-                Ok(_) => {
-                    println!("📝 Written to {}", path);
-                }
-                Err(e) => {
-                    eprintln!("❌ Error writing to {}: {}", path, e);
-                    process::exit(1);
-                }
-            }
+    // Serialize to JSON
+    let json = match serde_json::to_string_pretty(&structured) {
+        Ok(j) => j,
+        Err(e) => {
+            eprintln!("❌ JSON serialization error: {}", e);
+            process::exit(1);
         }
-        None => {
-            println!("\n{}", structured_yaml);
+    };
+
+    // Write output file
+    match fs::write(&output_file, &json) {
+        Ok(_) => {
+            println!("✅ Written to {}", output_file);
+        }
+        Err(e) => {
+            eprintln!("❌ Error writing to {}: {}", output_file, e);
+            process::exit(1);
         }
     }
 
+    println!();
     println!("🎉 Done!");
+    println!();
+    println!("Summary:");
+    println!("  Input:  {} (original YAML format)", input_file);
+    println!("  Output: {} (structured JSON format)", output_file);
 }
