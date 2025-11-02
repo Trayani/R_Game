@@ -1,6 +1,6 @@
 
 # CONFIG
-CFG_PP_RELEASE AT: float  # range 0..1  , default: 0.6
+# CFG_PP_RELEASE: float  # range 0..1  , default: 0.6
 
 # GLOBAL
 global:
@@ -8,6 +8,7 @@ global:
     grid_columns: int
     grid_cell_width: float
     grid_cell_height: float
+    CFG_PP_RELEASE: float
   parameters:
     delta_time: float
 
@@ -15,7 +16,7 @@ global:
 MOVE:
   - DO: move_to_target
   - SET NDT: distance_to_target
-  - SET PD: distance_to_point(actor.pos)
+  - SET PD: distance_to_point_pos(actor.pos)
   - PROC:switch_pp:
       # Release the old/current primary point before switching
       DO: release_reserved(actor.ppId)
@@ -28,7 +29,7 @@ MOVE:
           PANIC: "switch_pp called with no valid reservations"
 
       # If both reserved points are valid, choose the one closer to destination
-      IF (actor.reserved_anchor >=0)  && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
+      IF (actor.reserved_anchor >=0) && (distance_to_point_sqr(actor.reserved_point) > distance_to_point_sqr(actor.reserved_anchor)):
         SET NEXT: actor.reserved_anchor
         SET actor.reserved_anchor: -1     # -1 means 'invalid'
       ELSE:
@@ -51,13 +52,16 @@ MOVE:
       - IF (PD.x + PD.y) / TOTAL > CFG_PP_RELEASE:
           DO: switch_pp
 
+  # If we've switched pp and have no more reservations, go back to IDLE to re-plan
+  - IF AND(actor.pp_switched, actor.reserved_point < 0, actor.reserved_anchor < 0):
+      - SET state: IDLE
 
   # Target reached - transition to IDLE
   # pp_switched toggles only once per MOVE cycle (set in switch_pp, reset in IDLE)
   - IF AND(NDT.x < 0.5 ,  NDT.y < 0.5):
       - IF !actor.pp_switched:
           DO: switch_pp
-      - DO: release_reserved(actor.reserved_point,  actor.reserved_anchor)
+      - DO: release_reserved_both(actor.reserved_point,  actor.reserved_anchor)
       - SET state: IDLE
 
 
@@ -74,8 +78,8 @@ IDLE:
       ELSE:
         alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))
   - IF actor.dir.set:
-      SET actor.pp_switched: false  # Reset pp_switched flag for new MOVE cycle
-      SET state: MOVE
+      - SET actor.pp_switched: false  # Reset pp_switched flag for new MOVE cycle
+      - SET state: MOVE
     ELSE:
       # No valid direction found - wait and retry (actor stays in IDLE)
       # This should happen when all paths are blocked
@@ -107,6 +111,7 @@ i2n: int x, int y, bool set
 Direction: DT type, bool direct, bool set, f2 target
 
 Actor:
+  id: uint    # unique identifier for this actor
   pos: f2     # float-precise position of the actor in the grid
   pp: i2n     # primary point (also called subPoint) that denotes the actor's normalized position (for the purpose of path finding and crowd control)
   ppId: int32 # ID of the primary point, calculated as  pp.x + pp.y * grid_columns
@@ -117,6 +122,9 @@ Actor:
   reserved_anchor: int = -1  #  ID of a secondary reserved point
   pp_switched: bool = false
 
+Grid:
+  grid_points: map(uint, uint)  # map from point ID to actor ID (which actor has reserved this point)
+
 
 
 
@@ -124,9 +132,11 @@ Actor:
 proc:
   opt_dir:DirectionType:
     - SET south: actor.pp.y < actor.dest.y
-    - IF actor.pp.x == actor.dest.x: RETURN  (V, south, false)
+    - IF actor.pp.x == actor.dest.x:
+        RETURN: (V, south, false)
     - SET east: actor.pp.x < actor.dest.x
-    - IF actor.pp.y == actor.dest.y: RETURN  (H, false, east)
+    - IF actor.pp.y == actor.dest.y:
+        RETURN: (H, false, east)
     - RETURN: (N, south, east)
 
   # Helper: conditional value selection (replaces inline if-else expressions)
@@ -139,17 +149,21 @@ proc:
   to_pos(int pointId):f2:
     SET y: pointId / grid_columns     #(this should round down to integer)
     RETURN: ((pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height)
-  to_pos(int2 point):f2:
+  to_pos2(int2 point):f2:
     RETURN: (point.x*grid_cell_width, point.y*grid_cell_height)
-  to_point(int pointId):i2:
+  to_point(int pointId):i2n:
     SET y: pointId / grid_columns     #(this should round down to integer)
-    RETURN: ((pointId - y*grid_columns), y)
+    RETURN: ((pointId - y*grid_columns), y, true)
 
+
+  # Type constructor for DirectionType - returns a tuple that gets converted to DirectionType
+  DT(str cardinality, bool south, bool east):DirectionType:
+    RETURN: (cardinality, south, east)
 
   alternative_direction(DT a, DT b):
-      - SET actor.dir: optimal_direction(a)
-      - IF !actor.dir.set:
-          - SET actor.dir: optimal_direction(b)
+    - SET actor.dir: optimal_direction(a)
+    - IF !actor.dir.set:
+        - SET actor.dir: optimal_direction(b)
 
   optimal_direction(DT d):Direction:
     - SET h_offset: if_else(d.east, 1, -1)
@@ -171,7 +185,7 @@ proc:
     - IF AND(!anchor_h , !anchor_v):
         RETURN: ( d, false,  false, (0,0) )
     - SET affinity_h: abs(actor.dest.x - actor.pp.x) > abs(actor.dest.y - actor.pp.y)
-    - SET DEST_POS: to_pos(actor.dest)
+    - SET DEST_POS: to_pos2(actor.dest)
     - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
     - SET RECT_Y: (actor.pp.y+v_offset) * grid_cell_height
     - IF affinity_h:
@@ -194,21 +208,21 @@ proc:
                 SET TARGET_Y: max(min(TARGET_Y, RECT_Y), actor.pos.y)
               ELSE :
                 SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
-            - RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
+            - RETURN: ( d, true,  try_reserve_point_with_anchor(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
         - IF anchor_v:
-            RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
+            - RETURN: ( d, true,  try_reserve_point_with_anchor(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
       ELSE:
         - SET yDiff: DEST_POS.y - actor.pos.y
         - IF AND( anchor_v, yDiff != 0):
-          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff                              # line equation, please validate correctness
-          - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
-          - IF d.east:
-              SET TARGET_X: max(min(TARGET_X, RECT_X), actor.pos.x)
-            ELSE :
-              SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
-          - RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
+            - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff                              # line equation, please validate correctness
+            - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
+            - IF d.east:
+                SET TARGET_X: max(min(TARGET_X, RECT_X), actor.pos.x)
+              ELSE :
+                SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
+            - RETURN: ( d, true,  try_reserve_point_with_anchor(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
         - IF anchor_h:
-            RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id) , to_pos(diagonal_id) )
+            - RETURN: ( d, true,  try_reserve_point_with_anchor(anchor_h_id , diagonal_id) , to_pos(diagonal_id) )
       # at this point, nothing passed
       RETURN: ( d, false,  false , (0,0) )
 
@@ -218,7 +232,7 @@ proc:
     - SET y: abs(actor.dir.target.y - actor.pos.y)
     - RETURN: (x, y)
 
-  distance_to_point(f2 point):f2:
+  distance_to_point_pos(f2 point):f2:
     - SET px: point.x * grid_cell_width
     - SET py: point.y * grid_cell_height
     - SET x: abs(px - actor.pos.x)
@@ -232,6 +246,14 @@ proc:
     - SET x: abs(px - actor.pos.x)
     - SET y: abs(py - actor.pos.y)
     - RETURN: (x, y)
+
+  distance_to_point_sqr(int pointId):float:
+    - SET point: to_point(pointId)
+    - SET px: point.x * grid_cell_width
+    - SET py: point.y * grid_cell_height
+    - SET dx: px - actor.pos.x
+    - SET dy: py - actor.pos.y
+    - RETURN: dx * dx + dy * dy
 
   # Movement - converted to DSL (previously in proc-ai)
   move_to_target:
@@ -256,40 +278,71 @@ proc:
     - SET actor.pos.x: actor.pos.x + x_step
     - SET actor.pos.y: actor.pos.y + y_step
 
+  # Map helper functions
+  get(map m, uint key, uint fallback):uint:
+    - SET result: fallback
+    - IF key in m:
+        SET result: m[key]
+    - RETURN: result
+
+  remove(map m, uint key):
+    - IF key in m:
+        SET m[key]: 0  # Remove by setting to 0 (or implement proper removal if supported)
+
+  # Grid/Reservation functions - now implemented in DSL using Grid.grid_points map
+  can_reserve_point(uint pointId):bool:
+    - SET result: false
+    - IF !(pointId in grid.grid_points):
+        SET result: true  # Not reserved, can reserve
+    - IF pointId in grid.grid_points:
+        SET owner: get(grid.grid_points, pointId, 0)
+        IF owner == 0:
+          SET result: true  # Released (owner=0), can reserve
+        IF owner == actor.id:
+          SET result: true  # Already reserved by this actor
+    - RETURN: result
+
+
+  try_reserve_point(uint pointId):bool:
+    - SET result: false
+    - IF can_reserve_point(pointId):
+        - SET grid.grid_points[pointId]: actor.id
+        - SET actor.reserved_point: pointId
+        - SET result: true
+    - RETURN: result
+
+  try_reserve_point_with_anchor(uint pointId, uint anchor):bool:
+    # Atomic reservation: check both points can be reserved BEFORE reserving either
+    - SET result: false
+    - IF AND(can_reserve_point(pointId), can_reserve_point(anchor)):
+        - SET grid.grid_points[pointId]: actor.id
+        - SET grid.grid_points[anchor]: actor.id
+        - SET actor.reserved_point: pointId
+        - SET actor.reserved_anchor: anchor
+        - SET result: true
+    - RETURN: result
+
+  release_reserved(uint pointId):
+    - IF pointId >= 0:
+        IF pointId in grid.grid_points:
+          SET grid.grid_points[pointId]: 0
+
+  release_reserved_both(uint pointId1, uint pointId2):
+    - IF pointId1 >= 0:
+        IF pointId1 in grid.grid_points:
+          SET grid.grid_points[pointId1]: 0
+    - IF pointId2 >= 0:
+        IF pointId2 in grid.grid_points:
+          SET grid.grid_points[pointId2]: 0
+
 # proc-ai has to be implemented by AI agent based on provided information
 proc-ai:
-  # Math functions
-  sqrt(float x):float:  # Native: square root function
-  min(float a, float b):float:  # Native: minimum of two values
-  max(float a, float b):float:  # Native: maximum of two values
-  abs(float x):float:  # Native: absolute value
-
-  # Grid/Reservation functions - the following require native implementation
-  can_reserve_point( int  pointId):
-    - validate that pointId is within grid bounds (0 <= pointId < grid_columns * grid_rows)
-    - inquire grid about the point at the id
-    - grid should store reservation information bound by point IDs
-    - RETURN:
-        false: if the point is out of bounds OR already reserved by another actor
-        true: if the point is in bounds AND (not reserved OR reserved by the inquiring actor)
-  try_reserve_point(int  pointId ):
-    - IF can_reserve_point(pointId):
-        - mark the point as reserved  by this actor
-        - actor.reserved_point = pointId
-        - RETURN: true
-    - RETURN: false
-  try_reserve_point(int  pointId , int anchor ):
-    # Atomic reservation: check both points can be reserved BEFORE reserving either
-    # All-or-nothing approach: if either check fails, return false without reserving anything
-    - IF  AND(can_reserve_point(pointId) , can_reserve_point(anchor)):
-        - mark both points as reserved  by this actor
-        - actor.reserved_point = pointId
-        - actor.reserved_anchor = anchor
-        - RETURN: true
-    - RETURN: false
-  release_reserved(vararg int  pointId):             # 'vararg int'  means that multiple 'int' can be passed as parameter.
-    - ensure that each  point ID is open for reservation from the grid's perspective
-    - if a point ID < 0 , ignore (it is invalid)
-
-  wait_frames(int frames): do not run the update logic for the actor for <frames> frames
+  # Math functions - standard mathematical operations
+  sqrt(float x):float: Returns the square root of x. Implemented natively for performance.
+  min(float a, float b):float: Returns the minimum of two float values (a or b, whichever is smaller).
+  max(float a, float b):float: Returns the maximum of two float values (a or b, whichever is larger).
+  abs(float x):float: Returns the absolute value of x (removes negative sign if present).
+  pow(float x):float: Returns x*x
+  # Timing function - frame-based delay
+  wait_frames(int frames): Pauses actor update logic for the specified number of frames. Actor remains in current state but does not execute update logic during the wait period.
 
