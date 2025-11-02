@@ -357,8 +357,11 @@ impl ActorYAMLConverter {
             .map(|(name, _)| (name.clone(), name.clone()))
             .collect();
 
-        // Expand vararg functions into multiple permutations
-        let expanded_natives = self.expand_vararg_functions(&original.native_procedures);
+        // Analyze actual function call usage to determine vararg arities
+        let vararg_usage = self.analyze_vararg_usage(&original);
+
+        // Expand vararg functions based on actual usage
+        let expanded_natives = self.expand_vararg_functions(&original.native_procedures, &vararg_usage);
 
         let mut structured = StructuredBehaviorSpec {
             version: "1.0".to_string(),
@@ -381,15 +384,84 @@ impl ActorYAMLConverter {
         Ok(structured)
     }
 
-    /// Expand vararg functions into multiple permutations
-    /// Example: "release_reserved(vararg int pointId)" becomes:
-    ///   - "release_reserved(int pointId)"
-    ///   - "release_reserved(int pointId, int pointId)"
-    ///   - "release_reserved(int pointId, int pointId, int pointId)"
-    ///   ... up to MAX_VARARG_PERMUTATIONS
-    fn expand_vararg_functions(&self, native_procs: &HashMap<String, NativeProcSpec>) -> Vec<String> {
-        const MAX_VARARG_PERMUTATIONS: usize = 5; // Generate up to 5 permutations
+    /// Analyze actual usage of functions to determine vararg arities
+    /// Returns a map of function_name -> set of arities used
+    fn analyze_vararg_usage(&self, original: &OriginalBehaviorSpec) -> HashMap<String, Vec<usize>> {
+        use std::collections::HashSet;
 
+        let mut usage: HashMap<String, HashSet<usize>> = HashMap::new();
+
+        // Scan all statements in all states
+        for (_state_name, statements) in &original.states {
+            self.scan_statements_for_calls(statements, &mut usage);
+        }
+
+        // Scan all procedures
+        for (_proc_name, proc_def) in &original.procedures {
+            self.scan_statements_for_calls(&proc_def.body, &mut usage);
+        }
+
+        // Convert HashSet to sorted Vec
+        usage.into_iter()
+            .map(|(name, arities)| {
+                let mut arities_vec: Vec<usize> = arities.into_iter().collect();
+                arities_vec.sort();
+                (name, arities_vec)
+            })
+            .collect()
+    }
+
+    /// Recursively scan statements for function calls
+    fn scan_statements_for_calls(&self, statements: &[OriginalStatement], usage: &mut HashMap<String, std::collections::HashSet<usize>>) {
+        for stmt in statements {
+            match stmt {
+                OriginalStatement::Do { action } => {
+                    // Parse function call: "func_name(arg1, arg2, ...)"
+                    if let Some((func_name, args_str)) = action.split_once('(') {
+                        let func_name = func_name.trim();
+                        let args_str = args_str.trim_end_matches(')').trim();
+
+                        // Count arguments (simple comma counting)
+                        let arg_count = if args_str.is_empty() {
+                            0
+                        } else {
+                            args_str.split(',').count()
+                        };
+
+                        usage.entry(func_name.to_string())
+                            .or_insert_with(std::collections::HashSet::new)
+                            .insert(arg_count);
+                    }
+                }
+                OriginalStatement::If { then_body, else_body, .. } => {
+                    self.scan_statements_for_calls(then_body, usage);
+                    if let Some(else_stmts) = else_body {
+                        self.scan_statements_for_calls(else_stmts, usage);
+                    }
+                }
+                OriginalStatement::ElseIf { then_body, else_body, .. } => {
+                    self.scan_statements_for_calls(then_body, usage);
+                    if let Some(else_stmts) = else_body {
+                        self.scan_statements_for_calls(else_stmts, usage);
+                    }
+                }
+                OriginalStatement::ProcDef { body, .. } => {
+                    self.scan_statements_for_calls(body, usage);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Expand vararg functions based on actual usage
+    /// Example: "release_reserved(vararg int pointId)" with usage [1, 2] becomes:
+    ///   - "release_reserved(int pointId)"           [1 arg]
+    ///   - "release_reserved(int pointId, int pointId)" [2 args]
+    fn expand_vararg_functions(
+        &self,
+        native_procs: &HashMap<String, NativeProcSpec>,
+        vararg_usage: &HashMap<String, Vec<usize>>,
+    ) -> Vec<String> {
         let mut result = Vec::new();
 
         for (name, _spec) in native_procs {
@@ -404,8 +476,13 @@ impl ActorYAMLConverter {
                     if rest.starts_with("vararg ") {
                         let param_decl = rest.strip_prefix("vararg ").unwrap().trim();
 
-                        // Generate permutations
-                        for count in 1..=MAX_VARARG_PERMUTATIONS {
+                        // Get actual usage arities, or default to [1] if none found
+                        let arities = vararg_usage.get(func_name)
+                            .cloned()
+                            .unwrap_or_else(|| vec![1]);
+
+                        // Generate permutations only for observed arities
+                        for count in arities {
                             let params: Vec<String> = (0..count)
                                 .map(|_| param_decl.to_string())
                                 .collect();
