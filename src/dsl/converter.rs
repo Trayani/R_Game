@@ -741,14 +741,14 @@ impl ActorYAMLConverter {
         return_type_name: &str,
         types: &HashMap<String, TypeDef>,
     ) -> DslResult<()> {
-        // Look up return type definition
-        let type_def = types.get(return_type_name)
-            .ok_or_else(|| DslError::ConversionError(
-                format!("Return type '{}' not found in type definitions", return_type_name)
-            ))?;
-
         // If return expression is a tuple, validate element count and types
         if let ExpressionAST::Tuple { elements } = expr {
+            // Look up return type definition (only required for tuples)
+            let type_def = types.get(return_type_name)
+                .ok_or_else(|| DslError::ConversionError(
+                    format!("Return type '{}' not found in type definitions", return_type_name)
+                ))?;
+
             let expected_count = type_def.fields.len();
             let actual_count = elements.len();
 
@@ -779,13 +779,10 @@ impl ActorYAMLConverter {
                         )
                     ))?;
             }
-
-            Ok(())
-        } else {
-            // Single expression - validate it matches the type
-            // For now, just ensure type exists
-            Ok(())
         }
+
+        // For non-tuple returns (primitives, variables, etc.), skip validation
+        Ok(())
     }
 
     /// Validate expression type matches expected type

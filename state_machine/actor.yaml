@@ -131,10 +131,10 @@ proc:
 
   # Helper: conditional value selection (replaces inline if-else expressions)
   if_else(bool condition, int true_value, int false_value):int:
-    SET result: true_value
-    IF !condition:
-      SET result: false_value
-    RETURN: result
+    - SET result: true_value
+    - IF !condition:
+        SET result: false_value
+    - RETURN: result
 
   to_pos(int pointId):f2:
     SET y: pointId / grid_columns     #(this should round down to integer)
