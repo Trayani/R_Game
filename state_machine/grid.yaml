@@ -1,88 +1,9 @@
 
-# CONFIG
-CFG_PP_RELEASE AT: float  # range 0..1  , default: 0.6
-
-# GLOBAL
-global:
-  constants:
-    grid_columns: int
-    grid_cell_width: float
-    grid_cell_height: float
-  parameters:
-    delta_time: float
-
-## STATES
-MOVE:
-  - DO: move_to_target
-  - SET NDT: distance_to_target
-  - SET PD: distance_to_point(actor.pos)
-  - PROC:switch_pp:
-      # Release the old/current primary point before switching
-      DO: release_reserved(actor.ppId)
-
-      # Choose the best reserved point to switch to
-      SET NEXT: actor.reserved_point
-      IF NEXT < 0:
-        SET NEXT: actor.reserved_anchor
-        IF NEXT < 0:
-          PANIC: "switch_pp called with no valid reservations"
-
-      # If both reserved points are valid, choose the one closer to destination
-      IF (actor.reserved_anchor >=0)  && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
-        SET NEXT: actor.reserved_anchor
-        SET actor.reserved_anchor: -1     # -1 means 'invalid'
-      ELSE:
-        SET actor.reserved_point: -1      # -1 means 'invalid'
-
-      # Update actor's primary point to the new reserved point
-      SET actor.pp_switched: true
-      # NEXT is always valid (>=0)
-      SET actor.ppId: NEXT
-      SET actor.pp: to_point(NEXT)
-
-    # PP switch
-    # TOTAL can NEVER be zero during MOVE state, because actor.pos cannot equal
-    # both actor.pp (primary point) AND actor.dir.target simultaneously
-  - SET TOTAL: PD.x + NDT.x  + PD.y + NDT.y
-  - IF !actor.pp_switched:
-      # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
-      # Note: switch_pp is only called when reservation has already succeeded (optimal_direction returned set=true)
-      # Therefore, reservation failure after pp_switched should never occur
-      - IF (PD.x + PD.y) / TOTAL > CFG_PP_RELEASE:
-          DO: switch_pp
 
 
-  # Target reached - transition to IDLE
-  # pp_switched toggles only once per MOVE cycle (set in switch_pp, reset in IDLE)
-  - IF AND(NDT.x < 0.5 ,  NDT.y < 0.5):
-      - IF !actor.pp_switched:
-          DO: switch_pp
-      - DO: release_reserved(actor.reserved_point,  actor.reserved_anchor)
-      - SET state: IDLE
 
+GRID:
 
-IDLE:
-  # Wait for valid destination - actor remains in IDLE checking each frame until valid destination is set externally
-  - IF actor.dest.x < 0  || actor.dest.y < 0: PASS                # PASS means terminate early
-  - SET d: opt_dir
-  - SET actor.dir: optimal_direction(d)
-  - IF !actor.dir.set:
-      IF d.cardinality == V:
-        alternative_direction( DT(N, d.south, false), DT(N, d.south, true))
-      ELSE IF d.cardinality == H:
-        alternative_direction( DT(N, false,  d.east), DT(N, true,  d.east))
-      ELSE:
-        alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))
-  - IF actor.dir.set:
-      SET actor.pp_switched: false  # Reset pp_switched flag for new MOVE cycle
-      SET state: MOVE
-    ELSE:
-      # No valid direction found - wait and retry (actor stays in IDLE)
-      # This should happen when all paths are blocked
-      DO: wait_frames(3)
-
-## TYPES
-DirectionTypeCardinality: H | V | N   # horizontal | vertical | none
 
 DirectionType:
   fields:
@@ -233,38 +154,14 @@ proc:
     - SET y: abs(py - actor.pos.y)
     - RETURN: (x, y)
 
-  # Movement - converted to DSL (previously in proc-ai)
-  move_to_target:
-    # Calculate direction vector to target
-    - SET dx: actor.dir.target.x - actor.pos.x
-    - SET dy: actor.dir.target.y - actor.pos.y
-
-    # Calculate Euclidean distance
-    - SET L: sqrt(dx*dx + dy*dy)
-
-    # Early exit if already at target (within 0.001 pixels)
-    - IF L < 0.001: RETURN
-
-    # Calculate step size: speed * delta_time, clamped to remaining distance
-    - SET movement: min(actor.speed * delta_time, L)
-
-    # Calculate normalized step (direction * distance)
-    - SET x_step: movement * dx / L
-    - SET y_step: movement * dy / L
-
-    # Update actor position
-    - SET actor.pos.x: actor.pos.x + x_step
-    - SET actor.pos.y: actor.pos.y + y_step
-
 # proc-ai has to be implemented by AI agent based on provided information
 proc-ai:
-  # Math functions
-  sqrt(float x):float:  # Native: square root function
-  min(float a, float b):float:  # Native: minimum of two values
-  max(float a, float b):float:  # Native: maximum of two values
-  abs(float x):float:  # Native: absolute value
+  move_to_target:
+    - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.dir.target
+    - increment actor.pos by STEP
+    - if STEP overshoots the destination, clamp the new position exactly to actor.dir.target
 
-  # Grid/Reservation functions - the following require native implementation
+  # the following 2 are
   can_reserve_point( int  pointId):
     - validate that pointId is within grid bounds (0 <= pointId < grid_columns * grid_rows)
     - inquire grid about the point at the id
