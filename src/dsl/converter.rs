@@ -5,11 +5,13 @@
 
 use crate::dsl::ast::*;
 use crate::dsl::compact_format::*;
+use crate::dsl::original_format::*;
 use crate::dsl::condition_parser::ConditionParser;
 use crate::dsl::errors::{DslError, DslResult};
 use crate::dsl::expression_parser::ExpressionParser;
 use crate::dsl::structured_format::*;
 use crate::dsl::validator::Validator;
+use std::collections::HashMap;
 
 pub struct ActorYAMLConverter {
     validator: Option<Validator>,
@@ -339,5 +341,180 @@ types: {}
         let converter = ActorYAMLConverter::new();
         let result = converter.convert_str(compact_yaml);
         assert!(result.is_ok(), "Conversion failed: {:?}", result.err());
+    }
+}
+
+// Original format conversion (separate impl block)
+impl ActorYAMLConverter {
+    /// Convert original format spec to structured spec
+    pub fn convert_original_to_structured(
+        &self,
+        original: OriginalBehaviorSpec,
+    ) -> DslResult<StructuredBehaviorSpec> {
+        // Collect native function names for implicit call detection
+        let native_functions: HashMap<String, String> = original.native_procedures
+            .iter()
+            .map(|(name, _)| (name.clone(), name.clone()))
+            .collect();
+
+        let mut structured = StructuredBehaviorSpec {
+            version: "1.0".to_string(),
+            config: StructuredConfig {
+                pp_release_threshold: 0.6, // TODO: extract from CFG_PP_RELEASE
+            },
+            states: HashMap::new(),
+            procedures: StructuredProcedures {
+                native: native_functions.keys().cloned().collect(),
+            },
+            types: HashMap::new(),
+        };
+
+        // Convert states
+        for (state_name, statements) in original.states {
+            let converted_statements = self.convert_original_statements(&statements, &native_functions)?;
+            structured.states.insert(state_name, converted_statements);
+        }
+
+        Ok(structured)
+    }
+
+    /// Convert original statements to structured actions
+    fn convert_original_statements(
+        &self,
+        statements: &[OriginalStatement],
+        native_functions: &HashMap<String, String>,
+    ) -> DslResult<Vec<StructuredAction>> {
+        statements
+            .iter()
+            .map(|stmt| self.convert_original_statement(stmt, native_functions))
+            .collect()
+    }
+
+    /// Convert a single original statement to structured action
+    fn convert_original_statement(
+        &self,
+        statement: &OriginalStatement,
+        native_functions: &HashMap<String, String>,
+    ) -> DslResult<StructuredAction> {
+        match statement {
+            OriginalStatement::Do { action } => {
+                // Check if this is a native function call (implicit call)
+                let call = if native_functions.contains_key(action) {
+                    format!("{}()", action)
+                } else {
+                    action.clone()
+                };
+                Ok(StructuredAction::Do { call })
+            }
+
+            OriginalStatement::Set { target, value } => {
+                // Parse the value expression
+                let expr_ast = self.parse_expression_with_implicit_calls(value, native_functions)?;
+                let structured_expr = self.ast_to_structured_expr(expr_ast)?;
+
+                Ok(StructuredAction::Set {
+                    variable: target.clone(),
+                    value: structured_expr,
+                })
+            }
+
+            OriginalStatement::SetState { state } => {
+                Ok(StructuredAction::SetState {
+                    state: state.clone(),
+                })
+            }
+
+            OriginalStatement::If { condition, then_body, else_body } => {
+                // Parse condition
+                let cond_ast = ConditionParser::parse_from_str(condition)?;
+                let structured_cond = self.ast_to_structured_condition(cond_ast)?;
+
+                // Convert bodies
+                let then_actions = self.convert_original_statements(then_body, native_functions)?;
+                let else_actions = if let Some(else_stmts) = else_body {
+                    Some(self.convert_original_statements(else_stmts, native_functions)?)
+                } else {
+                    None
+                };
+
+                Ok(StructuredAction::If {
+                    condition: structured_cond,
+                    then_body: then_actions,
+                    else_body: else_actions,
+                })
+            }
+
+            OriginalStatement::ElseIf { condition, then_body, else_body } => {
+                // ELSE IF is just an IF in the else branch
+                let cond_ast = ConditionParser::parse_from_str(condition)?;
+                let structured_cond = self.ast_to_structured_condition(cond_ast)?;
+
+                let then_actions = self.convert_original_statements(then_body, native_functions)?;
+                let else_actions = if let Some(else_stmts) = else_body {
+                    Some(self.convert_original_statements(else_stmts, native_functions)?)
+                } else {
+                    None
+                };
+
+                Ok(StructuredAction::If {
+                    condition: structured_cond,
+                    then_body: then_actions,
+                    else_body: else_actions,
+                })
+            }
+
+            OriginalStatement::Pass => {
+                Ok(StructuredAction::Pass)
+            }
+
+            OriginalStatement::Return { value } => {
+                // For now, treat RETURN as PASS (states don't have return values)
+                // TODO: Handle RETURN in procedure contexts
+                Ok(StructuredAction::Pass)
+            }
+
+            OriginalStatement::Panic { message } => {
+                // Represent PANIC as a DO action
+                Ok(StructuredAction::Do {
+                    call: format!("panic(\"{}\")", message),
+                })
+            }
+
+            OriginalStatement::ProcDef { name, body } => {
+                // PROC definitions within states are treated as inline procedure calls
+                // Convert the body and wrap in a call
+                let proc_actions = self.convert_original_statements(body, native_functions)?;
+
+                // For now, inline the procedure body
+                // TODO: Extract to separate procedure definition
+                // Return a comment action indicating this was a PROC
+                Ok(StructuredAction::Do {
+                    call: format!("/* PROC:{} - {} statements */", name, proc_actions.len()),
+                })
+            }
+        }
+    }
+
+    /// Parse expression with implicit function call detection
+    fn parse_expression_with_implicit_calls(
+        &self,
+        expr_str: &str,
+        native_functions: &HashMap<String, String>,
+    ) -> DslResult<ExpressionAST> {
+        let trimmed = expr_str.trim();
+
+        // Check if this is a bare identifier that's a native function
+        if trimmed.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            if native_functions.contains_key(trimmed) {
+                // Implicit function call: "distance_to_target" → distance_to_target()
+                return Ok(ExpressionAST::FunctionCall {
+                    name: trimmed.to_string(),
+                    args: vec![],
+                });
+            }
+        }
+
+        // Otherwise, parse normally
+        ExpressionParser::parse_from_str(expr_str)
     }
 }

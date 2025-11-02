@@ -17,6 +17,16 @@ pub enum Token {
     #[token("NOT")]
     Not,
 
+    // Logical operators (alternative syntax)
+    #[token("&&")]
+    AndAnd,
+
+    #[token("||")]
+    OrOr,
+
+    #[token("!")]
+    Bang,
+
     #[token("true")]
     True,
 
@@ -72,9 +82,6 @@ pub enum Token {
 
     #[token("/")]
     Slash,
-
-    #[token("!")]
-    Bang,
 
     // Delimiters
     #[token("(")]

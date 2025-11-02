@@ -41,27 +41,57 @@ impl ConditionParser {
 
     // Grammar:
     // condition := logical_or
-    // logical_or := logical_and (OR logical_and)*  // Note: OR as infix for simple cases
-    // logical_and := logical_not (AND logical_not)*  // Note: AND as infix for simple cases
-    // logical_not := NOT logical_not | primary_condition
+    // logical_or := logical_and (('||' | OR) logical_and)*
+    // logical_and := logical_not (('&&' | AND) logical_not)*
+    // logical_not := NOT logical_not | '!' logical_not | primary_condition
     // primary_condition := AND '(' condition_list ')' | OR '(' condition_list ')' | comparison | '(' condition ')'
 
     fn parse_logical_or(&mut self) -> DslResult<ConditionAST> {
-        // For now, handle only prefix OR(...) and AND(...)
-        // Infix operators can be added later if needed
-        self.parse_logical_and()
+        let mut left = self.parse_logical_and()?;
+
+        while matches!(self.peek(), Some(Token::OrOr) | Some(Token::Or)) {
+            self.advance();
+            let right = self.parse_logical_and()?;
+            left = ConditionAST::Or(vec![left, right]);
+        }
+
+        Ok(left)
     }
 
     fn parse_logical_and(&mut self) -> DslResult<ConditionAST> {
-        self.parse_logical_not()
+        let mut left = self.parse_logical_not()?;
+
+        while matches!(self.peek(), Some(Token::AndAnd) | Some(Token::And)) {
+            // Check if this is infix && or prefix AND(
+            if matches!(self.peek(), Some(Token::And)) {
+                // Peek ahead to see if next token is '('
+                if matches!(self.peek_ahead(1), Some(Token::LParen)) {
+                    // This is prefix AND(...), stop parsing infix
+                    break;
+                }
+            }
+
+            self.advance();
+            let right = self.parse_logical_not()?;
+            left = ConditionAST::And(vec![left, right]);
+        }
+
+        Ok(left)
     }
 
     fn parse_logical_not(&mut self) -> DslResult<ConditionAST> {
+        // Handle prefix NOT(...) or !
         if matches!(self.peek(), Some(Token::Not)) {
             self.advance();
             self.expect(Token::LParen)?;
             let operand = self.parse()?;
             self.expect(Token::RParen)?;
+            return Ok(ConditionAST::Not(Box::new(operand)));
+        }
+
+        if matches!(self.peek(), Some(Token::Bang)) {
+            self.advance();
+            let operand = self.parse_logical_not()?;  // Allow chaining: !!x
             return Ok(ConditionAST::Not(Box::new(operand)));
         }
 
@@ -207,6 +237,10 @@ impl ConditionParser {
 
     fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.pos)
+    }
+
+    fn peek_ahead(&self, offset: usize) -> Option<&Token> {
+        self.tokens.get(self.pos + offset)
     }
 
     fn advance(&mut self) -> Token {
