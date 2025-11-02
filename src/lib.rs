@@ -6,6 +6,7 @@ pub mod compact_log;
 pub mod cone;
 pub mod config;
 pub mod corners;
+pub mod dsl;  // DSL for actor behavior specifications
 pub mod grid;
 pub mod mirror_triangle;
 pub mod pathfinding;
