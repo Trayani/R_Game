@@ -97,6 +97,10 @@ pub enum StructuredExpression {
         op: String,
         operand: Box<StructuredExpression>,
     },
+
+    Tuple {
+        elements: Vec<StructuredExpression>,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -164,6 +168,11 @@ pub enum StructuredAction {
 
         #[serde(skip_serializing_if = "Option::is_none")]
         else_body: Option<Vec<StructuredAction>>,
+    },
+
+    Return {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<StructuredExpression>,
     },
 
     Pass,

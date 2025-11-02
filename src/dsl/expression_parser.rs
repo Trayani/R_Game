@@ -223,9 +223,39 @@ impl ExpressionParser {
             }
             Some(Token::LParen) => {
                 self.advance();
-                let expr = self.parse_expression()?;
-                self.expect(Token::RParen)?;
-                Ok(expr)
+
+                // Check for empty tuple: ()
+                if matches!(self.peek(), Some(Token::RParen)) {
+                    self.advance();
+                    return Ok(ExpressionAST::Tuple { elements: vec![] });
+                }
+
+                // Parse first expression
+                let first_expr = self.parse_expression()?;
+
+                // Check if it's a tuple (has comma) or grouped expression
+                if matches!(self.peek(), Some(Token::Comma)) {
+                    // It's a tuple
+                    let mut elements = vec![first_expr];
+
+                    while matches!(self.peek(), Some(Token::Comma)) {
+                        self.advance(); // consume comma
+
+                        // Check for trailing comma: (a, b, )
+                        if matches!(self.peek(), Some(Token::RParen)) {
+                            break;
+                        }
+
+                        elements.push(self.parse_expression()?);
+                    }
+
+                    self.expect(Token::RParen)?;
+                    Ok(ExpressionAST::Tuple { elements })
+                } else {
+                    // Single grouped expression: (expr)
+                    self.expect(Token::RParen)?;
+                    Ok(first_expr)
+                }
             }
             _ => Err(DslError::ParseError {
                 line: 0,

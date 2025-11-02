@@ -53,6 +53,11 @@ pub enum ExpressionAST {
         op: String,  // "!", "-"
         operand: Box<ExpressionAST>,
     },
+
+    /// Tuple literal: (a, b, c)
+    Tuple {
+        elements: Vec<ExpressionAST>,
+    },
 }
 
 // ============================================================================

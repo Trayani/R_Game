@@ -244,6 +244,17 @@ impl ActorYAMLConverter {
                 op,
                 operand: Box::new(self.ast_to_structured_expr(*operand)?),
             }),
+
+            ExpressionAST::Tuple { elements } => {
+                let structured_elements = elements
+                    .into_iter()
+                    .map(|elem| self.ast_to_structured_expr(elem))
+                    .collect::<DslResult<Vec<_>>>()?;
+
+                Ok(StructuredExpression::Tuple {
+                    elements: structured_elements,
+                })
+            }
         }
     }
 
