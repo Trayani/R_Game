@@ -10,17 +10,17 @@ MOVE:
   - PROC:switch_pp:
       DO: release_reserved(actor.ppId)
       SET NEXT: actor.reserved_point
-      IF actor.reserved_anchor.not_null && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
+      IF (actor.reserved_anchor >=0)  && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
         SET NEXT: actor.reserved_anchor
         SET actor.reserved_anchor: -1     # -1 means 'invalid'
       ELSE:
-        SET actor.reserved_point: -1    # -1 means 'invalid'
-
+        SET actor.reserved_point: -1      # -1 means 'invalid'
+      SET actor.pp_switched: true
       SET actor.ppId: NEXT
-      SET actor.pp: NEXT.to_point
+      SET actor.pp: to_point(NEXT)
 
     # PP switch
-  - IF AND(!pp_switched,  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y) ) > CFG_PP_RELEASE:              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+  - IF AND(!actor.pp_switched,  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
       DO: switch_pp
 
 
@@ -94,17 +94,17 @@ proc:
     - IF actor.pp.y == actor.dest.y: RETURN  (H, false, east)
     - RETURN: (N, south, east)
 
-  to_pos(int pointId):f2n:
+  to_pos(int pointId):f2:
     SET y: pointId / grid_columns     #(this should round down)
     RETURN: (pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height
-  to_pos(int2 point):f2n:
+  to_pos(int2 point):f2:
     RETURN: point.x*grid_cell_width, point.y*grid_cell_height
   to_point(int pointId):i2:
     SET y: pointId / grid_columns     #(this should round down)
     RETURN: (pointId - y*grid_columns), y
 
 
-  alternative_direction(DT a, DT b):Direction:
+  alternative_direction(DT a, DT b):
       - SET actor.dir: optimal_direction(a)
       - IF !actor.dir.set:
           - SET actor.dir: optimal_direction(b)
@@ -133,7 +133,8 @@ proc:
     - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
     - SET RECT_Y: (actor.pp.y+v_offset) * grid_cell_height
     - IF affinity_h:
-        - IF anchor_h:
+        - SET xDiff: DEST_POS.x - actor.pos.x
+        - IF AND( anchor_h, xDiff == 0):
             - SET SLOPE:  (DEST_POS.y - actor.pos.y) / (DEST_POS.x - actor.pos.x)         # line equation, please validate correctness
             - SET TARGET_Y: SLOPE * (RECT_X - actor.pos.x) + actor.pos.y
             - IF d.south:
@@ -144,7 +145,8 @@ proc:
         - IF anchor_v:
             RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
       ELSE:
-        - IF anchor_v:
+        - SET yDiff: DEST_POS.y - actor.pos.y
+        - IF AND( anchor_v, yDiff == 0):
           - SET SLOPE:  (DEST_POS.x - actor.pos.x) / (DEST_POS.y - actor.pos.y)         # line equation, please validate correctness
           - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
           - IF d.east:
