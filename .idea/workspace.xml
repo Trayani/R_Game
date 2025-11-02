@@ -228,7 +228,7 @@
       <workItem from="1761107967090" duration="8763000" />
       <workItem from="1761224653269" duration="11882000" />
       <workItem from="1761987539955" duration="188000" />
-      <workItem from="1761987748427" duration="43792000" />
+      <workItem from="1761987748427" duration="44208000" />
     </task>
     <servers />
   </component>
@@ -263,14 +263,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="custom_flow" />
-                      </list>
-                    </value>
-                  </entry>
-                  <entry key="text">
-                    <value>
-                      <list>
-                        <option value="monoto" />
+                        <option value="custom_flow_2" />
                       </list>
                     </value>
                   </entry>

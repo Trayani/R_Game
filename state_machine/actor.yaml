@@ -32,7 +32,8 @@ MOVE:
       SET actor.pp: to_point(NEXT)
 
     # PP switch
-    # TOTAL can NEVER be zero, because the actor cannot be at two points at the same time
+    # TOTAL can NEVER be zero during MOVE state, because actor.pos cannot equal
+    # both actor.pp (primary point) AND actor.dir.target simultaneously
   - SET TOTAL: PD.x + NDT.x  + PD.y + NDT.y
   - IF !actor.pp_switched:
       # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
@@ -203,6 +204,10 @@ proc-ai:
   distance_to_point(f2 point):
     x:float: abs(point.x*grid_cell_width - actor.pos.x)
     y:float: abs(point.y*grid_cell_height - actor.pos.y)
+  distance_to_point(int pointId):
+    # Overload that accepts point ID instead of coordinates
+    x:float: abs(to_point(pointId).x*grid_cell_width - actor.pos.x)
+    y:float: abs(to_point(pointId).y*grid_cell_height - actor.pos.y)
   move_to_target:
     - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.dir.target
     - increment actor.pos by STEP
@@ -210,11 +215,12 @@ proc-ai:
 
   # the following 2 are
   can_reserve_point( int  pointId):
+    - validate that pointId is within grid bounds (0 <= pointId < grid_columns * grid_rows)
     - inquire grid about the point at the id
     - grid should store reservation information bound by point IDs
     - RETURN:
-        false: if the inquired point is already reserved by another actor
-        true: if the inquired point is not reserved or reserved by the inquiring actor
+        false: if the point is out of bounds OR already reserved by another actor
+        true: if the point is in bounds AND (not reserved OR reserved by the inquiring actor)
   try_reserve_point(int  pointId ):
     - IF can_reserve_point(pointId):
         - mark the point as reserved  by this actor
