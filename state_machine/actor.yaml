@@ -145,6 +145,15 @@ proc:
         - IF AND( anchor_h, xDiff != 0):
             - SET SLOPE:  (DEST_POS.y - actor.pos.y) / xDiff         # line equation, please validate correctness
             - SET TARGET_Y: SLOPE * (RECT_X - actor.pos.x) + actor.pos.y
+            # RECT_X and RECT_Y  are float coordinates of a rectangle edge that is diagonally opposite to the actor's POINT-based position (actor.pp)
+            # The rectangle forms an area of possible movement. Since the horizontal direction is stronger than
+            # vertical, we already know, that the actor must travel to the vertical boundary at RECT_X.
+            # But Y must be calculated by line equation based on actor's actual position (actor.pos).
+            # That can lead to edge cases, where the projected Y is outside the rectangle.
+            # Thus, we have to clamp it: if the vertical direction is
+            # - south: Y should increment toward destination, so  Y=min(Y, actor.pos), because the actor should NOT move
+            #          in a vertically backward direction. And Y=max(Y, RECT_Y), because the actor cannot aim outside the rectangle
+            # - !south (north): Y should decrement toward destination. This inverts the logic for 'south'
             - IF d.south:
                 SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
               ELSE :
@@ -155,7 +164,7 @@ proc:
       ELSE:
         - SET yDiff: DEST_POS.y - actor.pos.y
         - IF AND( anchor_v, yDiff != 0):
-          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff        # line equation, please validate correctness
+          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff                              # line equation, please validate correctness
           - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
           - IF d.east:
               SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
