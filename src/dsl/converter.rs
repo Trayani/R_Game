@@ -412,7 +412,14 @@ impl ActorYAMLConverter {
                 native: expanded_natives,
                 dsl: dsl_procedures,
             },
-            types: HashMap::new(),
+            types: original.types.iter()
+                .map(|(name, typedef)| {
+                    let fields = typedef.fields.iter()
+                        .map(|(field_name, type_name)| (field_name.clone(), type_name.clone()))
+                        .collect();
+                    (name.clone(), StructuredTypeDef { fields })
+                })
+                .collect(),
             constants: original.constants.iter()
                 .map(|(name, type_name)| (name.clone(), ConstantDef { type_name: type_name.clone() }))
                 .collect(),
