@@ -11,7 +11,7 @@ MOVE:
       SET NEXT: actor.reserved_point
       IF NEXT < 0:
         SET NEXT: actor.reserved_anchor
-        RECHECK:                                # RECHECK means evaluate again the 'NEXT < 0' condition
+        IF NEXT < 0:
           SET actor.pp_switched: true
           RETURN: PASS                          # PASS is void
 
@@ -22,13 +22,18 @@ MOVE:
         SET actor.reserved_point: -1      # -1 means 'invalid'
       SET actor.pp_switched: true
       DO: release_reserved(actor.ppId)
+      # NEXT is always valid (>=0)
       SET actor.ppId: NEXT
       SET actor.pp: to_point(NEXT)
 
     # PP switch
   - SET TOTAL: PD.x + NDT.x  + PD.y + NDT.y
-  - IF AND(!actor.pp_switched, OR((TOTAL == 0),  (PD.x + PD.y) / TOTAL) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
-      DO: switch_pp
+  - IF !actor.pp_switched:
+      - IF TOTAL == 0:
+          DO: switch_pp
+      # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+      - ELSE IF (PD.x + PD.y) / TOTAL > CFG_PP_RELEASE:
+          DO: switch_pp
 
 
   - IF AND(NDT.x < 0.5 ,  NDT.y < 0.5):
@@ -53,6 +58,7 @@ IDLE:
       SET actor.pp_switched: false
       SET state: MOVE
     ELSE:
+      # this should happen infinitely by design
       DO: wait_frames(3)
 
 ## TYPES
@@ -104,12 +110,12 @@ proc:
     - RETURN: (N, south, east)
 
   to_pos(int pointId):f2:
-    SET y: pointId / grid_columns     #(this should round down)
+    SET y: pointId / grid_columns     #(this should round down to integer)
     RETURN: (pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height
   to_pos(int2 point):f2:
     RETURN: point.x*grid_cell_width, point.y*grid_cell_height
   to_point(int pointId):i2:
-    SET y: pointId / grid_columns     #(this should round down)
+    SET y: pointId / grid_columns     #(this should round down to integer)
     RETURN: (pointId - y*grid_columns), y
 
 
@@ -170,9 +176,9 @@ proc:
           - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff                              # line equation, please validate correctness
           - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
           - IF d.east:
-              SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
-            ELSE :
               SET TARGET_X: max(min(TARGET_X, RECT_X), actor.pos.x)
+            ELSE :
+              SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
           - RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
         - IF anchor_h:
             RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id) , to_pos(diagonal_id) )
