@@ -15,6 +15,8 @@
 pub mod ast;
 pub mod compact_format;
 pub mod structured_format;
+pub mod original_format;
+pub mod original_parser;
 pub mod lexer;
 pub mod expression_parser;
 pub mod condition_parser;
@@ -28,6 +30,7 @@ pub mod errors;
 pub use ast::*;
 pub use compact_format::*;
 pub use structured_format::*;
+pub use original_format::*;
 pub use converter::ActorYAMLConverter;
 pub use validator::Validator;
 pub use interpreter::Interpreter;
