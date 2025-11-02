@@ -29,6 +29,16 @@ pub struct StructuredConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StructuredProcedures {
     pub native: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub dsl: HashMap<String, StructuredProcedure>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StructuredProcedure {
+    pub params: Vec<(String, String)>,  // [(param_name, type)]
+    pub return_type: Option<String>,
+    pub body: Vec<StructuredAction>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

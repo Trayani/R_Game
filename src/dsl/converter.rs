@@ -61,6 +61,7 @@ impl ActorYAMLConverter {
             states: Default::default(),
             procedures: StructuredProcedures {
                 native: compact.procedures.native,
+                dsl: HashMap::new(),  // Compact format doesn't have DSL procedures
             },
             types: compact.types.into_iter().map(|(name, typedef)| {
                 (name, StructuredTypeDef { fields: typedef.fields })
@@ -363,6 +364,20 @@ impl ActorYAMLConverter {
         // Expand vararg functions based on actual usage
         let expanded_natives = self.expand_vararg_functions(&original.native_procedures, &vararg_usage);
 
+        // Convert DSL procedures
+        let mut dsl_procedures = HashMap::new();
+        for (proc_name, proc_def) in &original.procedures {
+            let converted_body = self.convert_original_statements(&proc_def.body, &native_functions)?;
+            dsl_procedures.insert(
+                proc_name.clone(),
+                StructuredProcedure {
+                    params: proc_def.params.clone(),
+                    return_type: proc_def.return_type.clone(),
+                    body: converted_body,
+                },
+            );
+        }
+
         let mut structured = StructuredBehaviorSpec {
             version: "1.0".to_string(),
             config: StructuredConfig {
@@ -371,6 +386,7 @@ impl ActorYAMLConverter {
             states: HashMap::new(),
             procedures: StructuredProcedures {
                 native: expanded_natives,
+                dsl: dsl_procedures,
             },
             types: HashMap::new(),
         };

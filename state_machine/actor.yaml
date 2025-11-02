@@ -196,18 +196,29 @@ proc:
       # at this point, nothing passed
       RETURN: ( d, false,  false , (0,0) )
 
+  # Distance calculations - converted to DSL (previously in proc-ai)
+  distance_to_target:f2:
+    - SET x: abs(actor.dir.target.x - actor.pos.x)
+    - SET y: abs(actor.dir.target.y - actor.pos.y)
+    - RETURN: (x, y)
+
+  distance_to_point(f2 point):f2:
+    - SET px: point.x * grid_cell_width
+    - SET py: point.y * grid_cell_height
+    - SET x: abs(px - actor.pos.x)
+    - SET y: abs(py - actor.pos.y)
+    - RETURN: (x, y)
+
+  distance_to_point(int pointId):f2:
+    - SET point: to_point(pointId)
+    - SET px: point.x * grid_cell_width
+    - SET py: point.y * grid_cell_height
+    - SET x: abs(px - actor.pos.x)
+    - SET y: abs(py - actor.pos.y)
+    - RETURN: (x, y)
+
 # proc-ai has to be implemented by AI agent based on provided information
 proc-ai:
-  distance_to_target:
-    x:float: abs(actor.dir.target.x - actor.pos.x)
-    y:float: abs(actor.dir.target.y - actor.pos.y)
-  distance_to_point(f2 point):
-    x:float: abs(point.x*grid_cell_width - actor.pos.x)
-    y:float: abs(point.y*grid_cell_height - actor.pos.y)
-  distance_to_point(int pointId):
-    # Overload that accepts point ID instead of coordinates
-    x:float: abs(to_point(pointId).x*grid_cell_width - actor.pos.x)
-    y:float: abs(to_point(pointId).y*grid_cell_height - actor.pos.y)
   move_to_target:
     - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.dir.target
     - increment actor.pos by STEP

@@ -390,13 +390,46 @@ fn parse_native_procedures(value: &Value) -> DslResult<HashMap<String, NativePro
 }
 
 /// Parse function signature like "opt_dir:DirectionType:" or "to_pos(int pointId):f2:"
+/// or "optimal_direction(DT d):Direction:"
 fn parse_function_signature(sig: &str) -> DslResult<(String, Vec<(String, String)>, Option<String>)> {
-    // Simple parser for now - can be enhanced
+    // Split by ':' to separate name/params from return type
     let parts: Vec<&str> = sig.split(':').collect();
-    let name = parts[0].trim().to_string();
+    let name_and_params = parts[0].trim();
 
-    // Extract params from parentheses if present
-    let params = vec![];  // TODO: parse params
+    // Extract function name and params
+    let (func_name, params) = if let Some(paren_start) = name_and_params.find('(') {
+        // Has parameters: "func_name(type1 param1, type2 param2)"
+        let func_name = name_and_params[..paren_start].trim().to_string();
+
+        // Find closing paren
+        let paren_end = name_and_params.rfind(')').unwrap_or(name_and_params.len());
+        let params_str = &name_and_params[paren_start + 1..paren_end];
+
+        // Parse parameters: "type1 param1, type2 param2"
+        let mut params = Vec::new();
+        for param in params_str.split(',') {
+            let param = param.trim();
+            if param.is_empty() {
+                continue;
+            }
+
+            // Split "type name" by whitespace
+            let words: Vec<&str> = param.split_whitespace().collect();
+            if words.len() >= 2 {
+                let param_type = words[..words.len()-1].join(" ");  // All but last = type
+                let param_name = words[words.len()-1].to_string();  // Last = name
+                params.push((param_name, param_type));
+            } else if words.len() == 1 {
+                // Just a type, no name (e.g., "int")
+                params.push(("_".to_string(), words[0].to_string()));
+            }
+        }
+
+        (func_name, params)
+    } else {
+        // No parameters: "func_name"
+        (name_and_params.to_string(), vec![])
+    };
 
     // Extract return type if present
     let return_type = if parts.len() > 1 && !parts[1].is_empty() {
@@ -405,7 +438,7 @@ fn parse_function_signature(sig: &str) -> DslResult<(String, Vec<(String, String
         None
     };
 
-    Ok((name, params, return_type))
+    Ok((func_name, params, return_type))
 }
 
 /// Check if this is a type definition

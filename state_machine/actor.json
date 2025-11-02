@@ -4,144 +4,6 @@
     "pp_release_threshold": 0.6
   },
   "states": {
-    "IDLE": [
-      {
-        "action": "if",
-        "condition": {
-          "type": "comparison",
-          "op": "<",
-          "left": {
-            "type": "field_access",
-            "object": {
-              "type": "field_access",
-              "object": {
-                "type": "variable",
-                "name": "actor"
-              },
-              "field": "dest"
-            },
-            "field": "x"
-          },
-          "right": {
-            "type": "literal",
-            "value": 0
-          }
-        },
-        "then_body": [
-          {
-            "action": "pass"
-          }
-        ]
-      },
-      {
-        "action": "set",
-        "variable": "d",
-        "value": {
-          "type": "variable",
-          "name": "opt_dir"
-        }
-      },
-      {
-        "action": "set",
-        "variable": "actor.dir",
-        "value": {
-          "type": "function_call",
-          "name": "optimal_direction",
-          "args": [
-            {
-              "type": "variable",
-              "name": "d"
-            }
-          ]
-        }
-      },
-      {
-        "action": "if",
-        "condition": {
-          "type": "not",
-          "operand": {
-            "type": "expression",
-            "expr": {
-              "type": "field_access",
-              "object": {
-                "type": "field_access",
-                "object": {
-                  "type": "variable",
-                  "name": "actor"
-                },
-                "field": "dir"
-              },
-              "field": "set"
-            }
-          }
-        },
-        "then_body": [
-          {
-            "action": "if",
-            "condition": {
-              "type": "comparison",
-              "op": "==",
-              "left": {
-                "type": "field_access",
-                "object": {
-                  "type": "variable",
-                  "name": "d"
-                },
-                "field": "cardinality"
-              },
-              "right": {
-                "type": "variable",
-                "name": "V"
-              }
-            },
-            "then_body": [
-              {
-                "action": "do",
-                "call": "alternative_direction( DT(N, d.south, false), DT(N, d.south, true))"
-              }
-            ]
-          }
-        ],
-        "else_body": [
-          {
-            "action": "do",
-            "call": "alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))"
-          }
-        ]
-      },
-      {
-        "action": "if",
-        "condition": {
-          "type": "expression",
-          "expr": {
-            "type": "field_access",
-            "object": {
-              "type": "field_access",
-              "object": {
-                "type": "variable",
-                "name": "actor"
-              },
-              "field": "dir"
-            },
-            "field": "set"
-          }
-        },
-        "then_body": [
-          {
-            "action": "set",
-            "variable": "actor.pp_switched",
-            "value": {
-              "type": "literal",
-              "value": false
-            }
-          },
-          {
-            "action": "set_state",
-            "state": "MOVE"
-          }
-        ]
-      }
-    ],
     "MOVE": [
       {
         "action": "do",
@@ -151,9 +13,8 @@
         "action": "set",
         "variable": "NDT",
         "value": {
-          "type": "function_call",
-          "name": "distance_to_target",
-          "args": []
+          "type": "variable",
+          "name": "distance_to_target"
         }
       },
       {
@@ -350,23 +211,158 @@
           }
         ]
       }
+    ],
+    "IDLE": [
+      {
+        "action": "if",
+        "condition": {
+          "type": "comparison",
+          "op": "<",
+          "left": {
+            "type": "field_access",
+            "object": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "dest"
+            },
+            "field": "x"
+          },
+          "right": {
+            "type": "literal",
+            "value": 0
+          }
+        },
+        "then_body": [
+          {
+            "action": "pass"
+          }
+        ]
+      },
+      {
+        "action": "set",
+        "variable": "d",
+        "value": {
+          "type": "variable",
+          "name": "opt_dir"
+        }
+      },
+      {
+        "action": "set",
+        "variable": "actor.dir",
+        "value": {
+          "type": "function_call",
+          "name": "optimal_direction",
+          "args": [
+            {
+              "type": "variable",
+              "name": "d"
+            }
+          ]
+        }
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "not",
+          "operand": {
+            "type": "expression",
+            "expr": {
+              "type": "field_access",
+              "object": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "actor"
+                },
+                "field": "dir"
+              },
+              "field": "set"
+            }
+          }
+        },
+        "then_body": [
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "d"
+                },
+                "field": "cardinality"
+              },
+              "right": {
+                "type": "variable",
+                "name": "V"
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "alternative_direction( DT(N, d.south, false), DT(N, d.south, true))"
+              }
+            ]
+          }
+        ],
+        "else_body": [
+          {
+            "action": "do",
+            "call": "alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))"
+          }
+        ]
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "expression",
+          "expr": {
+            "type": "field_access",
+            "object": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "dir"
+            },
+            "field": "set"
+          }
+        },
+        "then_body": [
+          {
+            "action": "set",
+            "variable": "actor.pp_switched",
+            "value": {
+              "type": "literal",
+              "value": false
+            }
+          },
+          {
+            "action": "set_state",
+            "state": "MOVE"
+          }
+        ]
+      }
     ]
   },
   "procedures": {
     "native": [
+      "grid_columns",
+      "wait_frames(int frames)",
       "move_to_target",
-      "distance_to_point(f2 point)",
+      "grid_cell_width",
+      "try_reserve_point(int  pointId )",
       "try_reserve_point(int  pointId , int anchor )",
-      "can_reserve_point( int  pointId)",
+      "grid_cell_height",
       "release_reserved(int  pointId)",
       "release_reserved(int  pointId, int  pointId)",
-      "distance_to_target",
-      "grid_cell_height",
-      "grid_cell_width",
-      "grid_columns",
-      "distance_to_point(int pointId)",
-      "wait_frames(int frames)",
-      "try_reserve_point(int  pointId )"
+      "can_reserve_point( int  pointId)"
     ]
   },
   "types": {}
