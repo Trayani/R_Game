@@ -12,15 +12,15 @@ MOVE:
       SET NEXT: actor.reserved_point
       IF actor.reserved_anchor.not_null && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
         SET NEXT: actor.reserved_anchor
-        SET actor.reserved_anchor: null
+        SET actor.reserved_anchor: -1     # -1 means 'invalid'
       ELSE:
-        SET actor.reserved_point: null
+        SET actor.reserved_point: -1    # -1 means 'invalid'
 
       SET actor.ppId: NEXT
       SET actor.pp: NEXT.to_point
 
     # PP switch
-  - IF !pp_switched && PD/(PD + NDT) > CFG_PP_RELEASE:              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+  - IF AND(!pp_switched,  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y) ) > CFG_PP_RELEASE:              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
       DO: switch_pp
 
 
@@ -34,15 +34,15 @@ MOVE:
 IDLE:
   - IF dest.x < 0  || dest.y < 0: PASS                # PASS means terminate early
   - SET d: opt_dir
-  - SET OD: optimal_direction(d)
-  - IF !OD.set:
+  - SET actor.dir: optimal_direction(d)
+  - IF !actor.dir.set:
       IF d.cardinality == V:
         alternative_direction( DT(N, d.south, false), DT(N, d.south, true))
       ELSE IF d.cardinality == H:
         alternative_direction( DT(N, false,  d.east), DT(N, true,  d.east))
       ELSE:
-        alternative_direction( DT(V, d.south,  false), DT(H, false  d.east))
-  - IF OD.set:
+        alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))
+  - IF actor.dir.set:
       SET actor.pp_switched: false
       SET state: MOVE
 
@@ -78,9 +78,9 @@ Actor:
   dest: i2   # int-point of the destination that the actor should move to
   dir: Direction  # categorization of the actor's direction of motion
   speed: float   # motion speed
-  reserved_point: int?   # ID of a reserved point, that the actor is approaching
-  reserved_anchor: int?  #  ID of a secondary reserved point
-  pp_switched: bool
+  reserved_point: int = -1  # ID of a reserved point, that the actor is approaching
+  reserved_anchor: int = -1  #  ID of a secondary reserved point
+  pp_switched: bool = false
 
 
 
@@ -96,18 +96,18 @@ proc:
 
   to_pos(int pointId):f2n:
     SET y: pointId / grid_columns     #(this should round down)
-    RETURN: (pointId - y)*grid_cell_width, y*grid_cell_height
+    RETURN: (pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height
   to_pos(int2 point):f2n:
     RETURN: point.x*grid_cell_width, point.y*grid_cell_height
   to_point(int pointId):i2:
     SET y: pointId / grid_columns     #(this should round down)
-    RETURN: (pointId - y), y
+    RETURN: (pointId - y*grid_columns), y
 
 
   alternative_direction(DT a, DT b):Direction:
-      - SET OD: optimal_direction(a)
-      - IF !OD.set:
-          - SET OD: optimal_direction(b)
+      - SET actor.dir: optimal_direction(a)
+      - IF !actor.dir.set:
+          - SET actor.dir: optimal_direction(b)
 
   optimal_direction(DT d):Direction:
     - SET h_offset: (if d.east 1 else -1)
@@ -115,19 +115,19 @@ proc:
     - SET anchor_h_id: actor.ppId + h_offset
     - SET anchor_v_id: actor.ppId + v_offset*grid_columns
     - IF d.cardinality == V:
-        RETURN:  ( dir_type, false, try_reserve_point( anchor_v_id), to_pos(anchor_v_id) )
+        RETURN:  ( d, false, try_reserve_point( anchor_v_id), to_pos(anchor_v_id) )
 
     - IF d.cardinality == H:
-        RETURN: ( dir_type, false, try_reserve_point( anchor_h_id), to_pos(anchor_h_id))
+        RETURN: ( d, false, try_reserve_point( anchor_h_id), to_pos(anchor_h_id))
 
-    - SET diagonal_id: actor.pp.id + h_offset + v_offset*grid_columns
+    - SET diagonal_id: actor.ppId + h_offset + v_offset*grid_columns
     - SET diagonal: can_reserve_point(diagonal_id)
     - IF !diagonal:
-        RETURN: ( dir_type, false,  false )
+        RETURN: ( d, false,  false )
     - SET anchor_h: can_reserve_point( anchor_h_id)
     - SET anchor_v: can_reserve_point( anchor_v_id)
     - IF !anchor_h & !anchor_v:
-        RETURN: ( dir_type, false,  false )
+        RETURN: ( d, false,  false )
     - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.y - actor.pp.y)
     - SET DEST_POS: to_pos(dest)
     - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
@@ -135,25 +135,25 @@ proc:
     - IF affinity_h:
         - IF anchor_h:
             - SET SLOPE:  (DEST_POS.y - actor.pos.y) / (DEST_POS.x - actor.pos.x)         # line equation, please validate correctness
-            - SET TARGET_Y: RECT_X * SLOPE +  actor.pos.y
+            - SET TARGET_Y: SLOPE * (RECT_X - actor.pos.x) + actor.pos.y
             - IF d.south:
                 SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
               ELSE :
                 SET TARGET_Y: max(min(TARGET_Y, RECT_Y), actor.pos.y)
-            - RETURN: ( dir_type, true,  try_reserve_point(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
+            - RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
         - IF anchor_v:
-            RETURN: ( dir_type, true,  try_reserve_point(anchor_v_id , diagonal_id) , diagonal_id.to_pos )
+            RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
       ELSE:
         - IF anchor_v:
           - SET SLOPE:  (DEST_POS.x - actor.pos.x) / (DEST_POS.y - actor.pos.y)         # line equation, please validate correctness
-          - SET TARGET_X: RECT_Y * SLOPE +  actor.pos.y                                 # line equation, please validate correctness
+          - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
           - IF d.east:
               SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
             ELSE :
               SET TARGET_X: max(min(TARGET_X, RECT_X), actor.pos.x)
-          - RETURN: ( dir_type, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
+          - RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
         - IF anchor_h:
-            RETURN: ( dir_type, true,  try_reserve_point(anchor_h_id , diagonal_id) , diagonal_id.to_pos )
+            RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id) , to_pos(diagonal_id) )
 
 
 # proc-ai has to be implemented by AI agent based on provided information
@@ -183,16 +183,16 @@ proc-ai:
         - RETURN: true
     - RETURN: false
   try_reserve_point(int  pointId , int anchor ):
-    - IF can_reserve_point(pointIdA) & can_reserve_point(pointIdB):
+    - IF  AND(can_reserve_point(pointId) , can_reserve_point(anchor)):
         - mark both points as reserved  by this actor
         - actor.reserved_point = pointId
         - actor.reserved_anchor = anchor
         - if either reservation fails , the other must be reverted
         - RETURN: true
     - RETURN: false
-  release_reserved(vararg int?[]  pointId):
+  release_reserved(vararg int  pointId):             # 'vararg int'  means that multiple 'int' can be passed as parameter.
     - ensure that each  point ID is open for reservation from the grid's perspective
-    - if a point ID is null, ignore
+    - if a point ID < 0 , ignore (it is invalid)
 
 
   grid_columns:int : returns number of column in the grid
