@@ -32,8 +32,17 @@ fn main() {
             }
             println!();
             println!("Types: {}", spec.types.len());
-            for (name, _) in &spec.types {
-                println!("  - {}", name);
+            for (name, typedef) in &spec.types {
+                println!("  - {} ({} fields)", name, typedef.fields.len());
+                for (field_name, field_type) in &typedef.fields {
+                    println!("      {}: {}", field_name, field_type);
+                }
+                if !typedef.constants.is_empty() {
+                    println!("      constants: {}", typedef.constants.len());
+                }
+                if let Some(alias) = &typedef.alias {
+                    println!("      alias: {}", alias);
+                }
             }
             println!();
             println!("Constants: {}", spec.constants.len());

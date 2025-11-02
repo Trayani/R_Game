@@ -510,13 +510,45 @@ fn parse_function_signature(sig: &str) -> DslResult<(String, Vec<(String, String
 
 /// Check if this is a type definition
 fn is_type_definition(key: &str, value: &Value) -> bool {
-    // Type definitions either:
-    // 1. Have a mapping with 'fields' key
-    // 2. Are single-line format like "f2: float x, float y"
+    // Type definitions have three formats:
+    // 1. Structured format with 'fields' key: DirectionType: fields: {...}
+    // 2. Single-line format: f2: float x, float y
+    // 3. Direct mapping format: Actor: pos: f2, pp: i2n, ...
+
     if let Some(mapping) = value.as_mapping() {
-        mapping.contains_key(&Value::String("fields".to_string()))
+        // Format 1: Has 'fields' key (structured format)
+        if mapping.contains_key(&Value::String("fields".to_string())) {
+            return true;
+        }
+
+        // Format 3: Direct field mapping (Actor-style)
+        // Check if values are strings or have simple structure (type definitions)
+        // Exclude known non-type sections like states/procedures
+        if key.chars().next().map_or(false, |c| c.is_uppercase()) {
+            // Skip if this looks like a state (all uppercase)
+            if key.chars().all(|c| c.is_uppercase() || c == '_') {
+                return false;
+            }
+
+            // Check if mapping values are strings (field types) or simple structures
+            for (_field_key, field_value) in mapping {
+                if field_value.is_string() {
+                    // Field with type: pos: f2
+                    continue;
+                } else if field_value.is_number() || field_value.is_bool() {
+                    // Default value: reserved_point: -1
+                    continue;
+                } else {
+                    // Complex structure - probably not a type field
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        false
     } else if value.is_string() {
-        // Single-line type def
+        // Format 2: Single-line type def
         key.chars().all(|c| c.is_alphanumeric() || c == '_')
     } else {
         false
@@ -525,11 +557,123 @@ fn is_type_definition(key: &str, value: &Value) -> bool {
 
 /// Parse type definition
 fn parse_type_definition(name: &str, value: &Value) -> DslResult<TypeDef> {
-    // Simple parsing for now
+    let mut fields = Vec::new();
+    let mut constants = Vec::new();
+    let mut alias = None;
+
+    if let Some(string_value) = value.as_str() {
+        // Format 1: Single-line format like "f2: float x, float y"
+        fields = parse_single_line_fields(string_value)?;
+    } else if let Some(mapping) = value.as_mapping() {
+        if mapping.contains_key(&Value::String("fields".to_string())) {
+            // Format 2: Structured format with 'fields' key
+            if let Some(fields_value) = mapping.get(&Value::String("fields".to_string())) {
+                if let Some(fields_mapping) = fields_value.as_mapping() {
+                    for (field_key, field_type_value) in fields_mapping {
+                        let field_name = field_key.as_str()
+                            .ok_or_else(|| DslError::ConversionError(
+                                format!("Type {} field name must be string", name)
+                            ))?;
+                        let field_type = field_type_value.as_str()
+                            .ok_or_else(|| DslError::ConversionError(
+                                format!("Type {} field {} type must be string", name, field_name)
+                            ))?;
+                        fields.push((field_name.to_string(), field_type.to_string()));
+                    }
+                }
+            }
+
+            // Parse constants (const: [...])
+            if let Some(const_value) = mapping.get(&Value::String("const".to_string())) {
+                if let Some(const_seq) = const_value.as_sequence() {
+                    for const_item in const_seq {
+                        if let Some(const_str) = const_item.as_str() {
+                            // Parse "NORTH(V, false, false)" format
+                            if let Some(paren_pos) = const_str.find('(') {
+                                let const_name = const_str[..paren_pos].trim().to_string();
+                                let params_str = &const_str[paren_pos+1..];
+                                let params_end = params_str.rfind(')').unwrap_or(params_str.len());
+                                let params = params_str[..params_end]
+                                    .split(',')
+                                    .map(|p| p.trim().to_string())
+                                    .collect();
+                                constants.push(TypeConstant {
+                                    name: const_name,
+                                    params,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Parse alias (alias: DT)
+            if let Some(alias_value) = mapping.get(&Value::String("alias".to_string())) {
+                if let Some(alias_str) = alias_value.as_str() {
+                    alias = Some(alias_str.to_string());
+                }
+            }
+        } else {
+            // Format 3: Direct field mapping like "Actor: pos: f2, pp: i2n, ..."
+            for (field_key, field_value) in mapping {
+                let field_name = field_key.as_str()
+                    .ok_or_else(|| DslError::ConversionError(
+                        format!("Type {} field name must be string", name)
+                    ))?;
+
+                // Parse field type (might have default value like "int = -1")
+                let field_type = if let Some(type_str) = field_value.as_str() {
+                    // Remove default value if present: "int = -1" → "int"
+                    type_str.split('=').next().unwrap_or(type_str).trim().to_string()
+                } else if field_value.is_number() || field_value.is_bool() {
+                    // Infer type from default value
+                    if field_value.is_i64() || field_value.as_i64().is_some() {
+                        "int".to_string()
+                    } else if field_value.is_f64() || field_value.as_f64().is_some() {
+                        "float".to_string()
+                    } else if field_value.is_bool() {
+                        "bool".to_string()
+                    } else {
+                        continue; // Skip unrecognized values
+                    }
+                } else {
+                    continue; // Skip complex structures
+                };
+
+                fields.push((field_name.to_string(), field_type));
+            }
+        }
+    }
+
     Ok(TypeDef {
         name: name.to_string(),
-        fields: vec![],  // TODO: parse fields
-        constants: vec![],
-        alias: None,
+        fields,
+        constants,
+        alias,
     })
+}
+
+/// Parse single-line field format like "float x, float y"
+fn parse_single_line_fields(value: &str) -> DslResult<Vec<(String, String)>> {
+    let mut fields = Vec::new();
+
+    for part in value.split(',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+
+        // Split by whitespace to get "type name"
+        let words: Vec<&str> = part.split_whitespace().collect();
+        if words.len() >= 2 {
+            let field_type = words[..words.len()-1].join(" ");
+            let field_name = words[words.len()-1].to_string();
+            fields.push((field_name, field_type));
+        } else if words.len() == 1 {
+            // Just a type, use "_" as field name
+            fields.push(("_".to_string(), words[0].to_string()));
+        }
+    }
+
+    Ok(fields)
 }
