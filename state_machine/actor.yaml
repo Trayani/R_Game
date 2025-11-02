@@ -26,7 +26,8 @@ MOVE:
       SET actor.pp: to_point(NEXT)
 
     # PP switch
-  - IF AND(!actor.pp_switched, OR((PD.x + NDT.x  + PD.y + NDT.y == 0),  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y)) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+  - SET TOTAL: PD.x + NDT.x  + PD.y + NDT.y
+  - IF AND(!actor.pp_switched, OR((TOTAL == 0),  (PD.x + PD.y) / TOTAL) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
       DO: switch_pp
 
 
@@ -38,7 +39,7 @@ MOVE:
 
 
 IDLE:
-  - IF dest.x < 0  || dest.y < 0: PASS                # PASS means terminate early
+  - IF actor.dest.x < 0  || actor.dest.y < 0: PASS                # PASS means terminate early
   - SET d: opt_dir
   - SET actor.dir: optimal_direction(d)
   - IF !actor.dir.set:
@@ -131,11 +132,11 @@ proc:
     - SET diagonal_id: actor.ppId + h_offset + v_offset*grid_columns
     - SET diagonal: can_reserve_point(diagonal_id)
     - IF !diagonal:
-        RETURN: ( d, false,  false, default )         #  'default'  is the "zero" state (false/zero/null values)
+        RETURN: ( d, false,  false, (0,0) )         #  'default'  is the "zero" state (false/zero/null values)
     - SET anchor_h: can_reserve_point( anchor_h_id)
     - SET anchor_v: can_reserve_point( anchor_v_id)
     - IF AND(!anchor_h , !anchor_v):
-        RETURN: ( d, false,  false, default )
+        RETURN: ( d, false,  false, (0,0) )
     - SET affinity_h: abs(actor.dest.x - actor.pp.x) > abs(actor.dest.y - actor.pp.y)
     - SET DEST_POS: to_pos(actor.dest)
     - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
@@ -151,13 +152,15 @@ proc:
             # But Y must be calculated by line equation based on actor's actual position (actor.pos).
             # That can lead to edge cases, where the projected Y is outside the rectangle.
             # Thus, we have to clamp it: if the vertical direction is
-            # - south: Y should increment toward destination, so  Y=min(Y, actor.pos), because the actor should NOT move
-            #          in a vertically backward direction. And Y=max(Y, RECT_Y), because the actor cannot aim outside the rectangle
+            # - south: Y should increment toward destination, so we clamp:
+            #   - Lower bound: actor.pos.y (cannot move backward/north)
+            #   - Upper bound: RECT_Y (cannot aim beyond rectangle)
+            #   - Formula: max(min(TARGET_Y, RECT_Y), actor.pos.y)
             # - !south (north): Y should decrement toward destination. This inverts the logic for 'south'
             - IF d.south:
-                SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
-              ELSE :
                 SET TARGET_Y: max(min(TARGET_Y, RECT_Y), actor.pos.y)
+              ELSE :
+                SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
             - RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id), (RECT_X, TARGET_Y)  )
         - IF anchor_v:
             RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
@@ -173,7 +176,8 @@ proc:
           - RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id), (TARGET_X, RECT_Y)  )
         - IF anchor_h:
             RETURN: ( d, true,  try_reserve_point(anchor_h_id , diagonal_id) , to_pos(diagonal_id) )
-
+      # at this point, nothing passed
+      RETURN: ( d, false,  false , (0,0) )
 
 # proc-ai has to be implemented by AI agent based on provided information
 proc-ai:
