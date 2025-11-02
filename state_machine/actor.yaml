@@ -129,14 +129,21 @@ proc:
     - IF actor.pp.y == actor.dest.y: RETURN  (H, false, east)
     - RETURN: (N, south, east)
 
+  # Helper: conditional value selection (replaces inline if-else expressions)
+  if_else(bool condition, int true_value, int false_value):int:
+    SET result: true_value
+    IF !condition:
+      SET result: false_value
+    RETURN: result
+
   to_pos(int pointId):f2:
     SET y: pointId / grid_columns     #(this should round down to integer)
-    RETURN: (pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height
+    RETURN: ((pointId - y*grid_columns)*grid_cell_width, y*grid_cell_height)
   to_pos(int2 point):f2:
-    RETURN: point.x*grid_cell_width, point.y*grid_cell_height
+    RETURN: (point.x*grid_cell_width, point.y*grid_cell_height)
   to_point(int pointId):i2:
     SET y: pointId / grid_columns     #(this should round down to integer)
-    RETURN: (pointId - y*grid_columns), y
+    RETURN: ((pointId - y*grid_columns), y)
 
 
   alternative_direction(DT a, DT b):
@@ -145,8 +152,8 @@ proc:
           - SET actor.dir: optimal_direction(b)
 
   optimal_direction(DT d):Direction:
-    - SET h_offset: (if d.east 1 else -1)
-    - SET v_offset: (if d.south 1 else -1)
+    - SET h_offset: if_else(d.east, 1, -1)
+    - SET v_offset: if_else(d.south, 1, -1)
     - SET anchor_h_id: actor.ppId + h_offset
     - SET anchor_v_id: actor.ppId + v_offset*grid_columns
     - IF d.cardinality == V:

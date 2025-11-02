@@ -1,0 +1,1720 @@
+{
+  "version": "1.0",
+  "config": {
+    "pp_release_threshold": 0.6
+  },
+  "states": {
+    "IDLE": [
+      {
+        "action": "if",
+        "condition": {
+          "type": "comparison",
+          "op": "<",
+          "left": {
+            "type": "field_access",
+            "object": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "dest"
+            },
+            "field": "x"
+          },
+          "right": {
+            "type": "literal",
+            "value": 0
+          }
+        },
+        "then_body": [
+          {
+            "action": "pass"
+          }
+        ]
+      },
+      {
+        "action": "set",
+        "variable": "d",
+        "value": {
+          "type": "variable",
+          "name": "opt_dir"
+        }
+      },
+      {
+        "action": "set",
+        "variable": "actor.dir",
+        "value": {
+          "type": "function_call",
+          "name": "optimal_direction",
+          "args": [
+            {
+              "type": "variable",
+              "name": "d"
+            }
+          ]
+        }
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "not",
+          "operand": {
+            "type": "expression",
+            "expr": {
+              "type": "field_access",
+              "object": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "actor"
+                },
+                "field": "dir"
+              },
+              "field": "set"
+            }
+          }
+        },
+        "then_body": [
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "d"
+                },
+                "field": "cardinality"
+              },
+              "right": {
+                "type": "variable",
+                "name": "V"
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "alternative_direction( DT(N, d.south, false), DT(N, d.south, true))"
+              }
+            ]
+          }
+        ],
+        "else_body": [
+          {
+            "action": "do",
+            "call": "alternative_direction( DT(V, d.south,  false), DT(H, false,  d.east))"
+          }
+        ]
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "expression",
+          "expr": {
+            "type": "field_access",
+            "object": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "dir"
+            },
+            "field": "set"
+          }
+        },
+        "then_body": [
+          {
+            "action": "set",
+            "variable": "actor.pp_switched",
+            "value": {
+              "type": "literal",
+              "value": false
+            }
+          },
+          {
+            "action": "set_state",
+            "state": "MOVE"
+          }
+        ]
+      }
+    ],
+    "MOVE": [
+      {
+        "action": "do",
+        "call": "move_to_target()"
+      },
+      {
+        "action": "set",
+        "variable": "NDT",
+        "value": {
+          "type": "variable",
+          "name": "distance_to_target"
+        }
+      },
+      {
+        "action": "set",
+        "variable": "PD",
+        "value": {
+          "type": "function_call",
+          "name": "distance_to_point",
+          "args": [
+            {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "pos"
+            }
+          ]
+        }
+      },
+      {
+        "action": "do",
+        "call": "/* PROC:switch_pp - 7 statements */"
+      },
+      {
+        "action": "set",
+        "variable": "TOTAL",
+        "value": {
+          "type": "binary_op",
+          "op": "+",
+          "left": {
+            "type": "binary_op",
+            "op": "+",
+            "left": {
+              "type": "binary_op",
+              "op": "+",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "PD"
+                },
+                "field": "x"
+              },
+              "right": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "NDT"
+                },
+                "field": "x"
+              }
+            },
+            "right": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "PD"
+              },
+              "field": "y"
+            }
+          },
+          "right": {
+            "type": "field_access",
+            "object": {
+              "type": "variable",
+              "name": "NDT"
+            },
+            "field": "y"
+          }
+        }
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "not",
+          "operand": {
+            "type": "expression",
+            "expr": {
+              "type": "field_access",
+              "object": {
+                "type": "variable",
+                "name": "actor"
+              },
+              "field": "pp_switched"
+            }
+          }
+        },
+        "then_body": [
+          {
+            "action": "if",
+            "condition": {
+              "type": "expression",
+              "expr": {
+                "type": "binary_op",
+                "op": "+",
+                "left": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "PD"
+                  },
+                  "field": "x"
+                },
+                "right": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "PD"
+                  },
+                  "field": "y"
+                }
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "switch_pp"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "action": "if",
+        "condition": {
+          "type": "and",
+          "operands": [
+            {
+              "type": "comparison",
+              "op": "<",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "NDT"
+                },
+                "field": "x"
+              },
+              "right": {
+                "type": "literal",
+                "value": 0.5
+              }
+            },
+            {
+              "type": "comparison",
+              "op": "<",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "NDT"
+                },
+                "field": "y"
+              },
+              "right": {
+                "type": "literal",
+                "value": 0.5
+              }
+            }
+          ]
+        },
+        "then_body": [
+          {
+            "action": "if",
+            "condition": {
+              "type": "not",
+              "operand": {
+                "type": "expression",
+                "expr": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "pp_switched"
+                }
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "switch_pp"
+              }
+            ]
+          },
+          {
+            "action": "do",
+            "call": "release_reserved(actor.reserved_point,  actor.reserved_anchor)"
+          },
+          {
+            "action": "set_state",
+            "state": "IDLE"
+          }
+        ]
+      }
+    ]
+  },
+  "procedures": {
+    "native": [
+      "release_reserved",
+      "move_to_target",
+      "wait_frames",
+      "try_reserve_point",
+      "can_reserve_point"
+    ],
+    "dsl": {
+      "optimal_direction": {
+        "params": [
+          [
+            "d",
+            "DT"
+          ]
+        ],
+        "return_type": "Direction",
+        "body": [
+          {
+            "action": "set",
+            "variable": "h_offset",
+            "value": {
+              "type": "function_call",
+              "name": "if_else",
+              "args": [
+                {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "d"
+                  },
+                  "field": "east"
+                },
+                {
+                  "type": "literal",
+                  "value": 1
+                },
+                {
+                  "type": "unary_op",
+                  "op": "-",
+                  "operand": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "v_offset",
+            "value": {
+              "type": "function_call",
+              "name": "if_else",
+              "args": [
+                {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "d"
+                  },
+                  "field": "south"
+                },
+                {
+                  "type": "literal",
+                  "value": 1
+                },
+                {
+                  "type": "unary_op",
+                  "op": "-",
+                  "operand": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "anchor_h_id",
+            "value": {
+              "type": "binary_op",
+              "op": "+",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "actor"
+                },
+                "field": "ppId"
+              },
+              "right": {
+                "type": "variable",
+                "name": "h_offset"
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "anchor_v_id",
+            "value": {
+              "type": "binary_op",
+              "op": "+",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "actor"
+                },
+                "field": "ppId"
+              },
+              "right": {
+                "type": "binary_op",
+                "op": "*",
+                "left": {
+                  "type": "variable",
+                  "name": "v_offset"
+                },
+                "right": {
+                  "type": "variable",
+                  "name": "grid_columns"
+                }
+              }
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "d"
+                },
+                "field": "cardinality"
+              },
+              "right": {
+                "type": "variable",
+                "name": "V"
+              }
+            },
+            "then_body": [
+              {
+                "action": "return",
+                "value": {
+                  "type": "tuple",
+                  "elements": [
+                    {
+                      "type": "variable",
+                      "name": "d"
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "function_call",
+                      "name": "try_reserve_point",
+                      "args": [
+                        {
+                          "type": "variable",
+                          "name": "anchor_v_id"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "function_call",
+                      "name": "to_pos",
+                      "args": [
+                        {
+                          "type": "variable",
+                          "name": "anchor_v_id"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "d"
+                },
+                "field": "cardinality"
+              },
+              "right": {
+                "type": "variable",
+                "name": "H"
+              }
+            },
+            "then_body": [
+              {
+                "action": "return",
+                "value": {
+                  "type": "tuple",
+                  "elements": [
+                    {
+                      "type": "variable",
+                      "name": "d"
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "function_call",
+                      "name": "try_reserve_point",
+                      "args": [
+                        {
+                          "type": "variable",
+                          "name": "anchor_h_id"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "function_call",
+                      "name": "to_pos",
+                      "args": [
+                        {
+                          "type": "variable",
+                          "name": "anchor_h_id"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "action": "set",
+            "variable": "diagonal_id",
+            "value": {
+              "type": "binary_op",
+              "op": "+",
+              "left": {
+                "type": "binary_op",
+                "op": "+",
+                "left": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "ppId"
+                },
+                "right": {
+                  "type": "variable",
+                  "name": "h_offset"
+                }
+              },
+              "right": {
+                "type": "binary_op",
+                "op": "*",
+                "left": {
+                  "type": "variable",
+                  "name": "v_offset"
+                },
+                "right": {
+                  "type": "variable",
+                  "name": "grid_columns"
+                }
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "diagonal",
+            "value": {
+              "type": "function_call",
+              "name": "can_reserve_point",
+              "args": [
+                {
+                  "type": "variable",
+                  "name": "diagonal_id"
+                }
+              ]
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "not",
+              "operand": {
+                "type": "expression",
+                "expr": {
+                  "type": "variable",
+                  "name": "diagonal"
+                }
+              }
+            },
+            "then_body": [
+              {
+                "action": "return",
+                "value": {
+                  "type": "tuple",
+                  "elements": [
+                    {
+                      "type": "variable",
+                      "name": "d"
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "tuple",
+                      "elements": [
+                        {
+                          "type": "literal",
+                          "value": 0
+                        },
+                        {
+                          "type": "literal",
+                          "value": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "action": "set",
+            "variable": "anchor_h",
+            "value": {
+              "type": "function_call",
+              "name": "can_reserve_point",
+              "args": [
+                {
+                  "type": "variable",
+                  "name": "anchor_h_id"
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "anchor_v",
+            "value": {
+              "type": "function_call",
+              "name": "can_reserve_point",
+              "args": [
+                {
+                  "type": "variable",
+                  "name": "anchor_v_id"
+                }
+              ]
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "and",
+              "operands": [
+                {
+                  "type": "not",
+                  "operand": {
+                    "type": "expression",
+                    "expr": {
+                      "type": "variable",
+                      "name": "anchor_h"
+                    }
+                  }
+                },
+                {
+                  "type": "not",
+                  "operand": {
+                    "type": "expression",
+                    "expr": {
+                      "type": "variable",
+                      "name": "anchor_v"
+                    }
+                  }
+                }
+              ]
+            },
+            "then_body": [
+              {
+                "action": "return",
+                "value": {
+                  "type": "tuple",
+                  "elements": [
+                    {
+                      "type": "variable",
+                      "name": "d"
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "literal",
+                      "value": false
+                    },
+                    {
+                      "type": "tuple",
+                      "elements": [
+                        {
+                          "type": "literal",
+                          "value": 0
+                        },
+                        {
+                          "type": "literal",
+                          "value": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "action": "set",
+            "variable": "affinity_h",
+            "value": {
+              "type": "binary_op",
+              "op": ">",
+              "left": {
+                "type": "function_call",
+                "name": "abs",
+                "args": [
+                  {
+                    "type": "binary_op",
+                    "op": "-",
+                    "left": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "dest"
+                      },
+                      "field": "x"
+                    },
+                    "right": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "pp"
+                      },
+                      "field": "x"
+                    }
+                  }
+                ]
+              },
+              "right": {
+                "type": "function_call",
+                "name": "abs",
+                "args": [
+                  {
+                    "type": "binary_op",
+                    "op": "-",
+                    "left": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "dest"
+                      },
+                      "field": "y"
+                    },
+                    "right": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "pp"
+                      },
+                      "field": "y"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "DEST_POS",
+            "value": {
+              "type": "function_call",
+              "name": "to_pos",
+              "args": [
+                {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "dest"
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "RECT_X",
+            "value": {
+              "type": "binary_op",
+              "op": "*",
+              "left": {
+                "type": "binary_op",
+                "op": "+",
+                "left": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "variable",
+                      "name": "actor"
+                    },
+                    "field": "pp"
+                  },
+                  "field": "x"
+                },
+                "right": {
+                  "type": "variable",
+                  "name": "h_offset"
+                }
+              },
+              "right": {
+                "type": "variable",
+                "name": "grid_cell_width"
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "RECT_Y",
+            "value": {
+              "type": "binary_op",
+              "op": "*",
+              "left": {
+                "type": "binary_op",
+                "op": "+",
+                "left": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "variable",
+                      "name": "actor"
+                    },
+                    "field": "pp"
+                  },
+                  "field": "y"
+                },
+                "right": {
+                  "type": "variable",
+                  "name": "v_offset"
+                }
+              },
+              "right": {
+                "type": "variable",
+                "name": "grid_cell_height"
+              }
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "expression",
+              "expr": {
+                "type": "variable",
+                "name": "affinity_h"
+              }
+            },
+            "then_body": [
+              {
+                "action": "set",
+                "variable": "xDiff",
+                "value": {
+                  "type": "binary_op",
+                  "op": "-",
+                  "left": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "variable",
+                      "name": "DEST_POS"
+                    },
+                    "field": "x"
+                  },
+                  "right": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "variable",
+                        "name": "actor"
+                      },
+                      "field": "pos"
+                    },
+                    "field": "x"
+                  }
+                }
+              },
+              {
+                "action": "if",
+                "condition": {
+                  "type": "and",
+                  "operands": [
+                    {
+                      "type": "expression",
+                      "expr": {
+                        "type": "variable",
+                        "name": "anchor_h"
+                      }
+                    },
+                    {
+                      "type": "comparison",
+                      "op": "!=",
+                      "left": {
+                        "type": "variable",
+                        "name": "xDiff"
+                      },
+                      "right": {
+                        "type": "literal",
+                        "value": 0
+                      }
+                    }
+                  ]
+                },
+                "then_body": [
+                  {
+                    "action": "set",
+                    "variable": "SLOPE",
+                    "value": {
+                      "type": "binary_op",
+                      "op": "/",
+                      "left": {
+                        "type": "binary_op",
+                        "op": "-",
+                        "left": {
+                          "type": "field_access",
+                          "object": {
+                            "type": "variable",
+                            "name": "DEST_POS"
+                          },
+                          "field": "y"
+                        },
+                        "right": {
+                          "type": "field_access",
+                          "object": {
+                            "type": "field_access",
+                            "object": {
+                              "type": "variable",
+                              "name": "actor"
+                            },
+                            "field": "pos"
+                          },
+                          "field": "y"
+                        }
+                      },
+                      "right": {
+                        "type": "variable",
+                        "name": "xDiff"
+                      }
+                    }
+                  },
+                  {
+                    "action": "set",
+                    "variable": "TARGET_Y",
+                    "value": {
+                      "type": "binary_op",
+                      "op": "+",
+                      "left": {
+                        "type": "binary_op",
+                        "op": "*",
+                        "left": {
+                          "type": "variable",
+                          "name": "SLOPE"
+                        },
+                        "right": {
+                          "type": "binary_op",
+                          "op": "-",
+                          "left": {
+                            "type": "variable",
+                            "name": "RECT_X"
+                          },
+                          "right": {
+                            "type": "field_access",
+                            "object": {
+                              "type": "field_access",
+                              "object": {
+                                "type": "variable",
+                                "name": "actor"
+                              },
+                              "field": "pos"
+                            },
+                            "field": "x"
+                          }
+                        }
+                      },
+                      "right": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "field_access",
+                          "object": {
+                            "type": "variable",
+                            "name": "actor"
+                          },
+                          "field": "pos"
+                        },
+                        "field": "y"
+                      }
+                    }
+                  }
+                ],
+                "else_body": [
+                  {
+                    "action": "set",
+                    "variable": "TARGET_Y",
+                    "value": {
+                      "type": "function_call",
+                      "name": "min",
+                      "args": [
+                        {
+                          "type": "function_call",
+                          "name": "max",
+                          "args": [
+                            {
+                              "type": "variable",
+                              "name": "TARGET_Y"
+                            },
+                            {
+                              "type": "variable",
+                              "name": "RECT_Y"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "field_access",
+                          "object": {
+                            "type": "field_access",
+                            "object": {
+                              "type": "variable",
+                              "name": "actor"
+                            },
+                            "field": "pos"
+                          },
+                          "field": "y"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "action": "if",
+                "condition": {
+                  "type": "expression",
+                  "expr": {
+                    "type": "variable",
+                    "name": "anchor_v"
+                  }
+                },
+                "then_body": [
+                  {
+                    "action": "return",
+                    "value": {
+                      "type": "tuple",
+                      "elements": [
+                        {
+                          "type": "variable",
+                          "name": "d"
+                        },
+                        {
+                          "type": "literal",
+                          "value": true
+                        },
+                        {
+                          "type": "function_call",
+                          "name": "try_reserve_point",
+                          "args": [
+                            {
+                              "type": "variable",
+                              "name": "anchor_v_id"
+                            },
+                            {
+                              "type": "variable",
+                              "name": "diagonal_id"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "function_call",
+                          "name": "to_pos",
+                          "args": [
+                            {
+                              "type": "variable",
+                              "name": "diagonal_id"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "distance_to_point": {
+        "params": [
+          [
+            "pointId",
+            "int"
+          ]
+        ],
+        "return_type": "f2",
+        "body": [
+          {
+            "action": "set",
+            "variable": "point",
+            "value": {
+              "type": "function_call",
+              "name": "to_point",
+              "args": [
+                {
+                  "type": "variable",
+                  "name": "pointId"
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "px",
+            "value": {
+              "type": "binary_op",
+              "op": "*",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "point"
+                },
+                "field": "x"
+              },
+              "right": {
+                "type": "variable",
+                "name": "grid_cell_width"
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "py",
+            "value": {
+              "type": "binary_op",
+              "op": "*",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "variable",
+                  "name": "point"
+                },
+                "field": "y"
+              },
+              "right": {
+                "type": "variable",
+                "name": "grid_cell_height"
+              }
+            }
+          },
+          {
+            "action": "set",
+            "variable": "x",
+            "value": {
+              "type": "function_call",
+              "name": "abs",
+              "args": [
+                {
+                  "type": "binary_op",
+                  "op": "-",
+                  "left": {
+                    "type": "variable",
+                    "name": "px"
+                  },
+                  "right": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "variable",
+                        "name": "actor"
+                      },
+                      "field": "pos"
+                    },
+                    "field": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "y",
+            "value": {
+              "type": "function_call",
+              "name": "abs",
+              "args": [
+                {
+                  "type": "binary_op",
+                  "op": "-",
+                  "left": {
+                    "type": "variable",
+                    "name": "py"
+                  },
+                  "right": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "variable",
+                        "name": "actor"
+                      },
+                      "field": "pos"
+                    },
+                    "field": "y"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "return",
+            "value": {
+              "type": "tuple",
+              "elements": [
+                {
+                  "type": "variable",
+                  "name": "x"
+                },
+                {
+                  "type": "variable",
+                  "name": "y"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "to_point": {
+        "params": [
+          [
+            "pointId",
+            "int"
+          ]
+        ],
+        "return_type": "i2",
+        "body": []
+      },
+      "opt_dir": {
+        "params": [],
+        "return_type": "DirectionType",
+        "body": [
+          {
+            "action": "set",
+            "variable": "south",
+            "value": {
+              "type": "binary_op",
+              "op": "<",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "pp"
+                },
+                "field": "y"
+              },
+              "right": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "dest"
+                },
+                "field": "y"
+              }
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "pp"
+                },
+                "field": "x"
+              },
+              "right": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "dest"
+                },
+                "field": "x"
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "RETURN  (V, south, false)"
+              }
+            ]
+          },
+          {
+            "action": "set",
+            "variable": "east",
+            "value": {
+              "type": "binary_op",
+              "op": "<",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "pp"
+                },
+                "field": "x"
+              },
+              "right": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "dest"
+                },
+                "field": "x"
+              }
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "comparison",
+              "op": "==",
+              "left": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "pp"
+                },
+                "field": "y"
+              },
+              "right": {
+                "type": "field_access",
+                "object": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "variable",
+                    "name": "actor"
+                  },
+                  "field": "dest"
+                },
+                "field": "y"
+              }
+            },
+            "then_body": [
+              {
+                "action": "do",
+                "call": "RETURN  (H, false, east)"
+              }
+            ]
+          },
+          {
+            "action": "return",
+            "value": {
+              "type": "tuple",
+              "elements": [
+                {
+                  "type": "variable",
+                  "name": "N"
+                },
+                {
+                  "type": "variable",
+                  "name": "south"
+                },
+                {
+                  "type": "variable",
+                  "name": "east"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "if_else": {
+        "params": [
+          [
+            "condition",
+            "bool"
+          ],
+          [
+            "true_value",
+            "int"
+          ],
+          [
+            "false_value",
+            "int"
+          ]
+        ],
+        "return_type": "int",
+        "body": []
+      },
+      "alternative_direction": {
+        "params": [
+          [
+            "a",
+            "DT"
+          ],
+          [
+            "b",
+            "DT"
+          ]
+        ],
+        "return_type": null,
+        "body": [
+          {
+            "action": "set",
+            "variable": "actor.dir",
+            "value": {
+              "type": "function_call",
+              "name": "optimal_direction",
+              "args": [
+                {
+                  "type": "variable",
+                  "name": "a"
+                }
+              ]
+            }
+          },
+          {
+            "action": "if",
+            "condition": {
+              "type": "not",
+              "operand": {
+                "type": "expression",
+                "expr": {
+                  "type": "field_access",
+                  "object": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "variable",
+                      "name": "actor"
+                    },
+                    "field": "dir"
+                  },
+                  "field": "set"
+                }
+              }
+            },
+            "then_body": [
+              {
+                "action": "set",
+                "variable": "actor.dir",
+                "value": {
+                  "type": "function_call",
+                  "name": "optimal_direction",
+                  "args": [
+                    {
+                      "type": "variable",
+                      "name": "b"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "distance_to_target": {
+        "params": [],
+        "return_type": "f2",
+        "body": [
+          {
+            "action": "set",
+            "variable": "x",
+            "value": {
+              "type": "function_call",
+              "name": "abs",
+              "args": [
+                {
+                  "type": "binary_op",
+                  "op": "-",
+                  "left": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "dir"
+                      },
+                      "field": "target"
+                    },
+                    "field": "x"
+                  },
+                  "right": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "variable",
+                        "name": "actor"
+                      },
+                      "field": "pos"
+                    },
+                    "field": "x"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "set",
+            "variable": "y",
+            "value": {
+              "type": "function_call",
+              "name": "abs",
+              "args": [
+                {
+                  "type": "binary_op",
+                  "op": "-",
+                  "left": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "field_access",
+                        "object": {
+                          "type": "variable",
+                          "name": "actor"
+                        },
+                        "field": "dir"
+                      },
+                      "field": "target"
+                    },
+                    "field": "y"
+                  },
+                  "right": {
+                    "type": "field_access",
+                    "object": {
+                      "type": "field_access",
+                      "object": {
+                        "type": "variable",
+                        "name": "actor"
+                      },
+                      "field": "pos"
+                    },
+                    "field": "y"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "action": "return",
+            "value": {
+              "type": "tuple",
+              "elements": [
+                {
+                  "type": "variable",
+                  "name": "x"
+                },
+                {
+                  "type": "variable",
+                  "name": "y"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "to_pos": {
+        "params": [
+          [
+            "point",
+            "int2"
+          ]
+        ],
+        "return_type": "f2",
+        "body": []
+      }
+    }
+  },
+  "types": {},
+  "constants": {
+    "grid_cell_width": {
+      "type_name": "float"
+    },
+    "grid_columns": {
+      "type_name": "int"
+    },
+    "grid_cell_height": {
+      "type_name": "float"
+    }
+  },
+  "parameters": {
+    "delta_time": {
+      "type_name": "float"
+    }
+  }
+}
