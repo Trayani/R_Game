@@ -8,19 +8,25 @@ MOVE:
   - SET NDT: distance_to_target
   - SET PD: distance_to_point(actor.pos)
   - PROC:switch_pp:
-      DO: release_reserved(actor.ppId)
       SET NEXT: actor.reserved_point
+      IF NEXT < 0:
+        SET NEXT: actor.reserved_anchor
+        RECHECK:                                # RECHECK means evaluate again the 'NEXT < 0' condition
+          SET actor.pp_switched: true
+          RETURN: PASS                          # PASS is void
+
       IF (actor.reserved_anchor >=0)  && distance_to_point(actor.reserved_point) > distance_to_point(actor.reserved_anchor):
         SET NEXT: actor.reserved_anchor
         SET actor.reserved_anchor: -1     # -1 means 'invalid'
       ELSE:
         SET actor.reserved_point: -1      # -1 means 'invalid'
       SET actor.pp_switched: true
+      DO: release_reserved(actor.ppId)
       SET actor.ppId: NEXT
       SET actor.pp: to_point(NEXT)
 
     # PP switch
-  - IF AND(!actor.pp_switched,  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
+  - IF AND(!actor.pp_switched, OR((PD.x + NDT.x  + PD.y + NDT.y == 0),  (PD.x + PD.y) /(PD.x + NDT.x  + PD.y + NDT.y)) > CFG_PP_RELEASE):              # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
       DO: switch_pp
 
 
@@ -45,6 +51,8 @@ IDLE:
   - IF actor.dir.set:
       SET actor.pp_switched: false
       SET state: MOVE
+    ELSE:
+      DO: wait_frames(3)
 
 ## TYPES
 DirectionTypeCardinality: H | V | N   # horizontal | vertical | none
@@ -123,19 +131,19 @@ proc:
     - SET diagonal_id: actor.ppId + h_offset + v_offset*grid_columns
     - SET diagonal: can_reserve_point(diagonal_id)
     - IF !diagonal:
-        RETURN: ( d, false,  false )
+        RETURN: ( d, false,  false, default )         #  'default'  is the "zero" state (false/zero/null values)
     - SET anchor_h: can_reserve_point( anchor_h_id)
     - SET anchor_v: can_reserve_point( anchor_v_id)
-    - IF !anchor_h & !anchor_v:
-        RETURN: ( d, false,  false )
-    - SET affinity_h: abs(dest.x - actor.pp.x) > abs(dest.y - actor.pp.y)
-    - SET DEST_POS: to_pos(dest)
+    - IF AND(!anchor_h , !anchor_v):
+        RETURN: ( d, false,  false, default )
+    - SET affinity_h: abs(actor.dest.x - actor.pp.x) > abs(actor.dest.y - actor.pp.y)
+    - SET DEST_POS: to_pos(actor.dest)
     - SET RECT_X: (actor.pp.x+h_offset) * grid_cell_width
     - SET RECT_Y: (actor.pp.y+v_offset) * grid_cell_height
     - IF affinity_h:
         - SET xDiff: DEST_POS.x - actor.pos.x
-        - IF AND( anchor_h, xDiff == 0):
-            - SET SLOPE:  (DEST_POS.y - actor.pos.y) / (DEST_POS.x - actor.pos.x)         # line equation, please validate correctness
+        - IF AND( anchor_h, xDiff != 0):
+            - SET SLOPE:  (DEST_POS.y - actor.pos.y) / xDiff         # line equation, please validate correctness
             - SET TARGET_Y: SLOPE * (RECT_X - actor.pos.x) + actor.pos.y
             - IF d.south:
                 SET TARGET_Y: min(max(TARGET_Y, RECT_Y), actor.pos.y)
@@ -146,8 +154,8 @@ proc:
             RETURN: ( d, true,  try_reserve_point(anchor_v_id , diagonal_id) , to_pos(diagonal_id) )
       ELSE:
         - SET yDiff: DEST_POS.y - actor.pos.y
-        - IF AND( anchor_v, yDiff == 0):
-          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / (DEST_POS.y - actor.pos.y)         # line equation, please validate correctness
+        - IF AND( anchor_v, yDiff != 0):
+          - SET SLOPE:  (DEST_POS.x - actor.pos.x) / yDiff        # line equation, please validate correctness
           - SET TARGET_X: SLOPE * (RECT_Y - actor.pos.y) + actor.pos.x                  # line equation, please validate correctness
           - IF d.east:
               SET TARGET_X: min(max(TARGET_X, RECT_X), actor.pos.x)
@@ -200,3 +208,5 @@ proc-ai:
   grid_columns:int : returns number of column in the grid
   grid_cell_width:float : returns a grid cell width, as displayed in the GUI
   grid_cell_height:float : returns a grid cell height, as displayed in the GUI
+  wait_frames(int frames): do not run the update logic for the actor for <frames> frames
+
