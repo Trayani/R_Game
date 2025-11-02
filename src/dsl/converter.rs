@@ -384,7 +384,14 @@ impl ActorYAMLConverter {
         // Convert DSL procedures
         let mut dsl_procedures = HashMap::new();
         for (proc_name, proc_def) in &original.procedures {
-            let converted_body = self.convert_original_statements(&proc_def.body, &native_functions, constants, parameters)?;
+            let converted_body = self.convert_original_statements(
+                &proc_def.body,
+                &native_functions,
+                constants,
+                parameters,
+                proc_def.return_type.as_ref(),  // Pass return type for validation
+                &original.types,                 // Pass type definitions
+            )?;
             dsl_procedures.insert(
                 proc_name.clone(),
                 StructuredProcedure {
@@ -414,9 +421,16 @@ impl ActorYAMLConverter {
                 .collect(),
         };
 
-        // Convert states
+        // Convert states (states don't have return types)
         for (state_name, statements) in original.states {
-            let converted_statements = self.convert_original_statements(&statements, &native_functions, constants, parameters)?;
+            let converted_statements = self.convert_original_statements(
+                &statements,
+                &native_functions,
+                constants,
+                parameters,
+                None,            // States don't have return types
+                &original.types, // Pass type definitions
+            )?;
             structured.states.insert(state_name, converted_statements);
         }
 
@@ -552,10 +566,12 @@ impl ActorYAMLConverter {
         native_functions: &HashMap<String, String>,
         constants: &HashMap<String, String>,
         parameters: &HashMap<String, String>,
+        return_type: Option<&String>,
+        types: &HashMap<String, TypeDef>,
     ) -> DslResult<Vec<StructuredAction>> {
         statements
             .iter()
-            .map(|stmt| self.convert_original_statement(stmt, native_functions, constants, parameters))
+            .map(|stmt| self.convert_original_statement(stmt, native_functions, constants, parameters, return_type, types))
             .collect()
     }
 
@@ -566,6 +582,8 @@ impl ActorYAMLConverter {
         native_functions: &HashMap<String, String>,
         constants: &HashMap<String, String>,
         parameters: &HashMap<String, String>,
+        return_type: Option<&String>,
+        types: &HashMap<String, TypeDef>,
     ) -> DslResult<StructuredAction> {
         match statement {
             OriginalStatement::Do { action } => {
@@ -602,9 +620,9 @@ impl ActorYAMLConverter {
                 let structured_cond = self.ast_to_structured_condition(cond_ast)?;
 
                 // Convert bodies
-                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters)?;
+                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters, return_type, types)?;
                 let else_actions = if let Some(else_stmts) = else_body {
-                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters)?)
+                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters, return_type, types)?)
                 } else {
                     None
                 };
@@ -621,9 +639,9 @@ impl ActorYAMLConverter {
                 let cond_ast = ConditionParser::parse_from_str(condition)?;
                 let structured_cond = self.ast_to_structured_condition(cond_ast)?;
 
-                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters)?;
+                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters, return_type, types)?;
                 let else_actions = if let Some(else_stmts) = else_body {
-                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters)?)
+                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters, return_type, types)?)
                 } else {
                     None
                 };
@@ -640,9 +658,25 @@ impl ActorYAMLConverter {
             }
 
             OriginalStatement::Return { value } => {
-                // For now, treat RETURN as PASS (states don't have return values)
-                // TODO: Handle RETURN in procedure contexts
-                Ok(StructuredAction::Pass)
+                if let Some(expr_str) = value {
+                    // Parse the return expression
+                    let expr_ast = self.parse_expression_with_implicit_calls(expr_str, native_functions, constants, parameters)?;
+
+                    // Validate against return type if available
+                    if let Some(ret_type) = return_type {
+                        self.validate_return_expression(&expr_ast, ret_type, types)?;
+                    }
+
+                    // Convert to structured expression
+                    let structured_expr = self.ast_to_structured_expr(expr_ast)?;
+
+                    Ok(StructuredAction::Return {
+                        value: Some(structured_expr),
+                    })
+                } else {
+                    // Empty return
+                    Ok(StructuredAction::Return { value: None })
+                }
             }
 
             OriginalStatement::Panic { message } => {
@@ -655,7 +689,7 @@ impl ActorYAMLConverter {
             OriginalStatement::ProcDef { name, body } => {
                 // PROC definitions within states are treated as inline procedure calls
                 // Convert the body and wrap in a call
-                let proc_actions = self.convert_original_statements(body, native_functions, constants, parameters)?;
+                let proc_actions = self.convert_original_statements(body, native_functions, constants, parameters, return_type, types)?;
 
                 // For now, inline the procedure body
                 // TODO: Extract to separate procedure definition
@@ -691,5 +725,128 @@ impl ActorYAMLConverter {
 
         // Otherwise, parse normally
         ExpressionParser::parse_from_str(expr_str)
+    }
+
+    /// Validate return expression against expected return type
+    fn validate_return_expression(
+        &self,
+        expr: &ExpressionAST,
+        return_type_name: &str,
+        types: &HashMap<String, TypeDef>,
+    ) -> DslResult<()> {
+        // Look up return type definition
+        let type_def = types.get(return_type_name)
+            .ok_or_else(|| DslError::ConversionError(
+                format!("Return type '{}' not found in type definitions", return_type_name)
+            ))?;
+
+        // If return expression is a tuple, validate element count and types
+        if let ExpressionAST::Tuple { elements } = expr {
+            let expected_count = type_def.fields.len();
+            let actual_count = elements.len();
+
+            if actual_count != expected_count {
+                return Err(DslError::ConversionError(
+                    format!(
+                        "RETURN tuple has {} elements but type '{}' requires {} fields: [{}]",
+                        actual_count,
+                        return_type_name,
+                        expected_count,
+                        type_def.fields.iter()
+                            .map(|(name, type_name)| format!("{}: {}", name, type_name))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                ));
+            }
+
+            // Validate each element type matches expected field type
+            for (i, (elem_expr, (field_name, field_type))) in elements.iter().zip(type_def.fields.iter()).enumerate() {
+                self.validate_expression_type(elem_expr, field_type, types)
+                    .map_err(|e| DslError::ConversionError(
+                        format!(
+                            "RETURN tuple element {} (field '{}'): {}",
+                            i,
+                            field_name,
+                            e
+                        )
+                    ))?;
+            }
+
+            Ok(())
+        } else {
+            // Single expression - validate it matches the type
+            // For now, just ensure type exists
+            Ok(())
+        }
+    }
+
+    /// Validate expression type matches expected type
+    fn validate_expression_type(
+        &self,
+        expr: &ExpressionAST,
+        expected_type: &str,
+        types: &HashMap<String, TypeDef>,
+    ) -> DslResult<()> {
+        match expr {
+            ExpressionAST::Literal(lit) => {
+                let actual_type = match lit {
+                    LiteralValue::Int(_) => "int",
+                    LiteralValue::Float(_) => "float",
+                    LiteralValue::Bool(_) => "bool",
+                    LiteralValue::String(_) => "string",
+                };
+
+                // Check if types match (allow int32 to match int, etc.)
+                if expected_type.starts_with(actual_type) || actual_type.starts_with(expected_type) {
+                    Ok(())
+                } else {
+                    Err(DslError::ConversionError(
+                        format!("Expected type '{}', found literal of type '{}'", expected_type, actual_type)
+                    ))
+                }
+            }
+
+            ExpressionAST::Variable(name) => {
+                // Variables: check if it's a known constant/enum value
+                // For types like DirectionTypeCardinality with values H/V/N
+                if let Some(type_def) = types.get(expected_type) {
+                    // Check if it's one of the type's constants
+                    if type_def.constants.iter().any(|c| &c.name == name) {
+                        return Ok(());
+                    }
+
+                    // Check if it's a standalone enum value (like H, V, N for DirectionTypeCardinality)
+                    // This is a heuristic - if expected type has a field with | in it, it's likely an enum
+                    if type_def.fields.iter().any(|(_, field_type)| field_type.contains('|')) {
+                        // Allow any identifier for enum types
+                        return Ok(());
+                    }
+                }
+
+                // Otherwise, assume variable is correctly typed (can't verify without full scope)
+                Ok(())
+            }
+
+            ExpressionAST::FunctionCall { name, .. } => {
+                // Function calls: assume return type matches (would need function registry to verify)
+                Ok(())
+            }
+
+            ExpressionAST::BinaryOp { .. } | ExpressionAST::UnaryOp { .. } => {
+                // Operations: assume they produce correct type
+                Ok(())
+            }
+
+            ExpressionAST::FieldAccess { .. } => {
+                // Field access: assume correct type
+                Ok(())
+            }
+
+            ExpressionAST::Tuple { .. } => {
+                // Nested tuple: would need to validate recursively
+                Ok(())
+            }
+        }
     }
 }
