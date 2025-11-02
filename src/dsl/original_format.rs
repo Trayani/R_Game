@@ -19,6 +19,8 @@ pub struct OriginalBehaviorSpec {
     pub types: HashMap<String, TypeDef>,
     pub procedures: HashMap<String, ProcedureDef>,           // proc:
     pub native_procedures: HashMap<String, NativeProcSpec>,  // proc-ai:
+    pub constants: HashMap<String, String>,                  // global: constants: (name -> type_name)
+    pub parameters: HashMap<String, String>,                 // global: parameters: (name -> type_name)
 }
 
 /// Configuration variable (e.g., CFG_PP_RELEASE AT: float)

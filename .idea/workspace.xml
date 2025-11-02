@@ -13,7 +13,10 @@
   <component name="ChangeListManager">
     <list default="true" id="8240a610-1142-4adc-89ba-d4967dbdae20" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/state_machine/actor.json" beforeDir="false" afterPath="$PROJECT_DIR$/state_machine/actor.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dsl/converter.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dsl/converter.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dsl/original_format.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dsl/original_format.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dsl/structured_format.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/dsl/structured_format.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/state_machine/actor_test_compact.yaml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -231,7 +234,7 @@
       <workItem from="1761107967090" duration="8763000" />
       <workItem from="1761224653269" duration="11882000" />
       <workItem from="1761987539955" duration="188000" />
-      <workItem from="1761987748427" duration="51931000" />
+      <workItem from="1761987748427" duration="52738000" />
     </task>
     <servers />
   </component>
@@ -266,7 +269,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="custom_flow_2" />
+                        <option value="custom_flow_4" />
                       </list>
                     </value>
                   </entry>

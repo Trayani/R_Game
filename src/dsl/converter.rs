@@ -66,6 +66,8 @@ impl ActorYAMLConverter {
             types: compact.types.into_iter().map(|(name, typedef)| {
                 (name, StructuredTypeDef { fields: typedef.fields })
             }).collect(),
+            constants: HashMap::new(),   // Compact format doesn't have constants
+            parameters: HashMap::new(),  // Compact format doesn't have parameters
         };
 
         // Convert each state
@@ -358,6 +360,10 @@ impl ActorYAMLConverter {
             .map(|(name, _)| (name.clone(), name.clone()))
             .collect();
 
+        // Collect constants and parameters (to skip them in implicit call detection)
+        let constants = &original.constants;
+        let parameters = &original.parameters;
+
         // Analyze actual function call usage to determine vararg arities
         let vararg_usage = self.analyze_vararg_usage(&original);
 
@@ -367,7 +373,7 @@ impl ActorYAMLConverter {
         // Convert DSL procedures
         let mut dsl_procedures = HashMap::new();
         for (proc_name, proc_def) in &original.procedures {
-            let converted_body = self.convert_original_statements(&proc_def.body, &native_functions)?;
+            let converted_body = self.convert_original_statements(&proc_def.body, &native_functions, constants, parameters)?;
             dsl_procedures.insert(
                 proc_name.clone(),
                 StructuredProcedure {
@@ -389,11 +395,17 @@ impl ActorYAMLConverter {
                 dsl: dsl_procedures,
             },
             types: HashMap::new(),
+            constants: original.constants.iter()
+                .map(|(name, type_name)| (name.clone(), ConstantDef { type_name: type_name.clone() }))
+                .collect(),
+            parameters: original.parameters.iter()
+                .map(|(name, type_name)| (name.clone(), ParameterDef { type_name: type_name.clone() }))
+                .collect(),
         };
 
         // Convert states
         for (state_name, statements) in original.states {
-            let converted_statements = self.convert_original_statements(&statements, &native_functions)?;
+            let converted_statements = self.convert_original_statements(&statements, &native_functions, constants, parameters)?;
             structured.states.insert(state_name, converted_statements);
         }
 
@@ -527,10 +539,12 @@ impl ActorYAMLConverter {
         &self,
         statements: &[OriginalStatement],
         native_functions: &HashMap<String, String>,
+        constants: &HashMap<String, String>,
+        parameters: &HashMap<String, String>,
     ) -> DslResult<Vec<StructuredAction>> {
         statements
             .iter()
-            .map(|stmt| self.convert_original_statement(stmt, native_functions))
+            .map(|stmt| self.convert_original_statement(stmt, native_functions, constants, parameters))
             .collect()
     }
 
@@ -539,11 +553,14 @@ impl ActorYAMLConverter {
         &self,
         statement: &OriginalStatement,
         native_functions: &HashMap<String, String>,
+        constants: &HashMap<String, String>,
+        parameters: &HashMap<String, String>,
     ) -> DslResult<StructuredAction> {
         match statement {
             OriginalStatement::Do { action } => {
                 // Check if this is a native function call (implicit call)
-                let call = if native_functions.contains_key(action) {
+                // Skip constants and parameters
+                let call = if !constants.contains_key(action) && !parameters.contains_key(action) && native_functions.contains_key(action) {
                     format!("{}()", action)
                 } else {
                     action.clone()
@@ -553,7 +570,7 @@ impl ActorYAMLConverter {
 
             OriginalStatement::Set { target, value } => {
                 // Parse the value expression
-                let expr_ast = self.parse_expression_with_implicit_calls(value, native_functions)?;
+                let expr_ast = self.parse_expression_with_implicit_calls(value, native_functions, constants, parameters)?;
                 let structured_expr = self.ast_to_structured_expr(expr_ast)?;
 
                 Ok(StructuredAction::Set {
@@ -574,9 +591,9 @@ impl ActorYAMLConverter {
                 let structured_cond = self.ast_to_structured_condition(cond_ast)?;
 
                 // Convert bodies
-                let then_actions = self.convert_original_statements(then_body, native_functions)?;
+                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters)?;
                 let else_actions = if let Some(else_stmts) = else_body {
-                    Some(self.convert_original_statements(else_stmts, native_functions)?)
+                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters)?)
                 } else {
                     None
                 };
@@ -593,9 +610,9 @@ impl ActorYAMLConverter {
                 let cond_ast = ConditionParser::parse_from_str(condition)?;
                 let structured_cond = self.ast_to_structured_condition(cond_ast)?;
 
-                let then_actions = self.convert_original_statements(then_body, native_functions)?;
+                let then_actions = self.convert_original_statements(then_body, native_functions, constants, parameters)?;
                 let else_actions = if let Some(else_stmts) = else_body {
-                    Some(self.convert_original_statements(else_stmts, native_functions)?)
+                    Some(self.convert_original_statements(else_stmts, native_functions, constants, parameters)?)
                 } else {
                     None
                 };
@@ -627,7 +644,7 @@ impl ActorYAMLConverter {
             OriginalStatement::ProcDef { name, body } => {
                 // PROC definitions within states are treated as inline procedure calls
                 // Convert the body and wrap in a call
-                let proc_actions = self.convert_original_statements(body, native_functions)?;
+                let proc_actions = self.convert_original_statements(body, native_functions, constants, parameters)?;
 
                 // For now, inline the procedure body
                 // TODO: Extract to separate procedure definition
@@ -644,12 +661,15 @@ impl ActorYAMLConverter {
         &self,
         expr_str: &str,
         native_functions: &HashMap<String, String>,
+        constants: &HashMap<String, String>,
+        parameters: &HashMap<String, String>,
     ) -> DslResult<ExpressionAST> {
         let trimmed = expr_str.trim();
 
         // Check if this is a bare identifier that's a native function
+        // Skip constants and parameters - they should remain as variables
         if trimmed.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            if native_functions.contains_key(trimmed) {
+            if !constants.contains_key(trimmed) && !parameters.contains_key(trimmed) && native_functions.contains_key(trimmed) {
                 // Implicit function call: "distance_to_target" → distance_to_target()
                 return Ok(ExpressionAST::FunctionCall {
                     name: trimmed.to_string(),

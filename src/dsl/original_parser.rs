@@ -51,6 +51,12 @@ impl OriginalBehaviorSpec {
             else if key_str == "proc-ai" {
                 spec.native_procedures = parse_native_procedures(val)?;
             }
+            // Global constants and parameters
+            else if key_str == "global" {
+                let (constants, parameters) = parse_global_section(val)?;
+                spec.constants = constants;
+                spec.parameters = parameters;
+            }
             // Type definitions (heuristic: single-line or has 'fields' key)
             else if is_type_definition(key_str, val) {
                 let type_def = parse_type_definition(key_str, val)?;
@@ -76,6 +82,67 @@ fn parse_config_var(key: &str, value: &Value) -> DslResult<ConfigVar> {
         type_hint: value_str.to_string(),
         comment: None,
     })
+}
+
+/// Parse global section with constants and parameters
+/// Expected format:
+/// global:
+///   constants:
+///     grid_columns: int
+///     grid_cell_width: float
+///   parameters:
+///     delta_time: float
+fn parse_global_section(value: &Value) -> DslResult<(HashMap<String, String>, HashMap<String, String>)> {
+    let mapping = value.as_mapping()
+        .ok_or_else(|| DslError::ConversionError("global: must be a mapping".to_string()))?;
+
+    let mut constants = HashMap::new();
+    let mut parameters = HashMap::new();
+
+    for (key, val) in mapping {
+        let key_str = key.as_str()
+            .ok_or_else(|| DslError::ConversionError("global: keys must be strings".to_string()))?;
+
+        match key_str {
+            "constants" => {
+                constants = parse_name_type_mapping(val, "constants")?;
+            }
+            "parameters" => {
+                parameters = parse_name_type_mapping(val, "parameters")?;
+            }
+            _ => {
+                return Err(DslError::ConversionError(
+                    format!("Unknown global: section key: {}", key_str)
+                ));
+            }
+        }
+    }
+
+    Ok((constants, parameters))
+}
+
+/// Parse a mapping of name: type entries
+/// Used for constants and parameters
+fn parse_name_type_mapping(value: &Value, section_name: &str) -> DslResult<HashMap<String, String>> {
+    let mapping = value.as_mapping()
+        .ok_or_else(|| DslError::ConversionError(
+            format!("{}: must be a mapping", section_name)
+        ))?;
+
+    let mut result = HashMap::new();
+    for (key, val) in mapping {
+        let name = key.as_str()
+            .ok_or_else(|| DslError::ConversionError(
+                format!("{}: keys must be strings", section_name)
+            ))?;
+        let type_name = val.as_str()
+            .ok_or_else(|| DslError::ConversionError(
+                format!("{}: '{}' must have a string type", section_name, name)
+            ))?;
+        result.insert(name.to_string(), type_name.to_string());
+    }
+
+    Ok(result)
 }
 
 /// Parse a list of statements

@@ -35,6 +35,16 @@ fn main() {
             for (name, _) in &spec.types {
                 println!("  - {}", name);
             }
+            println!();
+            println!("Constants: {}", spec.constants.len());
+            for (name, type_name) in &spec.constants {
+                println!("  - {}: {}", name, type_name);
+            }
+            println!();
+            println!("Parameters: {}", spec.parameters.len());
+            for (name, type_name) in &spec.parameters {
+                println!("  - {}: {}", name, type_name);
+            }
         }
         Err(e) => {
             eprintln!("❌ Parse error: {}", e);

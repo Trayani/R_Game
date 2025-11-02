@@ -19,6 +19,12 @@ pub struct StructuredBehaviorSpec {
 
     #[serde(default)]
     pub types: HashMap<String, StructuredTypeDef>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub constants: HashMap<String, ConstantDef>,
+
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub parameters: HashMap<String, ParameterDef>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,6 +50,16 @@ pub struct StructuredProcedure {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StructuredTypeDef {
     pub fields: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ConstantDef {
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ParameterDef {
+    pub type_name: String,
 }
 
 // ============================================================================

@@ -2,6 +2,15 @@
 # CONFIG
 CFG_PP_RELEASE AT: float  # range 0..1  , default: 0.6
 
+# GLOBAL
+global:
+  constants:
+    grid_columns: int
+    grid_cell_width: float
+    grid_cell_height: float
+  parameters:
+    delta_time: float
+
 ## STATES
 MOVE:
   - DO: move_to_target
@@ -251,9 +260,5 @@ proc-ai:
     - ensure that each  point ID is open for reservation from the grid's perspective
     - if a point ID < 0 , ignore (it is invalid)
 
-
-  grid_columns:int : returns number of column in the grid
-  grid_cell_width:float : returns a grid cell width, as displayed in the GUI
-  grid_cell_height:float : returns a grid cell height, as displayed in the GUI
   wait_frames(int frames): do not run the update logic for the actor for <frames> frames
 
