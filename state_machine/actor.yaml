@@ -27,12 +27,11 @@ MOVE:
       SET actor.pp: to_point(NEXT)
 
     # PP switch
+    # TOTAL can NEVER be a zero, because the actor cannot be at two points at the same time
   - SET TOTAL: PD.x + NDT.x  + PD.y + NDT.y
   - IF !actor.pp_switched:
-      - IF TOTAL == 0:
-          DO: switch_pp
       # if CFG_PP_RELEASE=0.6, then PP switch happens after 60% of the distance was walked
-      - ELSE IF (PD.x + PD.y) / TOTAL > CFG_PP_RELEASE:
+      - IF (PD.x + PD.y) / TOTAL > CFG_PP_RELEASE:
           DO: switch_pp
 
 
@@ -191,8 +190,8 @@ proc-ai:
     x:float: abs(actor.dir.target.x - actor.pos.x)
     y:float: abs(actor.dir.target.y - actor.pos.y)
   distance_to_point(f2 point):
-    x:float: abs(point.x - actor.pos.x)
-    y:float: abs(point.y - actor.pos.y)
+    x:float: abs(point.x*grid_cell_width - actor.pos.x)
+    y:float: abs(point.y*grid_cell_height - actor.pos.y)
   move_to_target:
     - based on delta-time, calculate STEP as euclidean increment to actor.pos towards actor.dir.target
     - increment actor.pos by STEP
