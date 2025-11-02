@@ -354,18 +354,22 @@
   },
   "procedures": {
     "native": [
-      "release_reserved(vararg int  pointId)",
-      "try_reserve_point(int  pointId , int anchor )",
-      "distance_to_point(f2 point)",
-      "grid_columns",
-      "wait_frames(int frames)",
       "distance_to_target",
       "grid_cell_height",
-      "can_reserve_point( int  pointId)",
-      "grid_cell_width",
+      "release_reserved(int  pointId)",
+      "release_reserved(int  pointId, int  pointId)",
+      "release_reserved(int  pointId, int  pointId, int  pointId)",
+      "release_reserved(int  pointId, int  pointId, int  pointId, int  pointId)",
+      "release_reserved(int  pointId, int  pointId, int  pointId, int  pointId, int  pointId)",
+      "wait_frames(int frames)",
+      "grid_columns",
       "distance_to_point(int pointId)",
-      "try_reserve_point(int  pointId )",
-      "move_to_target"
+      "try_reserve_point(int  pointId , int anchor )",
+      "grid_cell_width",
+      "move_to_target",
+      "can_reserve_point( int  pointId)",
+      "distance_to_point(f2 point)",
+      "try_reserve_point(int  pointId )"
     ]
   },
   "types": {}

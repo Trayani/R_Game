@@ -357,6 +357,9 @@ impl ActorYAMLConverter {
             .map(|(name, _)| (name.clone(), name.clone()))
             .collect();
 
+        // Expand vararg functions into multiple permutations
+        let expanded_natives = self.expand_vararg_functions(&original.native_procedures);
+
         let mut structured = StructuredBehaviorSpec {
             version: "1.0".to_string(),
             config: StructuredConfig {
@@ -364,7 +367,7 @@ impl ActorYAMLConverter {
             },
             states: HashMap::new(),
             procedures: StructuredProcedures {
-                native: native_functions.keys().cloned().collect(),
+                native: expanded_natives,
             },
             types: HashMap::new(),
         };
@@ -376,6 +379,54 @@ impl ActorYAMLConverter {
         }
 
         Ok(structured)
+    }
+
+    /// Expand vararg functions into multiple permutations
+    /// Example: "release_reserved(vararg int pointId)" becomes:
+    ///   - "release_reserved(int pointId)"
+    ///   - "release_reserved(int pointId, int pointId)"
+    ///   - "release_reserved(int pointId, int pointId, int pointId)"
+    ///   ... up to MAX_VARARG_PERMUTATIONS
+    fn expand_vararg_functions(&self, native_procs: &HashMap<String, NativeProcSpec>) -> Vec<String> {
+        const MAX_VARARG_PERMUTATIONS: usize = 5; // Generate up to 5 permutations
+
+        let mut result = Vec::new();
+
+        for (name, _spec) in native_procs {
+            // Check if this function has vararg
+            if name.contains("vararg") {
+                // Parse the signature: "func_name(vararg type param)"
+                if let Some((func_name, rest)) = name.split_once('(') {
+                    let func_name = func_name.trim();
+                    let rest = rest.trim_end_matches(')').trim();
+
+                    // Parse "vararg type param"
+                    if rest.starts_with("vararg ") {
+                        let param_decl = rest.strip_prefix("vararg ").unwrap().trim();
+
+                        // Generate permutations
+                        for count in 1..=MAX_VARARG_PERMUTATIONS {
+                            let params: Vec<String> = (0..count)
+                                .map(|_| param_decl.to_string())
+                                .collect();
+                            let signature = format!("{}({})", func_name, params.join(", "));
+                            result.push(signature);
+                        }
+                    } else {
+                        // Not a vararg, add as-is
+                        result.push(name.clone());
+                    }
+                } else {
+                    // No parentheses, add as-is
+                    result.push(name.clone());
+                }
+            } else {
+                // Not a vararg function, add as-is
+                result.push(name.clone());
+            }
+        }
+
+        result
     }
 
     /// Convert original statements to structured actions
